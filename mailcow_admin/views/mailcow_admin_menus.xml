@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <menuitem id="mailcow_root_menu"
+              name="Mailcow"
+              sequence="60"
+              web_icon="mailcow_admin,static/description/icon.png"
+              groups="mailcow_admin.group_mailcow_user"/>
+
+    <menuitem id="mailcow_objects_menu"
+              name="Objets"
+              parent="mailcow_root_menu"
+              sequence="10"/>
+
+    <menuitem id="mailcow_domain_menu"
+              name="Domaines"
+              parent="mailcow_objects_menu"
+              action="action_mailcow_domain"
+              sequence="10"/>
+
+    <menuitem id="mailcow_mailbox_menu"
+              name="Boîtes mail"
+              parent="mailcow_objects_menu"
+              action="action_mailcow_mailbox"
+              sequence="20"/>
+
+    <menuitem id="mailcow_alias_menu"
+              name="Alias"
+              parent="mailcow_objects_menu"
+              action="action_mailcow_alias"
+              sequence="30"/>
+
+    <menuitem id="mailcow_email_address_menu"
+              name="Adresses courriel"
+              parent="mailcow_objects_menu"
+              action="action_mailcow_email_address"
+              sequence="40"/>
+
+    <menuitem id="mailcow_config_menu"
+              name="Configuration"
+              parent="mailcow_root_menu"
+              action="action_mailcow_settings"
+              groups="base.group_system"
+              sequence="90"/>
+
+</odoo>

@@ -1,0 +1,5 @@
+id,name,model_id,group_id/id,operation,domain
+access_voipms_did_user,voipms.did user,voipms.did,voipms_sms.group_voipms_user,cru,
+access_voipms_did_manager,voipms.did manager,voipms.did,voipms_sms.group_voipms_manager,crud,
+access_voipms_sms_out_user,voipms.sms.out user,voipms.sms.out,voipms_sms.group_voipms_user,cru,
+access_voipms_sms_out_manager,voipms.sms.out manager,voipms.sms.out,voipms_sms.group_voipms_manager,crud,

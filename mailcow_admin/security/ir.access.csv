@@ -1,0 +1,10 @@
+id,name,model_id,group_id/id,operation,domain
+access_mailcow_email_address_user,mailcow.email_address user,mailcow.email_address,mailcow_admin.group_mailcow_user,cru,
+access_mailcow_email_address_manager,mailcow.email_address manager,mailcow.email_address,mailcow_admin.group_mailcow_manager,crud,
+access_mailcow_domain_user,mailcow.domain user,mailcow.domain,mailcow_admin.group_mailcow_user,cru,
+access_mailcow_domain_manager,mailcow.domain manager,mailcow.domain,mailcow_admin.group_mailcow_manager,crud,
+access_mailcow_mailbox_user,mailcow.mailbox user,mailcow.mailbox,mailcow_admin.group_mailcow_user,cru,
+access_mailcow_mailbox_manager,mailcow.mailbox manager,mailcow.mailbox,mailcow_admin.group_mailcow_manager,crud,
+access_mailcow_alias_user,mailcow.alias user,mailcow.alias,mailcow_admin.group_mailcow_user,cru,
+access_mailcow_alias_manager,mailcow.alias manager,mailcow.alias,mailcow_admin.group_mailcow_manager,crud,
+access_mailcow_mailbox_password_manager,mailcow.mailbox.password manager,mailcow.mailbox.password,mailcow_admin.group_mailcow_manager,crud,

@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="mailcow_mailbox_view_tree" model="ir.ui.view">
+        <field name="name">mailcow.mailbox.view.tree</field>
+        <field name="model">mailcow.mailbox</field>
+        <field name="arch" type="xml">
+            <list string="Boîtes mail">
+                <field name="local_part"/>
+                <field name="domain_id"/>
+                <field name="name" optional="show"/>
+                <field name="quota_mb" string="Quota (Mo)" optional="show"/>
+                <field name="active"/>
+                <field name="synced" string="Synchronisé"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="mailcow_mailbox_view_form" model="ir.ui.view">
+        <field name="name">mailcow.mailbox.view.form</field>
+        <field name="model">mailcow.mailbox</field>
+        <field name="arch" type="xml">
+            <form string="Boîte mail">
+                <header>
+                    <button name="action_create_on_mailcow" type="object"
+                            string="Créer sur Mailcow" class="btn-primary"
+                            invisible="synced"
+                            groups="mailcow_admin.group_mailcow_user"/>
+                    <button name="action_update_on_mailcow" type="object"
+                            string="Mettre à jour sur Mailcow"
+                            invisible="not synced"
+                            groups="mailcow_admin.group_mailcow_user"/>
+                    <button name="action_reset_password" type="object"
+                            string="Changer le mot de passe"
+                            invisible="not synced"
+                            groups="mailcow_admin.group_mailcow_manager"/>
+                    <button name="action_delete_on_mailcow" type="object"
+                            string="Supprimer de Mailcow" danger="1"
+                            invisible="not synced"
+                            groups="mailcow_admin.group_mailcow_manager"
+                            confirm="Supprimer cette boîte mail sur le serveur Mailcow ?"/>
+                    <button name="action_sync_from_mailcow" type="object"
+                            string="Synchroniser depuis Mailcow"
+                            groups="mailcow_admin.group_mailcow_manager"/>
+                </header>
+                <sheet>
+                    <widget name="web_ribbon" title="Non synchronisé" bgcolor="bg-danger" invisible="synced"/>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="local_part" placeholder="ex. info"/>
+                            <span>@</span>
+                            <field name="domain_id" placeholder="domaine"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Boîte mail">
+                            <field name="name"/>
+                            <field name="description"/>
+                            <field name="active"/>
+                        </group>
+                        <group string="Mailcow">
+                            <field name="synced"/>
+                            <field name="quota_mb"/>
+                            <field name="mailcow_id" invisible="not mailcow_id"/>
+                            <field name="password" invisible="synced" required="not synced"
+                                   password="True"
+                                   placeholder="Nécessaire à la création sur Mailcow"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="mailcow_mailbox_view_search" model="ir.ui.view">
+        <field name="name">mailcow.mailbox.view.search</field>
+        <field name="model">mailcow.mailbox</field>
+        <field name="arch" type="xml">
+            <search string="Boîtes mail">
+                <field name="local_part"/>
+                <field name="name"/>
+                <field name="domain_id"/>
+                <filter string="Non synchronisées" name="not_synced" domain="[('synced', '=', False)]"/>
+                <separator/>
+                <filter string="Archivé" name="inactive" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_mailcow_mailbox" model="ir.actions.act_window">
+        <field name="name">Boîtes mail</field>
+        <field name="res_model">mailcow.mailbox</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Créer une boîte mail ou synchroniser depuis Mailcow
+            </p>
+            <p>Les boîtes mail créées ici peuvent être poussées vers le serveur Mailcow.</p>
+        </field>
+    </record>
+
+</odoo>

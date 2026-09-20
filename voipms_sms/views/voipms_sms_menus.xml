@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem id="menu_voipms_sms_root"
+              name="SMS VoIP.ms"
+              web_icon="voipms_sms,static/description/icon.png"
+              groups="voipms_sms.group_voipms_user"/>
+    <menuitem id="menu_voipms_sms_out"
+              name="Boîte d'envoi"
+              parent="menu_voipms_sms_root"
+              action="action_voipms_sms_out"/>
+    <menuitem id="menu_voipms_did"
+              name="DIDs"
+              parent="menu_voipms_sms_root"
+              action="action_voipms_did"/>
+</odoo>
