@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="asterisk_call_view_list" model="ir.ui.view">
+        <field name="name">asterisk.call.list</field>
+        <field name="model">asterisk.call</field>
+        <field name="arch" type="xml">
+            <list string="Appels">
+                <field name="date_started"/>
+                <field name="partner_id"/>
+                <field name="phone"/>
+                <field name="state"/>
+                <field name="ari_call_id" optional="hide"/>
+                <field name="error_message" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="asterisk_call_view_form" model="ir.ui.view">
+        <field name="name">asterisk.call.form</field>
+        <field name="model">asterisk.call</field>
+        <field name="arch" type="xml">
+            <form string="Appel">
+                <header>
+                    <button name="action_originate" type="object"
+                            string="Appeler" class="oe_highlight"
+                            invisible="state != 'draft'"/>
+                    <button name="action_hangup" type="object"
+                            string="Raccrocher"
+                            invisible="state not in ('ringing', 'answered')"/>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <group>
+                        <field name="partner_id"/>
+                        <field name="phone"/>
+                        <field name="ari_call_id"/>
+                    </group>
+                    <group string="Erreurs" invisible="state != 'failed'">
+                        <field name="error_message" nolabel="1" colspan="2"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_asterisk_call" model="ir.actions.act_window">
+        <field name="name">Appels</field>
+        <field name="res_model">asterisk.call</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

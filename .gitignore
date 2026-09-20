@@ -1,2 +1,26 @@
 # Part of the hermes-odoo-addons project. See LICENSE for details.
 # Addon path: add this directory to odoo's addons_path
+
+# Checkout Odoo (source vendue, non versionnée ici)
+/odoo/
+/enterprise/
+/design-themes/
+/industry/
+/docker/
+/hermes_ai/
+/conf/
+
+# Environnement Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Bases / logs locaux
+*.log
+
+# Secrets / éditeur
+.env
+.env.*
+.vscode/
+.idea/

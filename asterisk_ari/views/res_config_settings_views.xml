@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="asterisk_ari_res_config_settings_view" model="ir.ui.view">
+        <field name="name">res.config.settings.asterisk.ari</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="inside">
+                <app string="Téléphonie (Asterisk ARI)" name="asterisk_ari"
+                     logo="/asterisk_ari/static/description/icon.png">
+                    <block title="Connexion FreePBX / Asterisk ARI">
+                        <setting string="URL ARI">
+                            <field name="asterisk_base_url"
+                                   placeholder="http://pbx:8088/ari"/>
+                        </setting>
+                        <setting string="Application ARI">
+                            <field name="asterisk_app_name"
+                                   placeholder="odoo_click"/>
+                        </setting>
+                        <setting string="Jeton ARI">
+                            <field name="asterisk_api_token" password="True"
+                                   placeholder="Jeton de l'application ARI"/>
+                        </setting>
+                        <setting string="Test de connexion">
+                            <button name="action_test_ari_connection"
+                                    type="object"
+                                    string="Tester la connexion"
+                                    class="btn-secondary"/>
+                            <field name="asterisk_connection_ok"
+                                   widget="boolean_favorite"
+                                   readonly="1"/>
+                        </setting>
+                    </block>
+                </app>
+            </xpath>
+        </field>
+    </record>
+</odoo>

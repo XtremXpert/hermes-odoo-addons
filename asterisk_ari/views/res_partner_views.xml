@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_partner_form_asterisk" model="ir.ui.view">
+        <field name="name">res.partner.form.asterisk.click</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_click_to_call" type="object"
+                        string="Appeler"
+                        class="oe_stat_button"
+                        icon="fa-phone"
+                        groups="asterisk_ari.group_asterisk_user"
+                        invisible="not phone"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>
