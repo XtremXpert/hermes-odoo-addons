@@ -73,3 +73,43 @@ class TestWazoClientToken(WazoTokenTestBase):
         self.assertEqual(request.data, b'{"expiration": 315360000}')
         self.assertEqual(resultat['token'], 'jeton-du-tenant')
         self.assertEqual(resultat['expires_at'], '2036-09-24T15:00:00.000000')
+
+
+@tagged('wazo_phone', 'post_install', '-at_install')
+class TestWazoClientRevokeToken(WazoTokenTestBase):
+    """Révoquer un jeton : ``DELETE /api/auth/0.1/token/{jeton}``.
+
+    La route ne demande **aucune authentification** (``security: - {}`` dans
+    l'API de wazo-auth) : celui qui connaît le jeton peut le tuer. C'est
+    exactement ce qu'il faut pour reprendre un secret fuité sur un Odoo client,
+    sans connaître autre chose que le jeton lui-même. On vérifie ici la forme de
+    l'appel, pas le transport.
+    """
+
+    def _appel_revocation(self, jeton='jeton-a-tuer'):
+        brut = b'{"message": "Token revoked"}'
+        fake_cm = type('CM', (), {
+            '__enter__': lambda self: io.BytesIO(brut),
+            '__exit__': lambda self, *a: False,
+        })()
+        with patch('urllib.request.urlopen',
+                   return_value=fake_cm) as urlopen:
+            resultat = WazoClient(self.env).revoke_token(jeton)
+        return urlopen.call_args[0][0], resultat
+
+    def test_revocation_is_a_delete_on_the_token_path(self):
+        request, _ = self._appel_revocation()
+        self.assertEqual(request.get_method(), 'DELETE')
+        self.assertEqual(
+            request.full_url,
+            'https://wazo.example.com/api/auth/0.1/token/jeton-a-tuer')
+
+    def test_revocation_sends_no_password(self):
+        """Le jeton dans le chemin suffit : rien à prouver de plus."""
+        request, _ = self._appel_revocation()
+        entetes = {k.lower(): v for k, v in request.header_items()}
+        self.assertNotIn('authorization', entetes)
+
+    def test_revocation_returns_the_api_message(self):
+        _, resultat = self._appel_revocation()
+        self.assertEqual(resultat['message'], 'Token revoked')

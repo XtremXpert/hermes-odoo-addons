@@ -10,6 +10,7 @@
                 <field name="context_name"/>
                 <field name="parent_id"/>
                 <field name="admin_username"/>
+                <field name="token_rotated_at" optional="hide"/>
                 <field name="state" widget="badge"
                        decoration-success="state == 'created'"
                        decoration-warning="state == 'new'"
@@ -37,6 +38,11 @@
                             class="btn-danger"
                             invisible="state != 'created'"
                             confirm="Supprimer ce tenant sur Wazo, avec son contexte, son administrateur et ses postes ?"/>
+                    <button name="action_rotate_token" type="object"
+                            string="Renouveler le jeton"
+                            invisible="state != 'created'"
+                            confirm="Fabriquer un jeton neuf pour ce tenant et révoquer l'ancien ? L'Odoo du client devra recevoir la nouvelle fiche : son jeton actuel cessera de fonctionner."
+                            help="À faire dès que le jeton a pu fuiter : sauvegarde de l'Odoo du client, poste de travail, départ d'un employé."/>
                 </header>
                 <sheet>
                     <group>
@@ -63,6 +69,12 @@
                         <field name="admin_password" password="True"/>
                         <field name="api_token" password="True"/>
                         <field name="token_expires_at"/>
+                        <field name="token_rotated_at"
+                               invisible="not token_rotated_at"/>
+                        <field name="previous_token_revoked"
+                               invisible="not token_rotated_at"/>
+                        <field name="token_revocation_note"
+                               invisible="not token_revocation_note"/>
                     </group>
                     <group string="Références Wazo">
                         <field name="remote_uuid"/>

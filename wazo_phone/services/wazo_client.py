@@ -268,6 +268,20 @@ class WazoClient:
                 'Réponse JSON illisible de l\'API Wazo pour %s %s.'
                 % (method, path)) from error
 
+    def revoke_token(self, token):
+        """Révoque un jeton (``DELETE /token/{jeton}``).
+
+        La route de wazo-auth ne demande **aucune authentification** : celui qui
+        connaît le jeton peut le tuer. C'est tout l'intérêt ici — reprendre un
+        secret parti avec l'Odoo d'un client sans rien connaître d'autre, ni mot
+        de passe d'administrateur ni jeton de service.
+
+        Le jeton voyage dans le **chemin**, donc il se retrouve dans les
+        journaux du serveur web : à l'appelant de ne pas le recopier dans ses
+        propres traces.
+        """
+        return self._request('auth', 'DELETE', '/token/%s' % token)
+
     def token(self, username, password, expiration=None, client_id=None):
         """Fabrique un jeton d'API pour un utilisateur (``POST /token``).
 

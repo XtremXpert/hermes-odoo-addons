@@ -18,10 +18,13 @@ indépendantes du tenant. La frontière se place à l'URL, voir
 ``doc/P5_WAZO_SERVER_SPEC.md``.
 """
 
+import logging
 import re
 import secrets
 import string
 from datetime import datetime
+
+_logger = logging.getLogger(__name__)
 
 from odoo import api, fields, models
 from odoo.exceptions import UserError, ValidationError
@@ -135,9 +138,19 @@ class WazoServerTenant(models.Model):
              "gestionnaires, puisqu'il porte le jeton et le mot de passe.")
     active = fields.Boolean(default=True)
 
+    #: Date du dernier renouvellement du jeton — donc l'âge du secret en cours.
+    token_rotated_at = fields.Datetime(
+        string='Jeton renouvelé le', readonly=True, copy=False)
+    #: L'ancien jeton a-t-il bien été révoqué ? Faux = il reste valable.
+    previous_token_revoked = fields.Boolean(
+        string='Ancien jeton révoqué', readonly=True, copy=False)
+    #: Ce qu'il faut dire quand la révocation a échoué (jamais le secret).
+    token_revocation_note = fields.Char(
+        string='Note de révocation', readonly=True, copy=False)
+
     @api.depends('state', 'name', 'remote_uuid', 'context_name',
                  'remote_context_name', 'admin_username', 'admin_password',
-                 'api_token', 'token_expires_at')
+                 'api_token', 'token_expires_at', 'token_rotated_at')
     def _compute_handover_text(self):
         """Le bloc à copier, recalculé à chaque lecture.
 
@@ -385,6 +398,65 @@ class WazoServerTenant(models.Model):
     # ------------------------------------------------------------------
     # Suppression
     # ------------------------------------------------------------------
+
+    def action_rotate_token(self):
+        """Remplace le jeton d'un tenant **vivant**, puis révoque l'ancien.
+
+        Le jeton est le secret remis au client. Le jour où il part — sauvegarde
+        d'Odoo, poste de travail, employé qui quitte —, il faut pouvoir le
+        remplacer : sans cette action, la seule sortie est de supprimer le
+        tenant, ce que la garde refuse tant qu'il porte des postes, et qui
+        emporterait le client avec elle.
+
+        L'ordre est **émettre, puis révoquer** : une révocation ratée laisse
+        deux jetons vivants — l'ancien mourra à son expiration — plutôt qu'un
+        client dont le jeton vient d'être tué avant que son Odoo ait reçu le
+        neuf. Et une révocation ratée est **dite** sur la fiche : c'est un
+        secret qui reste valable, l'exploitant doit le savoir, pas le découvrir.
+        """
+        self.ensure_one()
+        if not self.remote_uuid:
+            raise UserError(
+                "Le tenant « %s » n'existe pas encore sur Wazo : il n'y a pas "
+                'de jeton à renouveler.' % self.name)
+        if not (self.admin_username and self.admin_password):
+            raise UserError(
+                "Le renouvellement se fait avec les identifiants de "
+                "l'administrateur du tenant, et Wazo ne rend jamais un mot de "
+                'passe : renseignez-les sur cette fiche.')
+        ancien = self.api_token
+        client = self._client(self.remote_uuid)
+        donnees = client.token(self.admin_username, self.admin_password,
+                               expiration=self._TOKEN_EXPIRATION) or {}
+        if not donnees.get('token'):
+            raise UserError(
+                "Wazo n'a pas rendu de jeton pour « %s » : l'ancien reste en "
+                'place.' % self.name)
+        self.write({
+            'api_token': donnees['token'],
+            'token_expires_at': self._vers_datetime(donnees.get('expires_at')),
+            'token_rotated_at': fields.Datetime.now(),
+            'previous_token_revoked': False,
+            'token_revocation_note': False,
+        })
+        if not ancien:
+            return True
+        try:
+            client.revoke_token(ancien)
+        except WazoAPIError as erreur:
+            # La note est lue par des humains : le jeton ne s'y recopie pas, et
+            # le journal se contente du code HTTP.
+            _logger.warning(
+                "Jeton du tenant « %s » non révoqué (HTTP %s) : il reste "
+                "valable jusqu'à son expiration.",
+                self.name, getattr(erreur, 'status', '?'))
+            self.write({'token_revocation_note': (
+                "L'ancien jeton n'a pas pu être révoqué : il reste valable "
+                "jusqu'à son expiration. Réessayez, ou révoquez-le depuis "
+                'Wazo.')})
+            return True
+        self.write({'previous_token_revoked': True})
+        return True
 
     def action_delete_on_wazo(self):
         """Supprime le tenant — après avoir vérifié qu'il ne porte plus rien.

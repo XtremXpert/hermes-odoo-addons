@@ -113,6 +113,7 @@ lit déjà son URL dans les réglages (P5.5, hors périmètre logiciel).
 | **P5.7** | Reprise d'une création interrompue : relecture et adoption, jamais de doublon | ✅ voir §8 |
 | **P5.8** | Fiche de remise au tenant : un bloc à copier, étiqueté comme les réglages | ✅ voir §10 |
 | **P6** | Choisir le tenant à administrer, fiche par fiche (en-tête + contexte) | ✅ voir §9 |
+| **P7** | Renouveler le jeton d'un tenant vivant, et révoquer l'ancien | ✅ voir §11 |
 
 ## 7. Vérification en direct (P5.6)
 
@@ -232,3 +233,34 @@ la demande, donc la fiche reste juste même si les réglages changent après cou
 Il est **réservé au groupe gestionnaire** — il porte le jeton et le mot de passe.
 Un tenant qui n'existe pas encore sur Wazo rend une phrase qui le dit, plutôt
 qu'un bloc à moitié vide ou, pire, un jeton vide présenté comme un jeton.
+
+## 11. Renouveler le jeton d'un tenant vivant (P7)
+
+Le jeton est le secret remis au client. Tant qu'il n'y avait que créer et
+supprimer, un jeton fuité — sauvegarde de l'Odoo du client, poste de travail,
+départ d'un employé — ne pouvait pas être repris : la seule sortie était une
+suppression, que la garde refuse tant que le tenant porte des postes, et qui
+emporterait le client avec elle.
+
+`action_rotate_token` fabrique donc un jeton neuf avec les identifiants
+d'administrateur **déjà conservés sur la fiche** (`POST /token` en Basic, dix
+ans), puis révoque l'ancien (`DELETE /token/{jeton}` — route **ouverte** à qui
+connaît le jeton : mesuré, `security: - {}` dans l'API de wazo-auth).
+
+L'ordre est **émettre, puis révoquer**. Une révocation ratée laisse deux jetons
+vivants, l'ancien mourant à son expiration — réparable —, au lieu d'un client
+dont le jeton vient d'être tué avant que son Odoo ait reçu le neuf. Et une
+révocation ratée n'est jamais tue : la fiche le dit (`token_revocation_note`,
+`previous_token_revoked`), parce qu'un secret qui reste valable doit se savoir.
+
+Vérifié en direct sur un tenant neuf, du point de vue de wazo-auth lui-même :
+
+| Moment | Ancien jeton | Nouveau jeton | Ce que porte le tenant |
+|---|---|---|---|
+| avant | vivant (HTTP 200) | — | 1 contexte, 1 compte |
+| après | **mort (HTTP 404)** | vivant (HTTP 200) | 1 contexte, 1 compte |
+
+Le tenant n'a pas bougé d'un pouce : c'est tout l'objet de la manœuvre —
+reprendre le secret **sans** détruire le client. Le jeton ne se recopie ni dans
+la note d'échec ni dans le journal : la note est lue par des humains, et le
+jeton voyage déjà, en clair, dans le chemin de l'appel qui le révoque.

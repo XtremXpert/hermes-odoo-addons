@@ -57,7 +57,9 @@ expiration), étiqueté comme les réglages de `wazo_phone`. Dépend de `wazo_ph
 n'hérite jamais de cette machinerie. Sur l'instance de l'**exploitant**, chaque
 poste et chaque groupe d'appel **choisit son tenant** — l'en-tête et le contexte
 envoyés en découlent — et le voit en permanence : colonne de liste, filtre et
-groupement. 34 tests.
+groupement. Un jeton qui a pu fuiter se **reprend** : « Renouveler le jeton » en
+fabrique un neuf et révoque l'ancien, sans détruire le tenant ni ses postes.
+47 tests.
 
 **Limite connue, mesurée** : le jeton d'un tenant **ne le cloisonne pas**. Un
 jeton de tenant peut lire les données d'un autre tenant en changeant l'en-tête
