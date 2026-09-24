@@ -33,26 +33,38 @@ DIDs, boîte d'envoi segmentée (150 car., format `n/N`), réglages, droits.
 bouton « Appeler » sur la fiche partenaire, historique des appels
 (état, ID ARI, erreurs), réglages + test de connexion. 26 tests.
 
+### `wazo_phone`
+Connecteur **Wazo Platform** : création d'utilisateurs Wazo (ligne SIP, poste,
+endpoint, messagerie vocale) depuis un contact Odoo, création de **groupes
+d'appel** (membres ordonnés par priorité de sonnerie), **inventaire du
+contexte** (rattachements, postes orphelins, correspondance avec les fiches
+Odoo), journal d'appels (`wazo-call-logd`) et **softphone WebRTC** dans Odoo
+(moteurs sip.js et SDK Wazo). Les **plages d'extensions** sont lues dans Wazo
+(`contextnumbers`) au lieu d'être recopiées : un poste hors plage, d'un autre
+type, ou déjà en service, est refusé **avant** toute écriture distante.
+170 tests.
+
 ## Utilisation
 
 1. Cloner le dépôt.
 2. Ajouter le chemin à l'`addons_path` d'Odoo (ou copier chaque module).
 3. Installer les modules :
    ```sh
-   odoo-bin -d <db> -i mailcow_admin,voipms_sms,asterisk_ari --stop-after-init
+   odoo-bin -d <db> -i mailcow_admin,voipms_sms,asterisk_ari,wazo_phone --stop-after-init
    ```
 4. Configurer :
    - Réglages → **Mailcow** (URL + clé API)
    - Réglages → **SMS VoIP.ms** (utilisateur + token)
    - Réglages → **Téléphonie (Asterisk ARI)** (URL ARI + application + jeton)
+   - Réglages → **Téléphonie Wazo** (URL du serveur, jeton API, tenant)
    
    Puis tester chaque connexion.
 
 ## Tests
 
 ```sh
-odoo-bin -d t_test -i mailcow_admin,voipms_sms,asterisk_ari \
-  --test-tags=/mailcow_admin,/voipms_sms,/asterisk_ari \
+odoo-bin -d t_test -i mailcow_admin,voipms_sms,asterisk_ari,wazo_phone \
+  --test-tags=/mailcow_admin,/voipms_sms,/asterisk_ari,/wazo_phone \
   --stop-after-init --log-level=test
 ```
 
@@ -67,3 +79,13 @@ odoo-bin -d t_test -i mailcow_admin,voipms_sms,asterisk_ari \
 - `asterisk_ari` (M1) utilise le REST ARI uniquement. Le **WebSocket ARI**
   ( événements temps réel : réponse, fin d'appel → mise à jour de l'état)
   est prévu en M2.
+
+## Licence
+
+**LGPL-3** — GNU Lesser General Public License, version 3 : voir [`LICENSE`](LICENSE).
+
+C'est la licence déclarée par chacun des modules (`'license': 'LGPL-3'`) et
+celle à laquelle renvoient les en-têtes de fichiers (« See LICENSE for
+details »). La LGPL-3 incorpore les termes de la **GPL-3** par référence là où
+elle n'y déroge pas (<https://www.gnu.org/licenses/gpl-3.0.txt>) ; seul le texte
+de la LGPL est versionné ici.
