@@ -86,6 +86,10 @@ odoo-bin -d t_test -i mailcow_admin,voipms_sms,asterisk_ari,wazo_phone \
 
 C'est la licence déclarée par chacun des modules (`'license': 'LGPL-3'`) et
 celle à laquelle renvoient les en-têtes de fichiers (« See LICENSE for
-details »). La LGPL-3 incorpore les termes de la **GPL-3** par référence là où
-elle n'y déroge pas (<https://www.gnu.org/licenses/gpl-3.0.txt>) ; seul le texte
-de la LGPL est versionné ici.
+details »).
+
+La LGPL-3 **incorpore les termes de la GPL-3** par référence, là où elle n'y
+déroge pas : les deux textes sont donc versionnés ici — [`LICENSE`](LICENSE)
+pour la LGPL-3, [`LICENSE.GPL-3`](LICENSE.GPL-3) pour la GPL-3 (GNU General
+Public License, version 3, 29 juin 2007). Les textes sont repris tels quels de
+<https://www.gnu.org/licenses/>.
