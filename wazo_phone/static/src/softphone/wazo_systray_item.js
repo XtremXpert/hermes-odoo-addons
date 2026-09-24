@@ -4,11 +4,10 @@
  * Bouton téléphone dans la barre système (systray). Ouvre/ferme le softphone
  * (overlay) et affiche l'état (Prêt, En appel, Appel entrant…).
  */
-import { Component, useListener, onWillStart } from "@odoo/owl";
+import { Component, onWillStart } from "@odoo/owl";
 import { useCommand } from "@web/core/commands/command_hook";
 import { _t } from "@web/core/l10n/translation";
 import { useService } from "@web/core/utils/hooks";
-import { render } from "@web/owl2/utils";
 
 export class WazoSystrayItem extends Component {
     static props = {};
@@ -17,9 +16,11 @@ export class WazoSystrayItem extends Component {
     setup() {
         this.service = useService("wazo_softphone");
         this.ui = useService("ui");
-        // Réactivité sur l'état du service (proxy).
-        useListener(this.service.bus, "state_changed", () => render(this, true));
-        useListener(this.service.bus, "display_changed", () => render(this, true));
+        // Pas de rendu manuel : le service est réactif (``proxy(this)``), donc
+        // les getters lus par le gabarit (``state``, ``engineAvailable``…)
+        // abonnent le composant d'eux-mêmes. L'ancien appel à
+        // ``@web/owl2/utils.render`` était déprécié et re-rendait avec un
+        // contexte hérité.
         onWillStart(async () => {
             // Charge la config à l'ouverture du premier élément.
             await this.service.loadConfig();

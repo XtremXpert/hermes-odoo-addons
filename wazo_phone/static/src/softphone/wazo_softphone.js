@@ -1,19 +1,24 @@
 /**
  * Composant UI du softphone Wazo (P3.3 / P3.3b).
  *
- * Affiché comme un overlay (monté par ``WazoSoftphoneApp``). Contenu :
- * bandeau d'état (Prêt / En appel / Appel entrant / Erreur), deux onglets :
+ * Affiché comme un overlay (monté par ``WazoSoftphoneApp``). Contenu : bandeau
+ * d'état (Prêt / En appel / Appel entrant / Erreur), deux onglets :
  *   * « Appel »   — numéroteur + contrôles (Répondre / Raccrocher) et, en
  *                   appel, les commandes du cœur : hold/reprise, DTMF, transfert ;
  *   * « Journal » — journal d'appels (CDR) de l'utilisateur.
  *
  * Se dégrade proprement si le client SIP.js n'est pas chargé ou si l'utilisateur
  * n'a pas d'endpoint Wazo : on affiche un message clair à la place des contrôles.
+ *
+ * L'état réactif vient de deux sources — le **service**, qui est déjà réactif
+ * (il rend ``proxy(this)``), et l'état **local** du composant (``useState``).
+ * Aucun rendu manuel n'est donc nécessaire : ``@web/owl2/utils.render`` est
+ * déprécié et re-rendait le composant avec un contexte hérité, où les membres
+ * posés dans ``setup()`` sont invisibles.
  */
-import { Component, onWillUpdateProps, onMounted, useListener } from "@odoo/owl";
+import { Component, onMounted, useState } from "@odoo/owl";
 import { _t } from "@web/core/l10n/translation";
 import { useService } from "@web/core/utils/hooks";
-import { render } from "@web/owl2/utils";
 
 const DTMF_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "*", "0", "#"];
 
@@ -25,25 +30,17 @@ export class WazoSoftphone extends Component {
 
     setup() {
         this.service = useService("wazo_softphone");
-        this.target = this.props.target || "";
-        this.dtmfTones = "";
-        this.transferTarget = "";
-        this.activeTab = "call";
-        useListener(this.service.bus, "state_changed", () => render(this, true));
-        useListener(this.service.bus, "display_changed", () => render(this, true));
+        this.state = useState({
+            target: this.props.target || "",
+            dtmfTones: "",
+            transferTarget: "",
+            activeTab: "call",
+        });
         // Journal d'appels : chargé à l'ouverture, rechargé à chaque
         // bascule vers l'onglet « Journal » et à la fin d'un appel.
         onMounted(() => {
             this.service.loadCallLog();
         });
-        onWillUpdateProps(() => [
-            this.service.status.state,
-            this.service.status.message,
-            this.service.status.held,
-            this.service.callLog,
-            this.service.isConfigured,
-            this.service.engineAvailable,
-        ]);
     }
 
     // ─── État ──────────────────────────────────────────────────────────────────
@@ -121,10 +118,10 @@ export class WazoSoftphone extends Component {
 
     async onCall(ev) {
         ev.preventDefault();
-        if (!this.target) {
+        if (!this.state.target) {
             return;
         }
-        await this.service.callOut(this.target);
+        await this.service.callOut(this.state.target);
     }
 
     async onAnswer() {
@@ -136,7 +133,7 @@ export class WazoSoftphone extends Component {
     }
 
     onTargetInput(ev) {
-        this.target = ev.target.value;
+        this.state.target = ev.target.value;
     }
 
     // ─── Actions (cœur d'appel : hold / DTMF / transfert) ──────────────────────
@@ -150,43 +147,43 @@ export class WazoSoftphone extends Component {
     }
 
     onDtmfInput(ev) {
-        this.dtmfTones = ev.target.value;
+        this.state.dtmfTones = ev.target.value;
     }
 
     onDtmfKey(key) {
-        this.dtmfTones = (this.dtmfTones + key).slice(-12);
+        this.state.dtmfTones = (this.state.dtmfTones + key).slice(-12);
     }
 
     async onSendDtmf(ev) {
         if (ev) {
             ev.preventDefault();
         }
-        if (!this.dtmfTones) {
+        if (!this.state.dtmfTones) {
             return;
         }
-        await this.service.sendDtmf(this.dtmfTones);
-        this.dtmfTones = "";
+        await this.service.sendDtmf(this.state.dtmfTones);
+        this.state.dtmfTones = "";
     }
 
     onTransferInput(ev) {
-        this.transferTarget = ev.target.value;
+        this.state.transferTarget = ev.target.value;
     }
 
     async onTransfer(ev) {
         if (ev) {
             ev.preventDefault();
         }
-        if (!this.transferTarget) {
+        if (!this.state.transferTarget) {
             return;
         }
-        await this.service.transfer(this.transferTarget);
-        this.transferTarget = "";
+        await this.service.transfer(this.state.transferTarget);
+        this.state.transferTarget = "";
     }
 
     // ─── Actions (onglets / journal) ───────────────────────────────────────────
 
     onTabChange(tab) {
-        this.activeTab = tab;
+        this.state.activeTab = tab;
         if (tab === "log") {
             this.service.loadCallLog();
         }

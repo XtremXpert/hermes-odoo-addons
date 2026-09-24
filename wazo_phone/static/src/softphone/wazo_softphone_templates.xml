@@ -2,6 +2,10 @@
 <templates xml:space="preserve">
 
     <!-- Item systray : bouton téléphone dans la barre système. -->
+    <!-- Témoin de style : dans un gabarit, un membre du composant se lit
+         **avec « this. »**. Un nom nu n'est pas résolu sur le composant : il
+         arrive « undefined » et le client lève « Cannot read properties of
+         undefined ». -->
     <t t-name="wazo_phone.SystrayItem">
         <button
             class="o_nav_entry"
@@ -22,48 +26,48 @@
         <div class="o_wazo_softphone p-3 shadow border rounded">
             <!-- Bandeau d'état + fermeture. -->
             <div class="d-flex align-items-center mb-2">
-                <i t-attf-class="{{ statusIcon }} me-2"
-                    t-att-class="{ 'text-success': service.state === 'registered' or isInCall or isRinging }"/>
-                <span class="fw-bold me-auto"><t t-out="statusText"/></span>
-                <button class="btn btn-sm btn-ghost" t-on-click="onClose" title="Fermer">
+                <i t-attf-class="{{ this.statusIcon }} me-2"
+                    t-att-class="{ 'text-success': this.service.state === 'registered' or this.isInCall or this.isRinging }"/>
+                <span class="fw-bold me-auto"><t t-out="this.statusText"/></span>
+                <button class="btn btn-sm btn-ghost" t-on-click="this.onClose" title="Fermer">
                     <i class="fa fa-times"/>
                 </button>
             </div>
 
-            <t t-if="isUsable">
+            <t t-if="this.isUsable">
                 <!-- Onglets. -->
                 <ul class="nav nav-pills nav-fill mb-2">
                     <li class="nav-item">
                         <a class="nav-link" href="#"
-                            t-att-class="{ active: activeTab === 'call' }"
-                            t-att-disabled="isInCall or isRinging"
-                            t-on-click.prevent="onTabChange('call')">
+                            t-att-class="{ active: this.state.activeTab === 'call' }"
+                            t-att-disabled="this.isInCall or this.isRinging"
+                            t-on-click.prevent="this.onTabChange('call')">
                             <t t-out="_t('Appel')"/>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="#"
-                            t-att-class="{ active: activeTab === 'log' }"
-                            t-on-click.prevent="onTabChange('log')">
+                            t-att-class="{ active: this.state.activeTab === 'log' }"
+                            t-on-click.prevent="this.onTabChange('log')">
                             <t t-out="_t('Journal')"/>
                         </a>
                     </li>
                 </ul>
 
                 <!-- Onglet Appel : numéroteur + contrôles + cœur d'appel. -->
-                <div t-if="activeTab === 'call'">
+                <div t-if="this.state.activeTab === 'call'">
                     <!-- Numéroteur. -->
-                    <form class="d-flex mb-2" t-on-submit="onCall">
+                    <form class="d-flex mb-2" t-on-submit="this.onCall">
                         <input
                             type="text"
                             class="form-control me-2"
                             placeholder="Extension (ex. 1011)"
-                            t-att-value="target"
-                            t-on-input="onTargetInput"
+                            t-att-value="this.state.target"
+                            t-on-input="this.onTargetInput"
                             autocomplete="off"
                         />
                         <button type="submit" class="btn btn-primary"
-                            t-att-disabled="isInCall or isRinging">
+                            t-att-disabled="this.isInCall or this.isRinging">
                             <i class="fa fa-phone me-1"/>
                             <t t-out="_t('Appeler')"/>
                         </button>
@@ -71,40 +75,40 @@
 
                     <!-- Contrôles d'appel. -->
                     <div class="d-flex gap-2 flex-wrap">
-                        <button class="btn btn-success" t-if="isRinging" t-on-click="onAnswer">
+                        <button class="btn btn-success" t-if="this.isRinging" t-on-click="this.onAnswer">
                             <i class="fa fa-check me-1"/>
                             <t t-out="_t('Répondre')"/>
                         </button>
                         <button class="btn btn-danger"
-                            t-if="isInCall or isOutbound or isRinging" t-on-click="onHangup">
+                            t-if="this.isInCall or this.isOutbound or this.isRinging" t-on-click="this.onHangup">
                             <i class="fa fa-phone-slash me-1"/>
                             <t t-out="_t('Raccrocher')"/>
                         </button>
-                        <button class="btn btn-warning" t-if="isInCall" t-on-click="onHoldToggle">
-                            <i t-attf-class="fa {{ isHeld ? 'fa-phone-volume' : 'fa-pause' }} me-1"/>
-                            <t t-out="isHeld ? _t('Reprendre') : _t('Mettre en attente')"/>
+                        <button class="btn btn-warning" t-if="this.isInCall" t-on-click="this.onHoldToggle">
+                            <i t-attf-class="fa {{ this.isHeld ? 'fa-phone-volume' : 'fa-pause' }} me-1"/>
+                            <t t-out="this.isHeld ? _t('Reprendre') : _t('Mettre en attente')"/>
                         </button>
                     </div>
 
                     <!-- DTMF (en appel). -->
-                    <div class="mt-2" t-if="isInCall">
-                        <form class="d-flex align-items-center gap-2" t-on-submit="onSendDtmf">
+                    <div class="mt-2" t-if="this.isInCall">
+                        <form class="d-flex align-items-center gap-2" t-on-submit="this.onSendDtmf">
                             <input
                                 type="text"
                                 class="form-control"
                                 placeholder="DTMF (ex. 1234*)"
-                                t-att-value="dtmfTones"
-                                t-on-input="onDtmfInput"
+                                t-att-value="this.state.dtmfTones"
+                                t-on-input="this.onDtmfInput"
                                 autocomplete="off"
                             />
                             <button type="submit" class="btn btn-outline-secondary"
-                                t-att-disabled="!dtmfTones">
+                                t-att-disabled="!this.state.dtmfTones">
                                 <i class="fa fa-hashtag me-1"/>
                                 <t t-out="_t('Envoyer')"/>
                             </button>
                         </form>
                         <div class="d-flex gap-1 mt-1 flex-wrap">
-                            <t t-foreach="dtmfKeys" t-as="key" t-key="key">
+                            <t t-foreach="this.dtmfKeys" t-as="key" t-key="key">
                                 <button class="btn btn-sm btn-outline-secondary flex-fill"
                                     t-on-click="() => this.onDtmfKey(key)">
                                     <t t-out="key"/>
@@ -114,18 +118,18 @@
                     </div>
 
                     <!-- Transfert (en appel). -->
-                    <div class="mt-2" t-if="isInCall">
-                        <form class="d-flex align-items-center gap-2" t-on-submit="onTransfer">
+                    <div class="mt-2" t-if="this.isInCall">
+                        <form class="d-flex align-items-center gap-2" t-on-submit="this.onTransfer">
                             <input
                                 type="text"
                                 class="form-control"
                                 placeholder="Transférer vers (ex. 2000)"
-                                t-att-value="transferTarget"
-                                t-on-input="onTransferInput"
+                                t-att-value="this.state.transferTarget"
+                                t-on-input="this.onTransferInput"
                                 autocomplete="off"
                             />
                             <button type="submit" class="btn btn-outline-primary"
-                                t-att-disabled="!transferTarget">
+                                t-att-disabled="!this.state.transferTarget">
                                 <i class="fa fa-exchange me-1"/>
                                 <t t-out="_t('Transférer')"/>
                             </button>
@@ -135,11 +139,11 @@
 
                 <!-- Onglet Journal : journal d'appels (CDR). -->
                 <div t-else="">
-                    <div t-if="callLog.length === 0" class="text-muted small">
+                    <div t-if="this.callLog.length === 0" class="text-muted small">
                         <t t-out="_t('Aucun appel enregistré.')"/>
                     </div>
                     <ul class="list-group" t-else="">
-                        <li class="list-group-item py-2" t-foreach="callLog" t-as="entry"
+                        <li class="list-group-item py-2" t-foreach="this.callLog" t-as="entry"
                             t-key="entry.id">
                             <div class="d-flex align-items-center">
                                 <i t-attf-class="fa {{ entry.direction === 'inbound'
@@ -149,10 +153,10 @@
                                     <small class="text-muted"> (<t t-out="entry.num"/>)</small>
                                 </span>
                                 <span class="badge text-bg-light me-2"
-                                    t-out="formatDuration(entry.duration)"/>
+                                    t-out="this.formatDuration(entry.duration)"/>
                             </div>
                             <div class="small text-muted">
-                                <t t-out="formatDateTime(entry.date)"/>
+                                <t t-out="this.formatDateTime(entry.date)"/>
                                 <t t-if="entry.partner_name"> · <t t-out="entry.partner_name"/></t>
                                 <t t-if="!entry.answered"> · <t t-out="_t('non répondu')"/></t>
                             </div>
@@ -162,7 +166,7 @@
             </t>
             <t t-else="">
                 <!-- Message de dégradation. -->
-                <div class="text-muted small" t-out="statusText"/>
+                <div class="text-muted small" t-out="this.statusText"/>
                 <p class="text-muted small mb-0">
                     <t t-out="_t('Synchronisez l’endpoint Wazo de cet utilisateur pour activer les appels.')"/>
                 </p>
