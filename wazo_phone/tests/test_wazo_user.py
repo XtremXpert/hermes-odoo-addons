@@ -190,6 +190,72 @@ class TestWazoUserSync(TransactionCase):
             "L'endpoint doit référencer le template global PUIS le "
             "template webrtc (le second surcharge le premier).")
 
+    def test_sync_stores_endpoint_name_when_response_carries_the_object(self):
+        """La synchronisation enregistre le NOM de l'endpoint, pas l'objet.
+
+        Mesuré en direct sur Wazo 26 : la réponse de ``POST /lines`` porte
+        ``endpoint_sip`` sous forme d'**objet complet** (uuid, options,
+        templates…), et non le nom. Or ``remote_endpoint_name`` est l'AOR du
+        softphone (en-tête ``From``) : y écrire l'objet produit un en-tête
+        invalide et un softphone muet, sans erreur visible côté serveur.
+        """
+        wazo_user = self._create_wazo_user()
+
+        def conf(method, path, params=None, body=None):
+            if path.startswith('/tenants/'):
+                return {'global_sip_template_uuid': 'uuid-global',
+                        'webrtc_sip_template_uuid': 'uuid-webrtc'}
+            if method == 'GET':
+                return []
+            if path == '/extensions':
+                return {'id': 10, 'exten': '5550', 'context': 'default'}
+            if path == '/lines':
+                return {'id': 20, 'endpoint_sip': {
+                    'uuid': 'ep-uuid', 'name': 'bvkixf7o', 'label': None,
+                    'templates': [{'uuid': 'uuid-global', 'label': 'global'}],
+                    'endpoint_section_options': [['context', 'default']],
+                }}
+            if path == '/users':
+                return {'id': 'u-30-uuid'}
+            if path == '/voicemails':
+                return {'id': 50}
+            return None
+
+        with patch.object(WazoClient, 'conf', side_effect=conf), \
+                patch.object(WazoClient, 'auth',
+                             side_effect=_auth_side_effect()):
+            wazo_user.action_sync_wazo()
+        self.assertEqual(
+            wazo_user.remote_endpoint_name, 'bvkixf7o',
+            "L'AOR doit être le nom de l'endpoint, jamais l'objet renvoyé "
+            "par l'API (l'en-tête From du softphone serait invalide).")
+
+    def test_sync_stores_endpoint_name_when_response_carries_the_name(self):
+        """Une réponse qui porte directement le nom reste acceptée."""
+        wazo_user = self._create_wazo_user()
+
+        def conf(method, path, params=None, body=None):
+            if path.startswith('/tenants/'):
+                return {'global_sip_template_uuid': 'uuid-global',
+                        'webrtc_sip_template_uuid': 'uuid-webrtc'}
+            if method == 'GET':
+                return []
+            if path == '/extensions':
+                return {'id': 10, 'exten': '5550', 'context': 'default'}
+            if path == '/lines':
+                return {'id': 20, 'endpoint_sip': 'zo5qsdg5'}
+            if path == '/users':
+                return {'id': 'u-30-uuid'}
+            if path == '/voicemails':
+                return {'id': 50}
+            return None
+
+        with patch.object(WazoClient, 'conf', side_effect=conf), \
+                patch.object(WazoClient, 'auth',
+                             side_effect=_auth_side_effect()):
+            wazo_user.action_sync_wazo()
+        self.assertEqual(wazo_user.remote_endpoint_name, 'zo5qsdg5')
+
     def test_sync_reuses_existing_extension(self):
         wazo_user = self._create_wazo_user()
         # Reprise : le poste existe déjà côté Wazo à cause d'une tentative

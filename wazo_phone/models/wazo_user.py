@@ -120,6 +120,21 @@ class WazoUser(models.Model):
         return (self.env['ir.config_parameter'].sudo()
                 .get_str('wazo.voicemail_language', default='fr_CA') or 'fr_CA')
 
+    def _endpoint_name_from_line(self, line):
+        """Retourne le nom de l'endpoint (l'AOR) porté par une réponse ``/lines``.
+
+        La forme a changé selon les versions : tantôt le nom directement,
+        tantôt l'**objet complet** de l'endpoint. Mesuré en direct sur Wazo
+        26 : l'objet, son nom étant sous ``name``. Écrire autre chose que le
+        nom dans ``remote_endpoint_name`` — qui est l'AOR, donc l'en-tête
+        ``From`` du softphone — produit un en-tête invalide et un poste muet,
+        sans la moindre erreur côté serveur.
+        """
+        endpoint = line.get('endpoint_sip') or {}
+        if isinstance(endpoint, dict):
+            return endpoint.get('name') or False
+        return endpoint or False
+
     def action_sync_wazo(self):
         """Crée (ou reprend) l'utilisateur et ses ressources sur Wazo."""
         self.ensure_one()
@@ -243,9 +258,8 @@ class WazoUser(models.Model):
             'remote_extension_id': extension['id'],
             # Nom d'endpoint SIP généré par Wazo confgen (= l'AOR du
             # softphone, en-tête From — découverte P3.2 : distinct de
-            # l'extension). La réponse POST /lines porte ``endpoint_sip``
-            # = le nom de l'endpoint créé.
-            'remote_endpoint_name': line.get('endpoint_sip') or False,
+            # l'extension).
+            'remote_endpoint_name': self._endpoint_name_from_line(line),
             'sip_username': self.extension,
             'sip_password': sip_password,
             'remote_sip_id': sip_auth.get('uuid'),
