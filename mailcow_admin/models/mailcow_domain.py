@@ -22,21 +22,29 @@ class MailcowDomain(models.Model):
 
     # --- Actions Mailcow --------------------------------------------------
 
-    def _payload(self):
+    def _attr_payload(self):
+        """Les attributs modifiables d'un domaine : le « attr » d'une édition.
+
+        Mailcow attend {"items": [domaine], "attr": {...}} et ignore un corps
+        plat en répondant « success ». Le nom est l'identité, pas un attribut.
+        Les quotas sont en OCTETS ; un quota local à 0 vaut « illimité », on
+        n'envoie donc rien plutôt que d'effacer la politique du serveur.
+        """
         self.ensure_one()
-        payload = {
-            'domain': self.name,
+        attr = {
             'description': self.description or '',
             'active': '1' if self.active else '0',
         }
-        # Mailcow compte les quotas en OCTETS et ignore une clé « quota » sur un
-        # domaine. Un quota local à 0 vaut « illimité » : on n'envoie alors rien,
-        # plutôt que d'effacer la politique de quotas déjà en place au serveur.
         if self.quota_mb > 0:
             octets = self.quota_mb * 1024 * 1024
-            payload['def_quota_for_mbox'] = octets
-            payload['max_quota_for_domain'] = octets
-        return payload
+            attr['def_quota_for_mbox'] = octets
+            attr['max_quota_for_domain'] = octets
+        return attr
+
+    def _payload(self):
+        """La charge de création : le nom, plus les attributs modifiables."""
+        self.ensure_one()
+        return dict(self._attr_payload(), domain=self.name)
 
     def action_create_on_mailcow(self):
         """Crée le domaine sur Mailcow (ou le met à jour s'il existe déjà)."""
@@ -49,7 +57,10 @@ class MailcowDomain(models.Model):
         """Réécrit l'état local sur Mailcow."""
         for domain in self:
             client = MailcowClient(self.env)
-            client._request('POST', '/edit/domain', domain._payload())
+            client._request('POST', '/edit/domain', {
+                'items': [domain.name],
+                'attr': domain._attr_payload(),
+            })
             domain.write({'synced': True})
 
     def action_delete_on_mailcow(self):

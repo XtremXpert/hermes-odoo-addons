@@ -46,11 +46,13 @@ class MailcowMailbox(models.Model):
 
     # --- Actions Mailcow --------------------------------------------------
 
-    def _base_payload(self, with_password=False):
+    def _attr_payload(self, with_password=False):
+        """Les attributs modifiables d'une boîte : le « attr » d'une édition.
+
+        L'adresse est l'identité (elle va dans « items »), pas un attribut.
+        """
         self.ensure_one()
-        payload = {
-            'local_part': self.local_part,
-            'domain': self.domain_id.name,
+        attr = {
             'quota': self.quota_mb,  # Mailcow compte les quotas en mébioctets
             'active': '1' if self.active else '0',
             'name': self.name or '',
@@ -59,10 +61,18 @@ class MailcowMailbox(models.Model):
             'tls_enforce_out': '1' if self.tls_enforce_out else '0',
         }
         if with_password:
-            password = self.password
-            payload['password'] = password
-            payload['password2'] = password
-        return payload
+            attr['password'] = self.password
+            attr['password2'] = self.password
+        return attr
+
+    def _base_payload(self, with_password=False):
+        """La charge de création : l'identité, plus les attributs."""
+        self.ensure_one()
+        return dict(
+            self._attr_payload(with_password),
+            local_part=self.local_part,
+            domain=self.domain_id.name,
+        )
 
     def action_create_on_mailcow(self):
         """Crée la boîte mail sur Mailcow (un mot de passe est requis)."""
@@ -81,7 +91,10 @@ class MailcowMailbox(models.Model):
         """Réécrit l'état local sur Mailcow (jamais le mot de passe)."""
         for mailbox in self:
             client = MailcowClient(self.env)
-            client._request('POST', '/edit/mailbox', mailbox._base_payload())
+            client._request('POST', '/edit/mailbox', {
+                'items': [mailbox.email],
+                'attr': mailbox._attr_payload(),
+            })
             mailbox.write({'synced': True})
 
     def action_reset_password(self):

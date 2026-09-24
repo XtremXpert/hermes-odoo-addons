@@ -1,4 +1,5 @@
 from . import test_client
+from . import test_updates
 from . import test_domain
 from . import test_mailbox
 from . import test_alias

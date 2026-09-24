@@ -51,10 +51,14 @@ class TestMailcowDomain(TransactionCase):
             domain.action_update_on_mailcow()
         # quota_mb = 0 : aucun quota n'est envoyé, pour ne pas écraser la
         # politique de quotas du serveur.
+        # Mailcow attend {"items": [...], "attr": {...}} : un corps plat est
+        # accepté puis ignoré, sans la moindre erreur.
         request.assert_called_once_with('POST', '/edit/domain', {
-            'domain': 'dc.com',
-            'description': 'Description mise à jour',
-            'active': '1',
+            'items': ['dc.com'],
+            'attr': {
+                'description': 'Description mise à jour',
+                'active': '1',
+            },
         })
 
     def test_delete_on_mailcow_unsyncs_and_archives(self):

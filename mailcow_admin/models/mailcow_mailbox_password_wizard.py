@@ -43,9 +43,15 @@ class MailboxPasswordWizard(models.TransientModel):
         self.ensure_one()
         mailbox = self.mailbox_id
         client = MailcowClient(self.env)
-        payload = mailbox._base_payload()
-        payload['password'] = self.password
-        payload['password2'] = self.password
-        client._request('POST', '/edit/mailbox', payload)
+        # Même forme que les autres éditions : {"items": [...], "attr": {...}}.
+        # Un corps plat est accepté puis ignoré, le mot de passe ne changeait donc
+        # jamais malgré une réponse « success ».
+        client._request('POST', '/edit/mailbox', {
+            'items': [mailbox.email],
+            'attr': {
+                'password': self.password,
+                'password2': self.password,
+            },
+        })
         mailbox.write({'synced': True})
         return {'type': 'ir.actions.act_window_close'}

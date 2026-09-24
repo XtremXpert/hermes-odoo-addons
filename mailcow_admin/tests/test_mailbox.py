@@ -77,10 +77,13 @@ class TestMailcowMailbox(TransactionCase):
             mailbox.action_update_on_mailcow()
         payload = request.call_args[0][2]
         request.assert_called_once()
-        self.assertNotIn('password', payload)
-        self.assertNotIn('password2', payload)
         self.assertEqual(request.call_args[0][1], '/edit/mailbox')
-        self.assertEqual(payload['quota'], 50)
+        # Mailcow attend {"items": [...], "attr": {...}} : un corps plat est
+        # accepté puis ignoré, sans la moindre erreur.
+        self.assertEqual(payload['items'], ['info@dc.com'])
+        self.assertNotIn('password', payload['attr'])
+        self.assertNotIn('password2', payload['attr'])
+        self.assertEqual(payload['attr']['quota'], 50)
 
     def test_delete_on_mailcow_unsyncs_and_archives(self):
         mailbox = self.env['mailcow.mailbox'].create({
@@ -166,8 +169,9 @@ class TestMailcowMailbox(TransactionCase):
             wizard.action_reset()
         payload = request.call_args[0][2]
         self.assertEqual(request.call_args[0][1], '/edit/mailbox')
-        self.assertEqual(payload['password'], 'N3wPass!')
-        self.assertEqual(payload['password2'], 'N3wPass!')
+        self.assertIn('info@dc.com', payload['items'])
+        self.assertEqual(payload['attr']['password'], 'N3wPass!')
+        self.assertEqual(payload['attr']['password2'], 'N3wPass!')
         self.assertTrue(mailbox.synced)
 
     def test_reset_password_mismatch_raises(self):

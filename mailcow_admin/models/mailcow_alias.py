@@ -79,13 +79,46 @@ class MailcowAlias(models.Model):
             client._request('POST', '/add/alias', alias._payload())
             alias.write({'synced': True})
 
+    def _attr_payload(self):
+        """Les attributs modifiables d'un alias : le « attr » d'une édition.
+
+        L'identifiant Mailcow est l'identité (il va dans « items ») ; un corps
+        plat, ou l'adresse seule, ne modifient rien malgré un « success ».
+        """
+        self.ensure_one()
+        return {
+            'goto': ','.join(self.address_ids.mapped('address')),
+            'active': '1' if self.active else '0',
+            'description': self.description or '',
+        }
+
+    def _remote_id(self):
+        """L'identifiant de l'alias sur le serveur (il s'édite par identifiant)."""
+        self.ensure_one()
+        attendue = '%s@%s' % (self.alias_name or '', self.domain_id.name)
+        reponse = MailcowClient(self.env)._request('GET', '/get/alias/all', None)
+        entrees = reponse.get('data') if isinstance(reponse, dict) else reponse
+        for entree in entrees:
+            if entree.get('address') == attendue and entree.get('id') is not None:
+                return str(entree['id'])
+        return self.mailcow_id or None
+
     def action_update_on_mailcow(self):
         """Réécrit l'état local sur Mailcow."""
         for alias in self:
             alias._ensure_addresses()
+            identifiant = alias.mailcow_id or alias._remote_id()
+            if not identifiant:
+                raise UserError(
+                    "Alias « %s » introuvable sur Mailcow : synchronisez d'abord."
+                    % alias.display_name
+                )
             client = MailcowClient(self.env)
-            client._request('POST', '/edit/alias', alias._payload())
-            alias.write({'synced': True})
+            client._request('POST', '/edit/alias', {
+                'items': [str(identifiant)],
+                'attr': alias._attr_payload(),
+            })
+            alias.write({'synced': True, 'mailcow_id': str(identifiant)})
 
     def action_delete_on_mailcow(self):
         """Supprime l'alias sur Mailcow, puis l'archive localement."""
