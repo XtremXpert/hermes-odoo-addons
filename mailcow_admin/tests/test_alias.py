@@ -77,32 +77,41 @@ class TestMailcowAlias(TransactionCase):
             'synced': True,
             'active': True,
         })
+        # Forme réelle de /get/alias/all : « address » porte l'adresse de
+        # l'alias, « goto » les destinations (relevé sur le serveur).
         remote = {'data': [
             {
-                'alias_name': 'info',
+                'address': 'info@dc.com',
                 'domain': 'dc.com',
-                'address': ['info@dc.com'],
+                'goto': ['info@dc.com'],
                 'active': '0',
                 'description': '',
             },
             {
-                'alias_name': 'support',
+                'address': 'support@dc.com',
                 'domain': 'dc.com',
-                'address': ['info@dc.com'],
+                'goto': ['info@dc.com'],
                 'active': '1',
                 'description': '',
             },
         ]}
         with patch.object(MailcowClient, '_request', return_value=remote) as request:
             existing.action_sync_from_mailcow()
-        request.assert_called_once_with('GET', '/get/alias/111', None)
+        request.assert_called_once_with('GET', '/get/alias/all', None)
 
+        # Recherche limitée au domaine du test : des alias réels portent déjà le
+        # nom « info » (importés du serveur), et une recherche par nom seul
+        # renverrait alors plusieurs fiches.
         existing = self.env['mailcow.alias'].with_context(
-            active_test=False).search([('alias_name', '=', 'info')])
+            active_test=False).search([
+                ('alias_name', '=', 'info'),
+                ('domain_id', '=', self.domain.id)])
         self.assertFalse(existing.active)
         self.assertEqual(
             existing.address_ids.mapped('address'), ['info@dc.com'])
 
-        support = self.env['mailcow.alias'].search([('alias_name', '=', 'support')])
+        support = self.env['mailcow.alias'].search([
+            ('alias_name', '=', 'support'),
+            ('domain_id', '=', self.domain.id)])
         self.assertTrue(support)
         self.assertTrue(support.synced)

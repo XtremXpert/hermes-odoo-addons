@@ -84,22 +84,35 @@ class MailcowAlias(models.Model):
         return records
 
     def action_sync_from_mailcow(self):
-        """Aligne l'état local sur le serveur (GET /get/alias/111)."""
+        """Aligne l'état local sur le serveur (GET /get/alias/all)."""
         self.ensure_one()
         client = MailcowClient(self.env)
-        response = client._request('GET', '/get/alias/111', None)
+        response = client._request('GET', '/get/alias/all', None)
         entries = response.get('data') if isinstance(response, dict) else response
         remote_keys = set()
         for entry in entries:
-            if not isinstance(entry, dict) or not entry.get('alias_name') or not entry.get('domain'):
+            if not isinstance(entry, dict) or not entry.get('domain'):
                 continue
+            # Mailcow met l'adresse de l'alias dans « address » et ses
+            # destinations dans « goto » ; « alias_name » n'existe pas, et s'y
+            # fier fait ignorer chaque entrée en silence.
+            adresse = entry.get('address') or entry.get('alias_name') or ''
+            alias_name = adresse.split('@')[0]
+            if not alias_name:
+                continue
+            destinations = entry.get('goto')
+            if isinstance(destinations, str):
+                destinations = [item.strip() for item in destinations.split(',')
+                                if item.strip()]
+            elif not isinstance(destinations, list):
+                destinations = []
             domain = self.env['mailcow.domain'].search(
                 [('name', '=', entry['domain'])], limit=1)
             if not domain:  # domaine vu côté serveur, créé à la volée
                 domain = self.env['mailcow.domain'].create({'name': entry['domain']})
-            remote_keys.add((entry['alias_name'], domain.id))
+            remote_keys.add((alias_name, domain.id))
             alias = self.env['mailcow.alias'].search(
-                [('alias_name', '=', entry['alias_name']),
+                [('alias_name', '=', alias_name),
                  ('domain_id', '=', domain.id)],
                 limit=1,
             )
@@ -107,9 +120,7 @@ class MailcowAlias(models.Model):
                 'description': entry.get('description') or '',
                 'active': entry.get('active') in (1, '1', True),
                 'synced': True,
-                'address_ids': [(6, 0, self._address_records(
-                    entry.get('address') or []
-                ).ids)],
+                'address_ids': [(6, 0, self._address_records(destinations).ids)],
             }
             if entry.get('id') is not None:
                 values['mailcow_id'] = str(entry['id'])
@@ -117,7 +128,7 @@ class MailcowAlias(models.Model):
                 alias.write(values)
             else:
                 self.env['mailcow.alias'].create(
-                    dict(values, alias_name=entry['alias_name'], domain_id=domain.id))
+                    dict(values, alias_name=alias_name, domain_id=domain.id))
         # Les alias locaux absents du serveur ne sont plus « synchronisés ».
         self.env['mailcow.alias'].search([('active', '=', True)]).filtered(
             lambda a: (a.alias_name, a.domain_id.id) not in remote_keys

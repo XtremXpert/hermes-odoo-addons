@@ -77,10 +77,12 @@ class TestMailcowDomain(TransactionCase):
             'description': 'ancienne',
             'quota_mb': 50,
         })
+        # Forme réelle de /get/domain/all : le nom du domaine est dans
+        # « domain_name », et non « domain » (relevé sur le serveur).
         remote = {'data': [
             {
                 'id': 'abc',
-                'domain': 'dc.com',
+                'domain_name': 'dc.com',
                 'description': 'nouvelle',
                 'active': '1',
                 'dkim': {'private': 'p', 'public': 'pub'},
@@ -88,7 +90,7 @@ class TestMailcowDomain(TransactionCase):
             },
             {
                 'id': 'def',
-                'domain': 'new.com',
+                'domain_name': 'new.com',
                 'description': 'neuf',
                 'active': '1',
                 'dkim': None,
@@ -97,7 +99,7 @@ class TestMailcowDomain(TransactionCase):
         ]}
         with patch.object(MailcowClient, '_request', return_value=remote) as request:
             existing.action_sync_from_mailcow()
-        request.assert_called_once_with('GET', '/get/domain/111', None)
+        request.assert_called_once_with('GET', '/get/domain/all', None)
 
         existing = self.env['mailcow.domain'].search([('name', '=', 'dc.com')])
         self.assertEqual(existing.description, 'nouvelle')

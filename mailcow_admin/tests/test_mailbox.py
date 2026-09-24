@@ -104,9 +104,12 @@ class TestMailcowMailbox(TransactionCase):
             'domain_id': self.domain.id,
             'synced': True,
         })
+        # Forme réelle de /get/mailbox/all : « username » et « local_part »,
+        # et non « mail_user » (relevé sur le serveur le 24 septembre 2026).
         remote = {'data': [
             {
-                'mail_user': 'info',
+                'username': 'info@dc.com',
+                'local_part': 'info',
                 'domain': 'dc.com',
                 'name': 'Info',
                 'description': '',
@@ -114,7 +117,8 @@ class TestMailcowMailbox(TransactionCase):
                 'quota': 102400,
             },
             {
-                'mail_user': 'support',
+                'username': 'support@other.com',
+                'local_part': 'support',
                 'domain': 'other.com',
                 'name': '',
                 'description': '',
@@ -124,7 +128,7 @@ class TestMailcowMailbox(TransactionCase):
         ]}
         with patch.object(MailcowClient, '_request', return_value=remote) as request:
             local_only.action_sync_from_mailcow()
-        request.assert_called_once_with('GET', '/get/mailbox/111', None)
+        request.assert_called_once_with('GET', '/get/mailbox/all', None)
 
         info = self.env['mailcow.mailbox'].search(
             [('local_part', '=', 'info'), ('domain_id.name', '=', 'dc.com')])

@@ -57,17 +57,22 @@ class MailcowDomain(models.Model):
             domain.write({'synced': False, 'active': False})
 
     def action_sync_from_mailcow(self):
-        """Aligne l'état local sur le serveur (GET /get/domain/111)."""
+        """Aligne l'état local sur le serveur (GET /get/domain/all)."""
         self.ensure_one()
         client = MailcowClient(self.env)
-        response = client._request('GET', '/get/domain/111', None)
+        response = client._request('GET', '/get/domain/all', None)
         entries = response.get('data') if isinstance(response, dict) else response
         remote_ids = set()
         for entry in entries:
-            if not isinstance(entry, dict) or not entry.get('domain'):
+            if not isinstance(entry, dict):
                 continue
-            remote_ids.add(entry['domain'])
-            domain = self.env['mailcow.domain'].search([('name', '=', entry['domain'])], limit=1)
+            # Mailcow nomme le domaine « domain_name » ; « domain » n'existe pas,
+            # et s'y fier fait ignorer chaque entrée en silence.
+            nom = entry.get('domain_name') or entry.get('domain')
+            if not nom:
+                continue
+            remote_ids.add(nom)
+            domain = self.env['mailcow.domain'].search([('name', '=', nom)], limit=1)
             values = {
                 'description': entry.get('description') or '',
                 'dkim': bool(entry.get('dkim')),
@@ -81,7 +86,7 @@ class MailcowDomain(models.Model):
                 domain.write(values)
             else:
                 self.env['mailcow.domain'].create(
-                    dict(values, name=entry['domain']))
+                    dict(values, name=nom))
         # Les domaines locaux absents du serveur ne sont plus « synchronisés ».
         self.env['mailcow.domain'].search(
             [('name', 'not in', list(remote_ids)), ('active', '=', True)]

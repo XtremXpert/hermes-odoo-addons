@@ -43,3 +43,18 @@ class TestMailcowSettings(TransactionCase):
         ):
             with self.assertRaises(UserError):
                 self.settings.action_test_mailcow_connection()
+
+    def test_connection_uses_the_listing_route(self):
+        """La route de listage est `/all` : `111` répond 200 mais avec un corps vide."""
+        with patch.object(
+            MailcowClient, '_request', return_value={'data': []},
+        ) as request:
+            self.settings.action_test_mailcow_connection()
+        request.assert_called_once_with('GET', '/get/domain/all')
+
+    def test_connection_warns_when_the_server_returns_nothing(self):
+        """Un corps vide ne doit jamais être annoncé comme un succès."""
+        with patch.object(MailcowClient, '_request', return_value={'data': []}):
+            result = self.settings.action_test_mailcow_connection()
+        self.assertEqual(result['params']['type'], 'warning')
+        self.assertIn('aucun domaine', result['params']['message'].lower())

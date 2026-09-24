@@ -21,11 +21,31 @@ class ResConfigSettings(models.TransientModel):
     )
 
     def action_test_mailcow_connection(self):
-        """Teste la connexion en listant les domaines du serveur."""
+        """Teste la connexion en listant les domaines du serveur.
+
+        La route de listage est « /get/domain/all » : « /get/domain/111 » répond
+        200 avec un corps vide, ce qui ferait passer un échec pour un succès.
+        """
         client = MailcowClient(self.env)
-        response = client._request('GET', '/get/domain/111')
+        response = client._request('GET', '/get/domain/all')
         entries = response.get('data') if isinstance(response, dict) else response
         count = len([e for e in entries if isinstance(e, dict)])
+        if not count:
+            # Aucun domaine : la connexion a abouti mais l'API ne renvoie rien.
+            # L'annoncer comme un succès tromperait l'utilisateur.
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': 'Mailcow',
+                    'message': (
+                        'Connexion à Mailcow établie, mais le serveur ne renvoie '
+                        'aucun domaine. Vérifiez les droits de la clé API.'
+                    ),
+                    'type': 'warning',
+                    'sticky': True,
+                },
+            }
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',

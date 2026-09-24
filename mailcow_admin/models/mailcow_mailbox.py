@@ -108,22 +108,30 @@ class MailcowMailbox(models.Model):
             mailbox.write({'synced': False, 'active': False})
 
     def action_sync_from_mailcow(self):
-        """Aligne l'état local sur le serveur (GET /get/mailbox/111)."""
+        """Aligne l'état local sur le serveur (GET /get/mailbox/all)."""
         self.ensure_one()
         client = MailcowClient(self.env)
-        response = client._request('GET', '/get/mailbox/111', None)
+        response = client._request('GET', '/get/mailbox/all', None)
         entries = response.get('data') if isinstance(response, dict) else response
         remote_keys = set()
         for entry in entries:
-            if not isinstance(entry, dict) or not entry.get('mail_user') or not entry.get('domain'):
+            if not isinstance(entry, dict) or not entry.get('domain'):
+                continue
+            # Mailcow renvoie « local_part » et « username » ; « mail_user »
+            # n'existe pas, et s'y fier fait ignorer chaque entrée en silence.
+            local_part = entry.get('local_part')
+            if not local_part:
+                identifiant = entry.get('mail_user') or entry.get('username') or ''
+                local_part = identifiant.split('@')[0]
+            if not local_part:
                 continue
             domain_name = entry['domain']
-            remote_keys.add((entry['mail_user'], domain_name))
+            remote_keys.add((local_part, domain_name))
             domain = self.env['mailcow.domain'].search([('name', '=', domain_name)], limit=1)
             if not domain:  # domaine vu côté serveur, créé à la volée
                 domain = self.env['mailcow.domain'].create({'name': domain_name})
             mailbox = self.env['mailcow.mailbox'].search(
-                [('local_part', '=', entry['mail_user']),
+                [('local_part', '=', local_part),
                  ('domain_id', '=', domain.id)],
                 limit=1,
             )
@@ -140,7 +148,7 @@ class MailcowMailbox(models.Model):
                 mailbox.write(values)
             else:
                 self.env['mailcow.mailbox'].create(
-                    dict(values, local_part=entry['mail_user'], domain_id=domain.id))
+                    dict(values, local_part=local_part, domain_id=domain.id))
         # Les boîtes locales absentes du serveur ne sont plus « synchronisées ».
         self.env['mailcow.mailbox'].search([('active', '=', True)]).filtered(
             lambda m: (m.local_part, m.domain_id.name) not in remote_keys
