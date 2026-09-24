@@ -17,7 +17,7 @@ Connecteur Wazo Platform
 * Statistiques d'appels par contact
 """,
     'version': '19.5.3',
-    'depends': ['base'],
+    'depends': ['base', 'web'],
     'data': [
         'security/wazo_groups.xml',
         'security/ir.access.csv',
@@ -37,14 +37,14 @@ Connecteur Wazo Platform
     'auto_install': False,
     'assets': {
         'web.assets_backend': [
-            'wazo_phone/static/src/softphone/wazo_softphone_app.js',
-            'wazo_phone/static/src/softphone/wazo_systray_item.js',
-            'wazo_phone/static/src/softphone/wazo_softphone.js',
-            'wazo_phone/static/src/softphone/wazo_softphone_arbiter.js',
-            'wazo_phone/static/src/softphone/wazo_softphone_sipjs_engine.js',
-            'wazo_phone/static/src/softphone/wazo_softphone_sdk_engine.js',
-            'wazo_phone/static/src/softphone/wazo_softphone_engine.js',
-            'wazo_phone/static/src/softphone/wazo_softphone_service.js',
+            # Sans ordre explicite, Odoo trie les modules du paquet et place
+            # wazo_phone avant « web » (« waz » < « web ») : nos fichiers
+            # passeraient devant module_loader.js, qui définit odoo.define, et
+            # le client web mourrait au chargement sans la moindre erreur côté
+            # serveur. La directive « après le chargeur » ne dépend ni des noms
+            # ni du tri.
+            ('after', 'web/static/src/module_loader.js',
+             'wazo_phone/static/src/softphone/*.js'),
             'wazo_phone/static/src/softphone/wazo_softphone_templates.xml',
         ],
         'wazo_phone.assets_sip': [
