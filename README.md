@@ -75,7 +75,20 @@ l'en-tête —, pas dans le jeton. Détail et mesures : `doc/P5_WAZO_SERVER_SPEC
    ```sh
    odoo-bin -d <db> -i mailcow_admin,voipms_sms,asterisk_ari,wazo_phone,wazo_server --stop-after-init
    ```
-4. Configurer :
+4. Inscrire les utilisateurs aux groupes du module. Les menus sont rangés
+   derrière eux et l'administrateur n'y est **pas** d'office : sans cette
+   inscription, ni « Téléphonie Wazo » ni « Serveur Wazo » n'apparaissent — les
+   menus existent en base, mais ne sont pas servis au client.
+   ```sh
+   # Réglages → Utilisateurs → admin → Téléphonie Wazo, ou :
+   odoo-bin shell -d <db>
+   >>> env['res.users'].search([('login', '=', 'admin')]).write(
+   ...     {'group_ids': [(4, env.ref('wazo_phone.group_wazo_manager').id)]})
+   >>> env.cr.commit()
+   ```
+   Le groupe « Téléphonie Wazo : Gestionnaire » implique « Utilisateur » ;
+   `wazo_server` ajoute son propre groupe pour le menu « Serveur Wazo ».
+5. Configurer :
    - Réglages → **Mailcow** (URL + clé API)
    - Réglages → **SMS VoIP.ms** (utilisateur + token)
    - Réglages → **Téléphonie (Asterisk ARI)** (URL ARI + application + jeton)
@@ -92,6 +105,8 @@ odoo-bin -d t_test -i mailcow_admin,voipms_sms,asterisk_ari,wazo_phone,wazo_serv
   --test-tags=/mailcow_admin,/voipms_sms,/asterisk_ari,/wazo_phone,/wazo_server \
   --stop-after-init --log-level=test
 ```
+
+Suite complète : **224 tests**, 0 échec.
 
 Les tests **JavaScript** du softphone (`wazo_phone/static/tests/`) sont des tests
 **Node**, sans navigateur, et se lancent à part. 67 tests : arbitrage
@@ -111,6 +126,27 @@ node --test wazo_phone/static/tests/*.test.js
   `/odoo` — c'est la seule vérification qui attrape cette classe de faute.
   Et si le correctif semble sans effet, **lire les octets servis**, pas la
   source : un paquet d'actifs en cache peut survivre à `-u <module>`.
+- **L'ordre dans le paquet d'actifs décide du démarrage du client.** Odoo
+  assemble `web.assets_backend` en parcourant les modules **triés
+  topologiquement**, les ex æquo gardant l'ordre des noms : `wazo_phone` passe
+  donc **avant** `web` (« waz » < « web »). Sans ordre explicite, nos fichiers
+  s'exécutent avant `module_loader.js`, qui définit `odoo.define` : le premier
+  lève « odoo.define is not a function » et le client reste blanc, sans la
+  moindre erreur côté serveur. D'où la commande
+  `('after', 'web/static/src/module_loader.js', …)` du manifeste et le test
+  `TestAssetDependencies`, qui exige aussi la dépendance `web`.
+- **L'adresse d'un paquet d'actifs porte son empreinte** : redemander l'ancienne
+  adresse ressert l'ancien contenu, et l'empreinte change aussi quand seul un
+  manifeste change — une empreinte neuve ne prouve donc pas une reconstruction.
+  Pour mesurer : purger les paquets en cache, ou demander l'adresse avec un
+  segment fantaisiste et suivre la redirection. Vérifier qu'un **seul** serveur
+  écoute (`lsof -ti:2069`) avant toute mesure : deux processus, et toutes les
+  mesures mentent.
+- **`ir.ui.menu.search_count` ne dit pas ce que l'utilisateur voit.** Un menu
+  restreint à un groupe y compte comme visible alors que
+  `/web/webclient/load_menus` — la charge utile dont le navigateur rend les
+  menus — ne le contient pas. Vérifier la visibilité des menus uniquement sur
+  cette charge utile.
 
 - Développés en TDD contre Odoo 20 (dev/master). Les API changent vite sur
   cette branche : se référer à la skill `odoo20-breaking-changes` si une
