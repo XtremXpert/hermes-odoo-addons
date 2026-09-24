@@ -26,7 +26,7 @@ import re
 from odoo import api, fields, models
 from odoo.exceptions import UserError, ValidationError
 
-from ..services.wazo_client import WazoAPIError, in_ranges
+from ..services.wazo_client import WazoAPIError, WazoClient, in_ranges
 
 _logger = logging.getLogger(__name__)
 
@@ -115,6 +115,22 @@ class WazoExtensionMixin(models.AbstractModel):
     # ------------------------------------------------------------------
     # Côté Wazo
     # ------------------------------------------------------------------
+
+    def _wazo_tenant_uuid(self):
+        """Tenant Wazo visé par cette fiche.
+
+        Un tenant n'en connaît qu'un : celui de ses réglages. Le module
+        serveur (``wazo_server``) étend ce point pour viser le tenant **choisi
+        sur la fiche**, ce qui permet d'administrer plusieurs tenants depuis
+        une même instance : chaque appel part alors avec l'en-tête
+        ``Wazo-Tenant`` du bon tenant.
+        """
+        return (self.env['ir.config_parameter'].sudo()
+                .get_str('wazo.tenant_id') or None)
+
+    def _wazo_client(self):
+        """Client Wazo dans le contexte du tenant visé par cette fiche."""
+        return WazoClient(self.env, tenant_id=self._wazo_tenant_uuid())
 
     def _wazo_line_context(self):
         """Contexte Asterisk où vivent les postes (paramètre système)."""

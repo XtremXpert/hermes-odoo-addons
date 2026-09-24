@@ -27,6 +27,7 @@ voir ``doc/P5_WAZO_SERVER_SPEC.md``.
     'data': [
         'security/ir.access.csv',
         'views/wazo_server_tenant_views.xml',
+        'views/wazo_tenant_selection_views.xml',
         'views/wazo_server_menus.xml',
     ],
     'author': 'Benoît Vézina',

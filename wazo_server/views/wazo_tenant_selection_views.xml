@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Le tenant à administrer, visible **en permanence** : dans la liste comme
+        dans le formulaire, et groupable. Sans cela, un opérateur qui gère
+        plusieurs tenants ne peut pas dire à qui appartient un poste — et un
+        groupe d'appel peut mélanger des membres de deux clients.
+
+        Ces vues sont réservées au groupe gestionnaire, comme le champ lui-même
+        et le modèle des tenants.
+    -->
+
+    <!-- ==================== Postes ==================== -->
+
+    <record id="wazo_user_view_list_tenant" model="ir.ui.view">
+        <field name="name">wazo.user.list.tenant</field>
+        <field name="model">wazo.user</field>
+        <field name="inherit_id" ref="wazo_phone.wazo_user_view_list"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='name']" position="after">
+                <field name="tenant_id"
+                       groups="wazo_phone.group_wazo_manager"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="wazo_user_view_form_tenant" model="ir.ui.view">
+        <field name="name">wazo.user.form.tenant</field>
+        <field name="model">wazo.user</field>
+        <field name="inherit_id" ref="wazo_phone.wazo_user_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='extension']" position="after">
+                <field name="tenant_id"
+                       groups="wazo_phone.group_wazo_manager"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="wazo_server_search_wazo_user" model="ir.ui.view">
+        <field name="name">wazo.user.search.tenant</field>
+        <field name="model">wazo.user</field>
+        <field name="arch" type="xml">
+            <search string="Postes Wazo">
+                <field name="name"/>
+                <field name="extension"/>
+                <field name="tenant_id"
+                       groups="wazo_phone.group_wazo_manager"/>
+                <filter name="sans_tenant" string="Sans tenant choisi"
+                        domain="[('tenant_id', '=', False)]"/>
+                <group>
+                    <filter name="par_tenant" string="Tenant"
+                            context="{'group_by': 'tenant_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="wazo_phone.action_wazo_user" model="ir.actions.act_window">
+        <field name="search_view_id" ref="wazo_server_search_wazo_user"/>
+    </record>
+
+    <!-- ==================== Groupes d'appel ==================== -->
+
+    <record id="wazo_ring_group_view_list_tenant" model="ir.ui.view">
+        <field name="name">wazo.ring.group.list.tenant</field>
+        <field name="model">wazo.ring.group</field>
+        <field name="inherit_id" ref="wazo_phone.wazo_ring_group_view_list"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='name']" position="after">
+                <field name="tenant_id"
+                       groups="wazo_phone.group_wazo_manager"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="wazo_ring_group_view_form_tenant" model="ir.ui.view">
+        <field name="name">wazo.ring.group.form.tenant</field>
+        <field name="model">wazo.ring.group</field>
+        <field name="inherit_id" ref="wazo_phone.wazo_ring_group_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='extension']" position="after">
+                <field name="tenant_id"
+                       groups="wazo_phone.group_wazo_manager"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="wazo_server_search_wazo_ring_group" model="ir.ui.view">
+        <field name="name">wazo.ring.group.search.tenant</field>
+        <field name="model">wazo.ring.group</field>
+        <field name="arch" type="xml">
+            <search string="Groupes d'appel">
+                <field name="name"/>
+                <field name="extension"/>
+                <field name="tenant_id"
+                       groups="wazo_phone.group_wazo_manager"/>
+                <filter name="sans_tenant" string="Sans tenant choisi"
+                        domain="[('tenant_id', '=', False)]"/>
+                <group>
+                    <filter name="par_tenant" string="Tenant"
+                            context="{'group_by': 'tenant_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="wazo_phone.action_wazo_ring_group" model="ir.actions.act_window">
+        <field name="search_view_id" ref="wazo_server_search_wazo_ring_group"/>
+    </record>
+</odoo>

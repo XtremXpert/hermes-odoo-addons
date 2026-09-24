@@ -111,7 +111,8 @@ lit déjà son URL dans les réglages (P5.5, hors périmètre logiciel).
 | **P5.5** | Vues, menus, droits | ✅ |
 | **P5.6** | Vérification en direct | ✅ voir §7 |
 | **P5.7** | Reprise d'une création interrompue : relecture et adoption, jamais de doublon | ✅ voir §8 |
-| **P5.8** | Fiche de remise au tenant : un bloc à copier, étiqueté comme les réglages | ✅ voir §9 |
+| **P5.8** | Fiche de remise au tenant : un bloc à copier, étiqueté comme les réglages | ✅ voir §10 |
+| **P6** | Choisir le tenant à administrer, fiche par fiche (en-tête + contexte) | ✅ voir §9 |
 
 ## 7. Vérification en direct (P5.6)
 
@@ -156,7 +157,57 @@ mot de passe perdu rend un refus lisible plutôt qu'un tenant sans accès.
 Les relèvements n'ont lieu **que** sur une reprise : un tenant créé à l'instant
 n'a rien à relire, et ne paie pas deux appels inutiles.
 
-## 9. Fiche de remise au tenant (P5.8)
+## 9. Choisir le tenant à administrer (P6)
+
+Sur l'instance de l'**exploitant**, le tenant des réglages ne peut plus être
+celui de tout le monde. Les fiches qui parlent au PBX (`wazo.user`,
+`wazo.ring.group`) reçoivent donc un champ **Tenant Wazo** : c'est lui qui
+décide de l'en-tête `Wazo-Tenant` et du contexte employés. Deux postes du même
+modèle peuvent appartenir à deux clients — et un groupe d'appel ne peut plus
+mélanger les membres de deux tenants.
+
+Vérifié en direct, deux fiches sur une seule instance :
+
+| Fiche | En-tête envoyé | Contexte employé | Ce que le PBX rend |
+|---|---|---|---|
+| Tenant choisi (neuf) | `67bfb7b8…` | `ctx-odoo_sel-internal-…` | **0 poste, 1 contexte** |
+| Aucun tenant choisi | `7f001a0b…` (réglages) | `ctx-test-internal-…` | **8 postes, 1 contexte** |
+
+Le champ est **vide par défaut** : on retombe alors sur les réglages, ce qui
+laisse un tenant installer `wazo_phone` seul — chez lui, le champ n'existe
+nulle part. Il est réservé au groupe gestionnaire, comme les tenants eux-mêmes,
+et il apparaît en permanence : colonne de liste, champ de formulaire, filtre et
+groupement par tenant.
+
+### Le piège de l'ordre d'héritage
+
+`wazo_server` ne modifie pas `wazo_phone` : il étend ses méthodes
+(`_wazo_tenant_uuid`, `_wazo_line_context`) par un mixin,
+`wazo.server.tenant.selection`. Encore faut-il que ce mixin **passe devant**
+`wazo.extension.mixin` :
+
+    _inherit = ['wazo.user', 'wazo.server.tenant.selection']   # perd
+    _inherit = ['wazo.server.tenant.selection', 'wazo.user']   # gagne
+
+Mesuré : la **première** entrée de `_inherit` l'emporte. Dans le premier cas la
+chaîne est `WazoExtensionMixin -> WazoServerTenantSelection` et ce sont les
+réglages qui décident — silencieusement, sans erreur ni avertissement. Cinq
+tests portent désormais sur l'en-tête et le contexte réellement employés.
+
+### Ce qui garde le tenant des réglages
+
+Trois chemins ne suivent pas la fiche, volontairement : le **journal des
+appels** (lecture), l'**écran de réglages** (il teste la connexion telle qu'elle
+est réglée), et l'**inventaire** des postes (modèle transitoire, sans fiche à
+interroger). Sur l'instance de l'exploitant, ces écrans montrent le tenant des
+réglages.
+
+À noter, pour qui écrit une sonde : `WazoClient(env, tenant_id=None)` **retombe
+sur les réglages**, ce n'est pas « sans en-tête ». Toute lecture part donc avec
+l'en-tête du tenant réglé — ce qui explique qu'une liste de tenants paraisse
+courte : elle est vue **depuis ce tenant**.
+
+## 10. Fiche de remise au tenant (P5.8)
 
 L'exploitant ne recopie pas les valeurs une à une depuis un formulaire : la
 fiche de tenant calcule un **bloc à copier**, dont les libellés sont ceux des

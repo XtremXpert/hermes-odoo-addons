@@ -30,7 +30,7 @@ message d'erreur précise l'étape échouée.
 from odoo import fields, models
 from odoo.exceptions import UserError
 
-from ..services.wazo_client import WazoAPIError, WazoClient
+from ..services.wazo_client import WazoAPIError
 
 
 class WazoUser(models.Model):
@@ -108,7 +108,7 @@ class WazoUser(models.Model):
         if self.wazo_state != 'synced':
             # Rien n'existe au PBX sous cette fiche : pas d'uuid à relire.
             return False
-        client = client or WazoClient(self.env)
+        client = client or self._wazo_client()
         ligne = self._find_remote_line(client)
         for proprietaire in (ligne or {}).get('users') or []:
             if proprietaire.get('uuid'):
@@ -130,7 +130,7 @@ class WazoUser(models.Model):
             raise UserError(
                 'Le poste téléphonique est requis avant de synchroniser '
                 'sur Wazo.')
-        client = WazoClient(self.env)
+        client = self._wazo_client()
         context = self._wazo_line_context()
         # Mot de passe SIP de registration, généré localement puis stocké
         # dans la base (le champ n'est jamais relu côté authd).
@@ -279,7 +279,7 @@ class WazoUser(models.Model):
         n'en dépend pas (l'état est reconstruit depuis Wazo).
         """
         self.ensure_one()
-        client = WazoClient(self.env)
+        client = self._wazo_client()
 
         def _ignore_404(method, path):
             try:

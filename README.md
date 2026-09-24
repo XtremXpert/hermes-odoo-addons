@@ -54,7 +54,10 @@ des lignes, et énonce ce qui reste. Une **fiche de remise** calcule le bloc à
 copier pour l'exploitant du tenant (URL, jeton, tenant, contexte, administrateur,
 expiration), étiqueté comme les réglages de `wazo_phone`. Dépend de `wazo_phone`
 (client et réglages partagés) ; un tenant installe `wazo_phone` seul et
-n'hérite jamais de cette machinerie. 27 tests.
+n'hérite jamais de cette machinerie. Sur l'instance de l'**exploitant**, chaque
+poste et chaque groupe d'appel **choisit son tenant** — l'en-tête et le contexte
+envoyés en découlent — et le voit en permanence : colonne de liste, filtre et
+groupement. 34 tests.
 
 **Limite connue, mesurée** : le jeton d'un tenant **ne le cloisonne pas**. Un
 jeton de tenant peut lire les données d'un autre tenant en changeant l'en-tête

@@ -25,7 +25,7 @@ import re
 from odoo import api, fields, models
 from odoo.exceptions import UserError, ValidationError
 
-from ..services.wazo_client import WazoAPIError, WazoClient
+from ..services.wazo_client import WazoAPIError
 
 
 class WazoRingGroup(models.Model):
@@ -166,7 +166,7 @@ class WazoRingGroup(models.Model):
         if not self.extension:
             raise UserError(
                 'Le poste du groupe est requis avant de synchroniser sur Wazo.')
-        client = WazoClient(self.env)
+        client = self._wazo_client()
         context = self._wazo_line_context()
         # Chaque membre doit avoir son uuid Wazo. Un utilisateur synchronisé
         # avant l'arrivée du champ (P4.3) n'en a pas : on le relit plutôt que de
@@ -248,7 +248,7 @@ class WazoRingGroup(models.Model):
     def action_delete_wazo(self):
         """Supprime le groupe et son poste côté Wazo (idempotent)."""
         self.ensure_one()
-        client = WazoClient(self.env)
+        client = self._wazo_client()
 
         def _ignore_404(method, path):
             try:
