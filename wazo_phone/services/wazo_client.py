@@ -18,6 +18,7 @@ préserver la casse exacte des en-têtes ``X-Auth-Token`` et
 ``Wazo-Tenant``.
 """
 
+import base64
 import json
 import urllib.error
 import urllib.parse
@@ -211,8 +212,17 @@ class WazoClient:
             url += '?' + urllib.parse.urlencode(params)
         return url
 
-    def _request(self, service, method, path, params=None, body=None):
-        if not self.url or not self.api_key:
+    def _request(self, service, method, path, params=None, body=None,
+                 basic=None):
+        """Appel HTTP à l'API Wazo.
+
+        ``basic`` est un couple ``(identifiant, mot de passe)`` : l'appel est
+        alors authentifié en **Basic** et non par jeton, et l'en-tête
+        ``Wazo-Tenant`` n'est pas envoyé — les identifiants désignent déjà le
+        tenant, et un en-tête pourrait le contredire. C'est le cas de
+        ``/token``, seul point d'entrée qui rend un jeton.
+        """
+        if not self.url or (not self.api_key and basic is None):
             raise WazoAPIError(
                 'Connexion Wazo incomplète : renseignez l\'URL du serveur et '
                 'le token API dans Réglages > Applications > Téléphonie Wazo.')
@@ -220,10 +230,16 @@ class WazoClient:
         headers = {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
-            'X-Auth-Token': self.api_key,
         }
-        if self.tenant_id:
-            headers['Wazo-Tenant'] = self.tenant_id
+        if basic is not None:
+            identifiant, mot_de_passe = basic
+            secret = base64.b64encode(
+                ('%s:%s' % (identifiant, mot_de_passe)).encode('utf-8'))
+            headers['Authorization'] = 'Basic ' + secret.decode('ascii')
+        else:
+            headers['X-Auth-Token'] = self.api_key
+            if self.tenant_id:
+                headers['Wazo-Tenant'] = self.tenant_id
         data = json.dumps(body).encode('utf-8') if body is not None else None
         request = urllib.request.Request(
             url, data=data, headers=headers, method=method)
@@ -251,3 +267,29 @@ class WazoClient:
             raise WazoAPIError(
                 'Réponse JSON illisible de l\'API Wazo pour %s %s.'
                 % (method, path)) from error
+
+    def token(self, username, password, expiration=None, client_id=None):
+        """Fabrique un jeton d'API pour un utilisateur (``POST /token``).
+
+        Le point d'entrée est ``/token`` au **singulier** : ``/tokens``
+        n'accepte que ``GET`` et répond 405 en écriture. L'authentification est
+        en **Basic** (``username:password``) et non par jeton — c'est la seule
+        façon d'obtenir un jeton, et le jeton administrateur n'a rien à faire
+        dans cet appel.
+
+        ``expiration`` est en secondes ; wazo-auth accepte jusqu'à dix ans
+        (``315360000``), durée à préférer pour un jeton d'intégration, qui ne
+        doit pas expirer comme une session de navigateur. ``client_id``
+        rattache le jeton à un client, ce qui permet de le retrouver et de le
+        révoquer sans le mot de passe.
+
+        Rend la charge utile du jeton (``token``, ``expires_at``, ``acl``).
+        """
+        body = {}
+        if expiration is not None:
+            body['expiration'] = expiration
+        if client_id:
+            body['client_id'] = client_id
+        response = self._request(
+            'auth', 'POST', '/token', body=body, basic=(username, password))
+        return (response or {}).get('data') or {}

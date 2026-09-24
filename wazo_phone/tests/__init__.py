@@ -1,6 +1,7 @@
 # Part of the wazo_phone Odoo module. See LICENSE for details.
 from . import test_access
 from . import test_client
+from . import test_client_auth
 from . import test_cdr
 from . import test_voip_bridge
 from . import test_wazo_user

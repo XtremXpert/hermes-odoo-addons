@@ -44,27 +44,45 @@ Odoo), journal d'appels (`wazo-call-logd`) et **softphone WebRTC** dans Odoo
 type, ou déjà en service, est refusé **avant** toute écriture distante.
 170 tests.
 
+### `wazo_server`
+Côté **exploitant du PBX** : création et encadrement des **tenants** Wazo.
+Un tenant est créé de bout en bout — tenant (wazo-auth), **contexte interne et
+plages d'extensions** (wazo-confd), **utilisateur administrateur** avec la
+politique d'administration, **jeton d'API** à expiration longue — puis
+**supprimé sous garde** : la suppression refuse tant qu'il porte des postes ou
+des lignes, et énonce ce qui reste. Dépend de `wazo_phone` (client et réglages
+partagés) ; un tenant installe `wazo_phone` seul et n'hérite jamais de cette
+machinerie. 9 tests.
+
+**Limite connue, mesurée** : le jeton d'un tenant **ne le cloisonne pas**. Un
+jeton de tenant peut lire les données d'un autre tenant en changeant l'en-tête
+`Wazo-Tenant` (les ACL de Wazo sont des chaînes indépendantes du tenant). La
+frontière réelle se place à l'**URL** — un point d'entrée par tenant qui impose
+l'en-tête —, pas dans le jeton. Détail et mesures : `doc/P5_WAZO_SERVER_SPEC.md`.
+
 ## Utilisation
 
 1. Cloner le dépôt.
 2. Ajouter le chemin à l'`addons_path` d'Odoo (ou copier chaque module).
 3. Installer les modules :
    ```sh
-   odoo-bin -d <db> -i mailcow_admin,voipms_sms,asterisk_ari,wazo_phone --stop-after-init
+   odoo-bin -d <db> -i mailcow_admin,voipms_sms,asterisk_ari,wazo_phone,wazo_server --stop-after-init
    ```
 4. Configurer :
    - Réglages → **Mailcow** (URL + clé API)
    - Réglages → **SMS VoIP.ms** (utilisateur + token)
    - Réglages → **Téléphonie (Asterisk ARI)** (URL ARI + application + jeton)
    - Réglages → **Téléphonie Wazo** (URL du serveur, jeton API, tenant)
+     — côté serveur, c'est le **jeton administrateur** du PBX ; côté tenant,
+     c'est son **jeton de tenant**, fabriqué par `wazo_server`.
    
    Puis tester chaque connexion.
 
 ## Tests
 
 ```sh
-odoo-bin -d t_test -i mailcow_admin,voipms_sms,asterisk_ari,wazo_phone \
-  --test-tags=/mailcow_admin,/voipms_sms,/asterisk_ari,/wazo_phone \
+odoo-bin -d t_test -i mailcow_admin,voipms_sms,asterisk_ari,wazo_phone,wazo_server \
+  --test-tags=/mailcow_admin,/voipms_sms,/asterisk_ari,/wazo_phone,/wazo_server \
   --stop-after-init --log-level=test
 ```
 
