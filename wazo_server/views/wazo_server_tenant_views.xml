@@ -72,6 +72,12 @@
                            invisible="state != 'error'">
                         <field name="error_message" nolabel="1"/>
                     </group>
+                    <group string="Coordonnées à remettre au tenant"
+                           groups="wazo_phone.group_wazo_manager"
+                           invisible="state != 'created'">
+                        <field name="handover_text" nolabel="1"
+                               help="Bloc à copier pour l'exploitant du tenant."/>
+                    </group>
                 </sheet>
             </form>
         </field>

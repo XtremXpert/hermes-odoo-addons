@@ -111,6 +111,7 @@ lit déjà son URL dans les réglages (P5.5, hors périmètre logiciel).
 | **P5.5** | Vues, menus, droits | ✅ |
 | **P5.6** | Vérification en direct | ✅ voir §7 |
 | **P5.7** | Reprise d'une création interrompue : relecture et adoption, jamais de doublon | ✅ voir §8 |
+| **P5.8** | Fiche de remise au tenant : un bloc à copier, étiqueté comme les réglages | ✅ voir §9 |
 
 ## 7. Vérification en direct (P5.6)
 
@@ -154,3 +155,29 @@ mot de passe perdu rend un refus lisible plutôt qu'un tenant sans accès.
 
 Les relèvements n'ont lieu **que** sur une reprise : un tenant créé à l'instant
 n'a rien à relire, et ne paie pas deux appels inutiles.
+
+## 9. Fiche de remise au tenant (P5.8)
+
+L'exploitant ne recopie pas les valeurs une à une depuis un formulaire : la
+fiche de tenant calcule un **bloc à copier**, dont les libellés sont ceux des
+réglages de `wazo_phone` — un champ mal rempli se voit alors tout de suite.
+
+    Coordonnées du tenant « Client Alpha »
+
+    Réglages → Téléphonie Wazo
+        URL du serveur Wazo : https://wazo.example.com
+        Token API Wazo      : ****
+        Tenant Wazo (UUID)  : 1855d676-988d-4011-a3a9-22906df7c13c
+        Contexte des lignes : ctx-odoo_sonde-internal-99cbe378-…
+
+    Administrateur du tenant dans Wazo :
+        odoo_admin / ****
+
+    Jeton valable jusqu'au 2036-09-21 15:58:56. Il ne s'agit pas d'une
+    session : le jeton sert à l'intégration, et il disparaît avec le tenant.
+
+Le bloc est **calculé à la lecture**, non stocké : l'URL du serveur est relue à
+la demande, donc la fiche reste juste même si les réglages changent après coup.
+Il est **réservé au groupe gestionnaire** — il porte le jeton et le mot de passe.
+Un tenant qui n'existe pas encore sur Wazo rend une phrase qui le dit, plutôt
+qu'un bloc à moitié vide ou, pire, un jeton vide présenté comme un jeton.

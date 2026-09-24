@@ -414,3 +414,56 @@ class TestTenantResume(WazoServerTestBase):
         with self._patch(repondre):
             tenant.action_create_on_wazo()
         return tenant
+
+
+@tagged('wazo_server', 'post_install', '-at_install')
+class TestTenantHandover(WazoServerTestBase):
+    """Les coordonnées remises au tenant : un bloc à copier, et sous clé.
+
+    La fiche porte le jeton et le mot de passe d'administration : elle est
+    réservée au groupe gestionnaire, comme les champs qu'elle rassemble.
+    """
+
+    def _tenant_cree(self):
+        tenant = self._create_tenant()
+        appels, _, repondre = self._faux_serveur()
+        with self._patch(repondre):
+            tenant.action_create_on_wazo()
+        self.assertEqual(tenant.state, 'created')
+        return tenant
+
+    def _utilisateur_ordinaire(self):
+        return self.env['res.users'].create({
+            'name': 'Utilisateur ordinaire',
+            'login': 'wazo_server_test_ordinaire_remise',
+            'group_ids': [(6, 0, [self.env.ref('base.group_user').id])],
+        })
+
+    def test_handover_gathers_every_coordinate(self):
+        tenant = self._tenant_cree()
+        bloc = tenant.handover_text
+        self.assertIn('https://wazo.example.com', bloc)
+        self.assertIn(tenant.remote_uuid, bloc)
+        self.assertIn(tenant.remote_context_name, bloc)
+        self.assertIn('odoo_admin', bloc)
+        self.assertIn(tenant.admin_password, bloc)
+        self.assertIn(tenant.api_token, bloc)
+        self.assertIn('2036', bloc)
+
+    def test_handover_names_the_settings_to_fill(self):
+        """Le bloc dit où chaque valeur se pose, pas seulement ce qu'elle est."""
+        bloc = self._tenant_cree().handover_text
+        self.assertIn('Réglages → Téléphonie Wazo', bloc)
+        for libelle in ('URL du serveur Wazo', 'Token API Wazo',
+                        'Tenant Wazo (UUID)', 'Contexte des lignes'):
+            self.assertIn(libelle, bloc)
+
+    def test_handover_says_so_before_creation(self):
+        tenant = self._create_tenant()
+        self.assertIn("n'existe pas encore", tenant.handover_text)
+
+    def test_handover_is_reserved_to_managers(self):
+        from odoo.exceptions import AccessError
+        tenant = self._tenant_cree()
+        with self.assertRaises(AccessError):
+            tenant.with_user(self._utilisateur_ordinaire()).handover_text

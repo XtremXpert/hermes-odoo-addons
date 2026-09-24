@@ -31,6 +31,23 @@ from odoo.addons.wazo_phone.services.wazo_client import (
     WazoClient,
 )
 
+#: Bloc remis à l'exploitant du tenant. Les libellés sont ceux des réglages de
+#: `wazo_phone` (« Réglages → Téléphonie Wazo ») : la fiche se recopie sans
+#: traduction à faire, et un champ mal rempli se voit tout de suite.
+ENTETE_REMISE = """Coordonnées du tenant « %(nom)s »
+
+Réglages → Téléphonie Wazo
+    URL du serveur Wazo : %(url)s
+    Token API Wazo      : %(jeton)s
+    Tenant Wazo (UUID)  : %(tenant)s
+    Contexte des lignes : %(contexte)s
+
+Administrateur du tenant dans Wazo :
+    %(admin)s / %(mot_de_passe)s
+
+Jeton valable jusqu'au %(expiration)s. Il ne s'agit pas d'une session : le
+jeton sert à l'intégration, et il disparaît avec le tenant."""
+
 
 class WazoServerTenant(models.Model):
     _name = 'wazo.server.tenant'
@@ -109,7 +126,43 @@ class WazoServerTenant(models.Model):
     token_expires_at = fields.Datetime(
         string='Expiration du jeton', readonly=True, copy=False)
     error_message = fields.Text(string="Dernier message d'erreur", copy=False)
+    handover_text = fields.Text(
+        string='Coordonnées à remettre au tenant',
+        compute='_compute_handover_text',
+        groups='wazo_phone.group_wazo_manager',
+        help="Bloc à copier tel quel par l'exploitant du tenant : où se posent "
+             "les valeurs dans ses réglages, et ce qu'elles valent. Réservé aux "
+             "gestionnaires, puisqu'il porte le jeton et le mot de passe.")
     active = fields.Boolean(default=True)
+
+    @api.depends('state', 'name', 'remote_uuid', 'context_name',
+                 'remote_context_name', 'admin_username', 'admin_password',
+                 'api_token', 'token_expires_at')
+    def _compute_handover_text(self):
+        """Le bloc à copier, recalculé à chaque lecture.
+
+        Non stocké : l'URL du serveur est relue à la demande, donc la fiche
+        reste juste même si les réglages changent après coup.
+        """
+        url = self.env['ir.config_parameter'].sudo().get_str('wazo.url')
+        for tenant in self:
+            if tenant.state != 'created' or not tenant.remote_uuid:
+                tenant.handover_text = (
+                    "Le tenant « %s » n'existe pas encore sur Wazo : créez-le, "
+                    'puis ses coordonnées seront écrites ici.' % tenant.name)
+                continue
+            tenant.handover_text = ENTETE_REMISE % {
+                'nom': tenant.name,
+                'url': url or '(à renseigner)',
+                'jeton': tenant.api_token or '(aucun)',
+                'tenant': tenant.remote_uuid,
+                'contexte': tenant.remote_context_name or tenant.context_name,
+                'admin': tenant.admin_username,
+                'mot_de_passe': tenant.admin_password or '(inconnu)',
+                'expiration': (fields.Datetime.to_string(
+                    tenant.token_expires_at) if tenant.token_expires_at
+                    else 'sans date connue'),
+            }
 
     # ------------------------------------------------------------------
     # Contrôles locaux
