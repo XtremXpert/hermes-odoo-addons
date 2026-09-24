@@ -42,7 +42,7 @@ Odoo), journal d'appels (`wazo-call-logd`) et **softphone WebRTC** dans Odoo
 (moteurs sip.js et SDK Wazo). Les **plages d'extensions** sont lues dans Wazo
 (`contextnumbers`) au lieu d'être recopiées : un poste hors plage, d'un autre
 type, ou déjà en service, est refusé **avant** toute écriture distante.
-170 tests.
+175 tests.
 
 ### `wazo_server`
 Côté **exploitant du PBX** : création et encadrement des **tenants** Wazo.
@@ -52,7 +52,7 @@ politique d'administration, **jeton d'API** à expiration longue — puis
 **supprimé sous garde** : la suppression refuse tant qu'il porte des postes ou
 des lignes, et énonce ce qui reste. Dépend de `wazo_phone` (client et réglages
 partagés) ; un tenant installe `wazo_phone` seul et n'hérite jamais de cette
-machinerie. 9 tests.
+machinerie. 23 tests.
 
 **Limite connue, mesurée** : le jeton d'un tenant **ne le cloisonne pas**. Un
 jeton de tenant peut lire les données d'un autre tenant en changeant l'en-tête

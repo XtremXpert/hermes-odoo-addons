@@ -203,57 +203,86 @@ class WazoServerTenant(models.Model):
                 "Le tenant « %s » existe déjà sur Wazo. Pour le reprendre, "
                 'supprimez-le d\'abord ou créez-en un autre.' % self.name)
         client = self._client()
+        # Un tenant déjà connu (reprise) se relit ; un tenant créé à l'instant
+        # n'a rien à relire — et ne doit surtout pas être recréé.
+        nouveau = not self.remote_uuid
         try:
-            # 1. Le tenant, rattaché à la racine ou au parent déclaré.
-            corps = {'name': self.name, 'slug': self.slug}
-            parent = self.parent_id.remote_uuid or self._racine(client)
-            if parent:
-                corps['parent_uuid'] = parent
-            reponse = client.auth('POST', '/tenants', body=corps) or {}
-            self.remote_uuid = reponse.get('uuid')
+            # 1. Le tenant, rattaché à la racine ou au parent déclaré. Il n'est
+            #    créé qu'une fois : le recréer après un échec ferait un doublon
+            #    sur le PBX, avec deux tenants du même nom.
             if not self.remote_uuid:
-                raise WazoAPIError(
-                    "Wazo n'a pas rendu l'identifiant du tenant créé.")
-
-            # 2. Le contexte et ses plages, dans le tenant neuf. Les bornes
-            #    sont transmises en texte, comme Wazo les rend.
+                corps = {'name': self.name, 'slug': self.slug}
+                parent = self.parent_id.remote_uuid or self._racine(client)
+                if parent:
+                    corps['parent_uuid'] = parent
+                reponse = client.auth('POST', '/tenants', body=corps) or {}
+                self.remote_uuid = reponse.get('uuid')
+                if not self.remote_uuid:
+                    raise WazoAPIError(
+                        "Wazo n'a pas rendu l'identifiant du tenant créé.")
             client_tenant = self._client(self.remote_uuid)
-            contexte = client_tenant.conf('POST', '/contexts', body={
-                'label': self.context_name,
-                'user_ranges': [{'start': self.user_range_start,
-                                 'end': self.user_range_end}],
-                'group_ranges': [{'start': self.group_range_start,
-                                  'end': self.group_range_end}],
-            }) or {}
+
+            # 2. Le contexte et ses plages, dans le tenant. Repris s'il existe
+            #    déjà — la réponse d'un premier appel a pu se perdre —, créé
+            #    sinon. Les bornes sont transmises en texte, comme Wazo les rend.
+            contexte = None
+            if self.context_id:
+                contexte = {'id': self.context_id,
+                            'name': self.remote_context_name}
+            elif not nouveau:
+                contexte = self._contexte_existant(client_tenant)
+            if not contexte:
+                contexte = client_tenant.conf('POST', '/contexts', body={
+                    'label': self.context_name,
+                    'user_ranges': [{'start': self.user_range_start,
+                                     'end': self.user_range_end}],
+                    'group_ranges': [{'start': self.group_range_start,
+                                      'end': self.group_range_end}],
+                }) or {}
             self.context_id = contexte.get('id') or 0
             self.remote_context_name = contexte.get('name') or self.context_name
 
             # 3. L'administrateur du tenant : créé **dans** le tenant (paramètre
             #    et en-tête), puis doté de la politique d'administration.
-            mot_de_passe = self.admin_password or self._mot_de_passe()
-            # C'est l'en-tête du tenant neuf qui fait foi : wazo-auth **ignore**
-            # le paramètre `tenant_uuid` passé en chaîne de requête (mesuré en
+            # C'est l'en-tête du tenant qui fait foi : wazo-auth **ignore** le
+            # paramètre `tenant_uuid` passé en chaîne de requête (mesuré en
             # direct), et un utilisateur créé sans en-tête naîtrait dans le
             # maître — le tenant se retrouverait sans administrateur.
-            utilisateur = client_tenant.auth(
-                'POST', '/users',
-                params={'tenant_uuid': self.remote_uuid},
-                body={'username': self.admin_username,
-                      'password': mot_de_passe,
-                      'firstname': 'Administrateur',
-                      'lastname': self.name[:40]}) or {}
-            self.admin_user_uuid = utilisateur.get('uuid')
             if not self.admin_user_uuid:
+                utilisateur = (None if nouveau else
+                               self._administrateur_existant(client_tenant))
+                if utilisateur:
+                    self.admin_user_uuid = utilisateur.get('uuid')
+                else:
+                    mot_de_passe = self.admin_password or self._mot_de_passe()
+                    utilisateur = client_tenant.auth(
+                        'POST', '/users',
+                        params={'tenant_uuid': self.remote_uuid},
+                        body={'username': self.admin_username,
+                              'password': mot_de_passe,
+                              'firstname': 'Administrateur',
+                              'lastname': self.name[:40]}) or {}
+                    self.admin_user_uuid = utilisateur.get('uuid')
+                    self.admin_password = mot_de_passe
+                if not self.admin_user_uuid:
+                    raise WazoAPIError(
+                        "Wazo n'a pas rendu l'identifiant de l'administrateur "
+                        'créé.')
+            if not self.admin_password:
+                # Un administrateur repris sans son mot de passe ne peut pas
+                # recevoir de jeton : wazo-auth ne le rend à personne. Mieux
+                # vaut le dire que de laisser un tenant sans accès.
                 raise WazoAPIError(
-                    "Wazo n'a pas rendu l'identifiant de l'administrateur créé.")
-            self.admin_password = mot_de_passe
+                    "L'administrateur « %s » existe déjà sur Wazo mais son mot "
+                    'de passe est inconnu de cette base : supprimez le tenant '
+                    "sur Wazo, puis relancez la création." % self.admin_username)
             politique = self._politique_admin(client)
             if politique:
                 client_tenant.auth('PUT', '/users/%s/policies/%s'
                                    % (self.admin_user_uuid, politique))
 
             # 4. Son jeton, en Basic : les identifiants, pas le jeton du maître.
-            donnees = client.token(self.admin_username, mot_de_passe,
+            donnees = client.token(self.admin_username, self.admin_password,
                                    expiration=self._TOKEN_EXPIRATION)
             self.api_token = donnees.get('token')
             self.token_expires_at = self._vers_datetime(
@@ -265,6 +294,28 @@ class WazoServerTenant(models.Model):
             self.state = 'error'
             self.error_message = str(erreur)
             return False
+
+    def _contexte_existant(self, client_tenant):
+        """Le contexte du tenant, s'il a déjà été créé (reprise).
+
+        Un ``POST`` dont la réponse s'est perdue laisse un contexte sans trace
+        locale : le recréer produirait un doublon invisible depuis Odoo. On
+        relit donc la liste du tenant et on reconnaît le contexte à son
+        étiquette — la seule que nous ayons posée.
+        """
+        reponse = client_tenant.conf('GET', '/contexts') or {}
+        for item in reponse.get('items') or []:
+            if item.get('label') == self.context_name:
+                return item
+        return None
+
+    def _administrateur_existant(self, client_tenant):
+        """L'administrateur du tenant, s'il a déjà été créé (reprise)."""
+        reponse = client_tenant.auth('GET', '/users') or {}
+        for item in reponse.get('items') or []:
+            if item.get('username') == self.admin_username:
+                return item
+        return None
 
     def _politique_admin(self, client):
         """UUID de la politique d'administration, résolu depuis son slug.

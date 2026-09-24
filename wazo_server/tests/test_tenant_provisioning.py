@@ -44,7 +44,8 @@ class WazoServerTestBase(TransactionCase):
         return self.env['wazo.server.tenant'].create(valeurs)
 
     def _faux_serveur(self, erreur_sur=None, utilisateurs_distants=0,
-                      lignes_distantes=0):
+                      lignes_distantes=0, contextes_distants=None,
+                      comptes_distants=None):
         """Faux Wazo : les appels sont routés selon service et chemin.
 
         ``erreur_sur`` est un couple ``('auth'|'confd', chemin)`` qui fait
@@ -83,6 +84,9 @@ class WazoServerTestBase(TransactionCase):
                 if path == '/users' and method == 'POST':
                     return {'uuid': UTILISATEUR,
                             'username': body.get('username')}
+                if path == '/users' and method == 'GET':
+                    items = comptes_distants or []
+                    return {'total': len(items), 'items': items}
                 if path.startswith('/users/') and method == 'PUT':
                     return None
                 if path == '/users/%s' % UTILISATEUR and method == 'DELETE':
@@ -93,6 +97,9 @@ class WazoServerTestBase(TransactionCase):
                         'token': 'jeton-du-tenant',
                         'expires_at': '2036-09-24T15:00:00.000000'}}
             if service == 'confd':
+                if path == '/contexts' and method == 'GET':
+                    items = contextes_distants or []
+                    return {'total': len(items), 'items': items}
                 if path == '/contexts' and method == 'POST':
                     return {'id': 7, 'name': 'ctx-alpha-internal-abcdef',
                             'label': body.get('label')}
@@ -294,3 +301,116 @@ class TestTenantDeletion(WazoServerTestBase):
         self.assertFalse(tenant.remote_uuid)
         self.assertFalse(tenant.api_token)
         self.assertFalse(tenant.context_id)
+
+
+@tagged('wazo_server', 'post_install', '-at_install')
+class TestTenantResume(WazoServerTestBase):
+    """Une création interrompue se **reprend**, elle ne recommence pas.
+
+    Recréer le tenant produirait un doublon sur le PBX ; recréer son contexte
+    en produirait un second, invisible depuis Odoo si la réponse du premier
+    appel s'est perdue. La reprise relit donc ce qui existe et l'adopte.
+    """
+
+    CONTEXTE_EXISTANT = {'id': 9, 'name': 'ctx-alpha-internal-zzz',
+                         'label': 'ctx-alpha-internal'}
+    COMPTE_EXISTANT = {'uuid': UTILISATEUR, 'username': 'odoo_admin'}
+
+    def _tenant_interrompu(self):
+        """Un tenant dont la création a échoué après sa création sur Wazo."""
+        tenant = self._create_tenant()
+        appels, _, repondre = self._faux_serveur(
+            erreur_sur=('confd', '/contexts'))
+        with self._patch(repondre):
+            self.assertFalse(tenant.action_create_on_wazo())
+        self.assertEqual(tenant.state, 'error')
+        self.assertEqual(tenant.remote_uuid, NOUVEAU)
+        return tenant
+
+    def test_resume_does_not_create_a_second_tenant(self):
+        tenant = self._tenant_interrompu()
+        appels, _, repondre = self._faux_serveur()
+        with self._patch(repondre):
+            self.assertTrue(tenant.action_create_on_wazo())
+        sequence = [(service, method, path)
+                    for service, method, path, _, _ in appels]
+        self.assertNotIn(('auth', 'POST', '/tenants'), sequence)
+        self.assertEqual(tenant.state, 'created')
+        self.assertEqual(tenant.remote_uuid, NOUVEAU)
+
+    def test_resume_reads_the_contexts_before_creating_one(self):
+        """Recréer un contexte dont la réponse s'est perdue ferait un doublon."""
+        tenant = self._tenant_interrompu()
+        appels, _, repondre = self._faux_serveur()
+        with self._patch(repondre):
+            tenant.action_create_on_wazo()
+        sequence = [(service, method, path)
+                    for service, method, path, _, _ in appels]
+        self.assertEqual(sequence[0], ('confd', 'GET', '/contexts'))
+        self.assertIn(('confd', 'POST', '/contexts'), sequence)
+
+    def test_resume_adopts_a_context_that_already_exists(self):
+        tenant = self._tenant_interrompu()
+        appels, _, repondre = self._faux_serveur(
+            contextes_distants=[self.CONTEXTE_EXISTANT])
+        with self._patch(repondre):
+            self.assertTrue(tenant.action_create_on_wazo())
+        sequence = [(service, method, path)
+                    for service, method, path, _, _ in appels]
+        self.assertNotIn(('confd', 'POST', '/contexts'), sequence)
+        self.assertEqual(tenant.context_id, 9)
+        self.assertEqual(tenant.remote_context_name, 'ctx-alpha-internal-zzz')
+
+    def _tenant_repris(self, **valeurs):
+        """Un tenant interrompu **après** la création de son administrateur.
+
+        C'est l'état réel d'une panne survenue au moment des droits ou du
+        jeton : le tenant, le contexte et le compte existent, le mot de passe
+        est déjà consigné.
+        """
+        tenant = self._create_tenant()
+        tenant.write(dict({'state': 'error', 'remote_uuid': NOUVEAU}, **valeurs))
+        return tenant
+
+    def test_resume_adopts_an_administrator_that_already_exists(self):
+        """Un administrateur repris reçoit son jeton sans être recréé."""
+        tenant = self._tenant_repris(admin_password='motdepasse-connu')
+        appels, jetons, repondre = self._faux_serveur(
+            contextes_distants=[self.CONTEXTE_EXISTANT],
+            comptes_distants=[self.COMPTE_EXISTANT])
+        with self._patch(repondre):
+            self.assertTrue(tenant.action_create_on_wazo())
+        sequence = [(service, method, path)
+                    for service, method, path, _, _ in appels]
+        self.assertNotIn(('auth', 'POST', '/users'), sequence)
+        self.assertEqual(tenant.admin_user_uuid, UTILISATEUR)
+        self.assertEqual(jetons[0][1], 'motdepasse-connu')
+
+    def test_resume_refuses_an_administrator_whose_password_is_lost(self):
+        """Sans mot de passe, pas de jeton : on le dit, on n'invente rien."""
+        tenant = self._tenant_repris()
+        appels, _, repondre = self._faux_serveur(
+            contextes_distants=[self.CONTEXTE_EXISTANT],
+            comptes_distants=[self.COMPTE_EXISTANT])
+        with self._patch(repondre):
+            self.assertFalse(tenant.action_create_on_wazo())
+        sequence = [(service, method, path)
+                    for service, method, path, _, _ in appels]
+        self.assertNotIn(('auth', 'POST', '/users'), sequence)
+        self.assertEqual(tenant.state, 'error')
+        self.assertIn('mot de passe est inconnu', tenant.error_message)
+
+    def test_a_created_tenant_is_not_resumed(self):
+        """Un tenant abouti ne se reprend pas : la garde reste en place."""
+        tenant = self._tenant_cree_pour_reprise()
+        appels, _, repondre = self._faux_serveur()
+        with self._patch(repondre):
+            with self.assertRaises(UserError):
+                tenant.action_create_on_wazo()
+
+    def _tenant_cree_pour_reprise(self):
+        tenant = self._create_tenant()
+        appels, _, repondre = self._faux_serveur()
+        with self._patch(repondre):
+            tenant.action_create_on_wazo()
+        return tenant

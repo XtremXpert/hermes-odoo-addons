@@ -106,10 +106,11 @@ lit déjà son URL dans les réglages (P5.5, hors périmètre logiciel).
 |---|---|---|
 | **P5.1** | Client : appel `token` en Basic, `/token` au singulier, expiration longue | ✅ 5 tests |
 | **P5.2** | Modèle `wazo.server.tenant` : champs, validation locale du slug | ✅ |
-| **P5.3** | Création complète (tenant → contexte → plages → admin → droits → jeton) | ✅ 9 tests, séquence vérifiée |
+| **P5.3** | Création complète (tenant → contexte → plages → admin → droits → jeton) | ✅ séquence vérifiée |
 | **P5.4** | Suppression gardée, remise à l'état initial | ✅ |
 | **P5.5** | Vues, menus, droits | ✅ |
 | **P5.6** | Vérification en direct | ✅ voir §7 |
+| **P5.7** | Reprise d'une création interrompue : relecture et adoption, jamais de doublon | ✅ voir §8 |
 
 ## 7. Vérification en direct (P5.6)
 
@@ -132,3 +133,24 @@ le voir — ils remplaçaient `auth`/`conf`, alors que le jeton passe par
 comparant le `tenant_uuid` de la fiche, qui l'a montré ; deux tests l'encodent
 désormais (ils portent sur l'en-tête employé, pas sur l'appel reçu).
 **Un transport simulé ne falsifie pas un modèle de l'API** : il faut lire le PBX.
+
+## 8. Reprise d'une création interrompue (P5.7)
+
+Une création qui échoue laisse le tenant en état `error` avec des repères
+partiels. La relancer **reprend**, elle ne recommence pas :
+
+| Étape | Si le repère local manque | Si le repère existe |
+|---|---|---|
+| Tenant | création | rien — `remote_uuid` présent ⇒ jamais de second `POST /tenants` |
+| Contexte | relecture de `GET /contexts`, adoption si l'étiquette correspond, création sinon | rien |
+| Administrateur | relecture de `GET /users` (en-tête du tenant), adoption par nom d'utilisateur | rien |
+| Mot de passe | ─ | sans lui, **refus explicite** : wazo-auth ne le rend à personne | 
+| Jeton | toujours refabriqué s'il manque | rien |
+
+Vérifié en direct, après perte simulée des repères locaux : la reprise a adopté
+le **même** tenant, le **même** contexte et le **même** administrateur, et le
+PBX ne portait qu'**un** contexte et **un** compte. Aucun doublon. Le cas du
+mot de passe perdu rend un refus lisible plutôt qu'un tenant sans accès.
+
+Les relèvements n'ont lieu **que** sur une reprise : un tenant créé à l'instant
+n'a rien à relire, et ne paie pas deux appels inutiles.
