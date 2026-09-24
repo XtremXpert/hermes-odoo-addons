@@ -24,7 +24,6 @@ class TestMailcowDomain(TransactionCase):
             'name': 'dc.com',
             'description': 'Mon domaine',
             'quota_mb': 100,
-            'dkim': True,
         })
         with patch.object(
             MailcowClient, '_request',
@@ -84,11 +83,9 @@ class TestMailcowDomain(TransactionCase):
         # « domain_name », et non « domain » (relevé sur le serveur).
         remote = {'data': [
             {
-                'id': 'abc',
                 'domain_name': 'dc.com',
                 'description': 'nouvelle',
                 'active': '1',
-                'dkim': {'private': 'p', 'public': 'pub'},
                 'def_quota_for_mbox': 209715200,
             },
             {
@@ -96,7 +93,6 @@ class TestMailcowDomain(TransactionCase):
                 'domain_name': 'new.com',
                 'description': 'neuf',
                 'active': '1',
-                'dkim': None,
                 'def_quota_for_mbox': 0,
             },
         ]}
@@ -107,13 +103,10 @@ class TestMailcowDomain(TransactionCase):
         existing = self.env['mailcow.domain'].search([('name', '=', 'dc.com')])
         self.assertEqual(existing.description, 'nouvelle')
         self.assertEqual(existing.quota_mb, 200)
-        self.assertTrue(existing.dkim)
         self.assertTrue(existing.synced)
-        self.assertEqual(existing.mailcow_id, 'abc')
 
         new_domain = self.env['mailcow.domain'].search([('name', '=', 'new.com')])
         self.assertTrue(new_domain)
-        self.assertFalse(new_domain.dkim)
         self.assertTrue(new_domain.synced)
 
         local_only = local_only.search([('name', '=', 'local-only.com')])

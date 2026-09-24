@@ -11,11 +11,9 @@ class MailcowDomain(models.Model):
 
     name = fields.Char(string='Domaine', required=True, index=True)
     description = fields.Char(string='Description')
-    dkim = fields.Boolean(string='Clé DKIM', default=True)
     quota_mb = fields.Integer(string='Quota (Mo)', default=0, help='0 = illimité')
     active = fields.Boolean(string='Actif', default=True)
     synced = fields.Boolean(string='Synchronisé avec Mailcow')
-    mailcow_id = fields.Char(string='ID Mailcow', readonly=True)
     mailboxes = fields.One2many('mailcow.mailbox', 'domain_id', string='Boîtes mail')
     aliases = fields.One2many('mailcow.alias', 'domain_id', string='Alias')
 
@@ -91,14 +89,11 @@ class MailcowDomain(models.Model):
             domain = self.env['mailcow.domain'].search([('name', '=', nom)], limit=1)
             values = {
                 'description': entry.get('description') or '',
-                'dkim': bool(entry.get('dkim')),
                 # Mailcow renvoie les quotas en octets.
                 'quota_mb': int(entry.get('def_quota_for_mbox') or 0) // (1024 * 1024),
                 'active': entry.get('active') in (1, '1', True),
                 'synced': True,
             }
-            if entry.get('id') is not None:
-                values['mailcow_id'] = str(entry['id'])
             if domain:
                 domain.write(values)
             else:

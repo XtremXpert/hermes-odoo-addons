@@ -20,7 +20,6 @@ class MailcowMailbox(models.Model):
     quota_mb = fields.Integer(string='Quota (Mo)', default=0, help='0 = illimité')
     active = fields.Boolean(string='Actif', default=True)
     synced = fields.Boolean(string='Synchronisé avec Mailcow')
-    mailcow_id = fields.Char(string='ID Mailcow', readonly=True)
     password = fields.Char(
         string='Mot de passe',
         help="Utilisé à la création et à la réinitialisation. Jamais stocké dans Odoo.",
@@ -153,8 +152,6 @@ class MailcowMailbox(models.Model):
                 'active': entry.get('active') in (1, '1', True),
                 'synced': True,
             }
-            if entry.get('id') is not None:
-                values['mailcow_id'] = str(entry['id'])
             if mailbox:
                 mailbox.write(values)
             else:

@@ -14,7 +14,6 @@
                 <field name="name"/>
                 <field name="description" optional="show"/>
                 <field name="quota_mb" string="Quota (Mo)" optional="show"/>
-                <field name="dkim" optional="hide"/>
                 <field name="synced" string="Synchronisé"/>
                 <field name="active" readonly="1"/>
             </list>
@@ -56,9 +55,7 @@
                         </group>
                         <group string="Mailcow">
                             <field name="synced"/>
-                            <field name="dkim"/>
                             <field name="quota_mb"/>
-                            <field name="mailcow_id" invisible="not mailcow_id"/>
                         </group>
                     </group>
                     <notebook>
