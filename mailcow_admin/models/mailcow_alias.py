@@ -169,6 +169,8 @@ class MailcowAlias(models.Model):
                     dict(values, alias_name=alias_name, domain_id=domain.id))
         # Les alias locaux absents du serveur ne sont plus « synchronisés ».
         self.env['mailcow.alias'].search([('active', '=', True)]).filtered(
-            lambda a: (a.alias_name, a.domain_id.id) not in remote_keys
+            # Odoo stocke False dans un Char vide : comparer False à ''
+            # ferait passer le fourre-tout pour absent du serveur.
+            lambda a: ((a.alias_name or ''), a.domain_id.id) not in remote_keys
         ).write({'synced': False})
         return True
