@@ -50,9 +50,9 @@ class MailcowMailbox(models.Model):
     def _base_payload(self, with_password=False):
         self.ensure_one()
         payload = {
-            'mail_user': self.local_part,
+            'local_part': self.local_part,
             'domain': self.domain_id.name,
-            'quota': self.quota_mb * 1024,  # Mailcow attend un quota en Ko
+            'quota': self.quota_mb,  # Mailcow compte les quotas en mébioctets
             'active': '1' if self.active else '0',
             'name': self.name or '',
             'description': self.description or '',
@@ -101,15 +101,25 @@ class MailcowMailbox(models.Model):
         """Supprime la boîte mail sur Mailcow, puis l'archive localement."""
         for mailbox in self:
             client = MailcowClient(self.env)
+            # Mailcow exige l'adresse complète : « local_part » + « domain »
+            # lui vaut un access_denied, même avec une clé pleinement habilitée.
             client._request('POST', '/delete/mailbox', {
-                'mail_user': mailbox.local_part,
-                'domain': mailbox.domain_id.name,
+                'mail_user': mailbox.email,
             })
             mailbox.write({'synced': False, 'active': False})
 
     def action_sync_from_mailcow(self):
-        """Aligne l'état local sur le serveur (GET /get/mailbox/all)."""
+        """Synchronise depuis cette fiche (voir action_sync_all_from_mailcow)."""
         self.ensure_one()
+        return self.env['mailcow.mailbox'].action_sync_all_from_mailcow()
+
+    @api.model
+    def action_sync_all_from_mailcow(self):
+        """Aligne tout l'état local sur le serveur (GET /get/mailbox/all).
+
+        S'appelle sans aucune fiche locale : c'est ainsi qu'on amorce une base
+        vide, depuis l'en-tête d'une vue de liste ou le menu « Tout synchroniser ».
+        """
         client = MailcowClient(self.env)
         response = client._request('GET', '/get/mailbox/all', None)
         entries = response.get('data') if isinstance(response, dict) else response
@@ -138,7 +148,8 @@ class MailcowMailbox(models.Model):
             values = {
                 'name': entry.get('name') or '',
                 'description': entry.get('description') or '',
-                'quota_mb': int(entry.get('quota') or 0) // 1024,
+                # Mailcow renvoie les quotas en octets (écriture en Mo).
+                'quota_mb': int(entry.get('quota') or 0) // (1024 * 1024),
                 'active': entry.get('active') in (1, '1', True),
                 'synced': True,
             }

@@ -24,6 +24,7 @@ Administer un serveur Mailcow v1 depuis Odoo
         'views/mailcow_alias_views.xml',
         'views/res_config_settings_views.xml',
         'views/mailcow_admin_menus.xml',
+        'views/mailcow_sync_views.xml',
     ],
     'author': 'Benoît Vézina',
     'license': 'LGPL-3',

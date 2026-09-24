@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="action_mailcow_sync_all" model="ir.actions.server">
+        <field name="name">Tout synchroniser depuis Mailcow</field>
+        <field name="model_id" ref="model_mailcow_domain"/>
+        <field name="state">code</field>
+        <field name="code">
+env['mailcow.domain'].action_sync_all_from_mailcow()
+env['mailcow.mailbox'].action_sync_all_from_mailcow()
+env['mailcow.alias'].action_sync_all_from_mailcow()
+action = {
+    'type': 'ir.actions.client',
+    'tag': 'display_notification',
+    'params': {
+        'title': 'Mailcow',
+        'message': 'Domaines, boîtes mail et alias ont été relus depuis le serveur.',
+        'type': 'success',
+        'sticky': False,
+    },
+}
+        </field>
+    </record>
+
+    <menuitem id="mailcow_sync_menu"
+              name="Tout synchroniser"
+              parent="mailcow_root_menu"
+              action="action_mailcow_sync_all"
+              groups="mailcow_admin.group_mailcow_manager"
+              sequence="5"/>
+
+</odoo>

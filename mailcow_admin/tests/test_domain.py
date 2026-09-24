@@ -34,8 +34,10 @@ class TestMailcowDomain(TransactionCase):
         request.assert_called_once_with('POST', '/add/domain', {
             'domain': 'dc.com',
             'description': 'Mon domaine',
-            'dkim': True,
-            'quota': 102400,
+            'active': '1',
+            # Mailcow compte les quotas en octets : 100 Mo = 104857600.
+            'def_quota_for_mbox': 104857600,
+            'max_quota_for_domain': 104857600,
         })
         self.assertTrue(domain.synced)
 
@@ -48,11 +50,12 @@ class TestMailcowDomain(TransactionCase):
             return_value=[{'msg': 'domain_updated', 'type': 'success'}],
         ) as request:
             domain.action_update_on_mailcow()
+        # quota_mb = 0 : aucun quota n'est envoyé, pour ne pas écraser la
+        # politique de quotas du serveur.
         request.assert_called_once_with('POST', '/edit/domain', {
             'domain': 'dc.com',
             'description': 'Description mise à jour',
-            'dkim': True,
-            'quota': 0,
+            'active': '1',
         })
 
     def test_delete_on_mailcow_unsyncs_and_archives(self):
@@ -86,7 +89,7 @@ class TestMailcowDomain(TransactionCase):
                 'description': 'nouvelle',
                 'active': '1',
                 'dkim': {'private': 'p', 'public': 'pub'},
-                'quota': 204800,
+                'def_quota_for_mbox': 209715200,
             },
             {
                 'id': 'def',
@@ -94,7 +97,7 @@ class TestMailcowDomain(TransactionCase):
                 'description': 'neuf',
                 'active': '1',
                 'dkim': None,
-                'quota': 0,
+                'def_quota_for_mbox': 0,
             },
         ]}
         with patch.object(MailcowClient, '_request', return_value=remote) as request:
@@ -115,3 +118,18 @@ class TestMailcowDomain(TransactionCase):
 
         local_only = local_only.search([('name', '=', 'local-only.com')])
         self.assertFalse(local_only.synced)
+
+    def test_sync_all_works_without_any_local_record(self):
+        """Amorcer une base vide : aucune fiche locale n'est nécessaire."""
+        remote = {'data': [
+            {'domain_name': 'dc.com', 'description': 'importé', 'active': '1'},
+            {'domain_name': 'autre.com', 'description': '', 'active': '1'},
+        ]}
+        with patch.object(MailcowClient, '_request', return_value=remote):
+            self.env['mailcow.domain'].action_sync_all_from_mailcow()
+        self.assertEqual(
+            sorted(self.env['mailcow.domain'].search(
+                [('name', 'in', ['dc.com', 'autre.com'])]).mapped('name')),
+            ['autre.com', 'dc.com'])
+        self.assertTrue(self.env['mailcow.domain'].search(
+            [('name', 'in', ['dc.com', 'autre.com'])]).mapped('synced'))

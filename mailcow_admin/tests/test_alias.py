@@ -38,9 +38,8 @@ class TestMailcowAlias(TransactionCase):
         ) as request:
             alias.action_create_on_mailcow()
         request.assert_called_once_with('POST', '/add/alias', {
-            'alias_name': 'info',
-            'domain': 'dc.com',
-            'address': ['info@dc.com', 'admin@dc.com'],
+            'address': 'info@dc.com',
+            'goto': 'info@dc.com,admin@dc.com',
             'active': '1',
             'description': "Alias d'information",
         })
@@ -66,7 +65,7 @@ class TestMailcowAlias(TransactionCase):
         ) as request:
             alias.action_delete_on_mailcow()
         request.assert_called_once_with(
-            'POST', '/delete/alias', {'alias_name': 'info', 'domain': 'dc.com'})
+            'POST', '/delete/alias', {'address': 'info@dc.com'})
         self.assertFalse(alias.synced)
         self.assertFalse(alias.active)
 
@@ -115,3 +114,57 @@ class TestMailcowAlias(TransactionCase):
             ('domain_id', '=', self.domain.id)])
         self.assertTrue(support)
         self.assertTrue(support.synced)
+
+    def test_create_catch_all_sends_a_bare_address(self):
+        """Un alias fourre-tout s'écrit « @domaine » : la partie locale est vide."""
+        alias = self.env['mailcow.alias'].create({
+            'alias_name': '',
+            'is_catch_all': True,
+            'domain_id': self.domain.id,
+            'address_ids': [(6, 0, self.addresses.ids)],
+        })
+        with patch.object(
+            MailcowClient, '_request',
+            return_value=[{'msg': 'alias_added', 'type': 'success'}],
+        ) as request:
+            alias.action_create_on_mailcow()
+        request.assert_called_once_with('POST', '/add/alias', {
+            'address': '@dc.com',
+            'goto': 'info@dc.com,admin@dc.com',
+            'active': '1',
+            'description': '',
+        })
+
+    def test_sync_imports_catch_all_aliases(self):
+        """Un alias fourre-tout venu du serveur ne doit plus être écarté."""
+        amorce = self.env['mailcow.alias'].create({
+            'alias_name': 'amorce',
+            'domain_id': self.domain.id,
+        })
+        remote = {'data': [
+            {'address': '@dc.com', 'domain': 'dc.com', 'goto': ['info@dc.com'],
+             'active': '1', 'description': '', 'is_catch_all': 1},
+        ]}
+        with patch.object(MailcowClient, '_request', return_value=remote):
+            amorce.action_sync_from_mailcow()
+        fourre_tout = self.env['mailcow.alias'].search([
+            ('domain_id', '=', self.domain.id), ('alias_name', '=', '')])
+        self.assertTrue(fourre_tout)
+        self.assertTrue(fourre_tout.is_catch_all)
+        self.assertEqual(fourre_tout.display_name, '@dc.com')
+        self.assertEqual(
+            fourre_tout.address_ids.mapped('address'), ['info@dc.com'])
+
+    def test_sync_all_works_without_any_local_record(self):
+        """Amorcer une base vide : tous les alias du serveur sont importés."""
+        remote = {'data': [
+            {'address': 'info@dc.com', 'domain': 'dc.com', 'goto': ['info@dc.com'],
+             'active': '1', 'description': ''},
+            {'address': '@dc.com', 'domain': 'dc.com', 'goto': ['info@dc.com'],
+             'active': '1', 'description': '', 'is_catch_all': 1},
+        ]}
+        with patch.object(MailcowClient, '_request', return_value=remote):
+            self.env['mailcow.alias'].action_sync_all_from_mailcow()
+        alias = self.env['mailcow.alias'].search([('domain_id', '=', self.domain.id)])
+        self.assertEqual(len(alias), 2)
+        self.assertEqual(len(alias.filtered('is_catch_all')), 1)

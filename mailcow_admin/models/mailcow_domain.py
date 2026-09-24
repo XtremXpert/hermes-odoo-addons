@@ -1,5 +1,5 @@
 # Part of the mailcow_admin Odoo module. See LICENSE for details.
-from odoo import fields, models
+from odoo import api, fields, models
 
 from ..services.mailcow_client import MailcowClient
 
@@ -26,12 +26,19 @@ class MailcowDomain(models.Model):
 
     def _payload(self):
         self.ensure_one()
-        return {
+        payload = {
             'domain': self.name,
             'description': self.description or '',
-            'dkim': self.dkim,
-            'quota': self.quota_mb * 1024,  # Mailcow attend un quota en Ko
+            'active': '1' if self.active else '0',
         }
+        # Mailcow compte les quotas en OCTETS et ignore une clé « quota » sur un
+        # domaine. Un quota local à 0 vaut « illimité » : on n'envoie alors rien,
+        # plutôt que d'effacer la politique de quotas déjà en place au serveur.
+        if self.quota_mb > 0:
+            octets = self.quota_mb * 1024 * 1024
+            payload['def_quota_for_mbox'] = octets
+            payload['max_quota_for_domain'] = octets
+        return payload
 
     def action_create_on_mailcow(self):
         """Crée le domaine sur Mailcow (ou le met à jour s'il existe déjà)."""
@@ -57,8 +64,17 @@ class MailcowDomain(models.Model):
             domain.write({'synced': False, 'active': False})
 
     def action_sync_from_mailcow(self):
-        """Aligne l'état local sur le serveur (GET /get/domain/all)."""
+        """Synchronise depuis cette fiche (voir action_sync_all_from_mailcow)."""
         self.ensure_one()
+        return self.env['mailcow.domain'].action_sync_all_from_mailcow()
+
+    @api.model
+    def action_sync_all_from_mailcow(self):
+        """Aligne tout l'état local sur le serveur (GET /get/domain/all).
+
+        S'appelle sans aucune fiche locale : c'est ainsi qu'on amorce une base
+        vide, depuis l'en-tête d'une vue de liste ou le menu « Tout synchroniser ».
+        """
         client = MailcowClient(self.env)
         response = client._request('GET', '/get/domain/all', None)
         entries = response.get('data') if isinstance(response, dict) else response
@@ -76,7 +92,8 @@ class MailcowDomain(models.Model):
             values = {
                 'description': entry.get('description') or '',
                 'dkim': bool(entry.get('dkim')),
-                'quota_mb': int(entry.get('quota') or 0) // 1024,
+                # Mailcow renvoie les quotas en octets.
+                'quota_mb': int(entry.get('def_quota_for_mbox') or 0) // (1024 * 1024),
                 'active': entry.get('active') in (1, '1', True),
                 'synced': True,
             }

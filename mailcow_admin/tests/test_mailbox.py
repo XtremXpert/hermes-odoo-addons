@@ -50,11 +50,11 @@ class TestMailcowMailbox(TransactionCase):
         ) as request:
             mailbox.action_create_on_mailcow()
         request.assert_called_once_with('POST', '/add/mailbox', {
-            'mail_user': 'info',
+            'local_part': 'info',
             'domain': 'dc.com',
             'password': 'S3cret!',
             'password2': 'S3cret!',
-            'quota': 102400,
+            'quota': 100,          # Mailcow attend des mébioctets
             'active': '1',
             'name': 'Info Diverse',
             'description': '',
@@ -80,7 +80,7 @@ class TestMailcowMailbox(TransactionCase):
         self.assertNotIn('password', payload)
         self.assertNotIn('password2', payload)
         self.assertEqual(request.call_args[0][1], '/edit/mailbox')
-        self.assertEqual(payload['quota'], 51200)
+        self.assertEqual(payload['quota'], 50)
 
     def test_delete_on_mailcow_unsyncs_and_archives(self):
         mailbox = self.env['mailcow.mailbox'].create({
@@ -93,8 +93,10 @@ class TestMailcowMailbox(TransactionCase):
             return_value=[{'msg': 'mailbox_deleted', 'type': 'success'}],
         ) as request:
             mailbox.action_delete_on_mailcow()
+        # Mailcow exige l'adresse complète pour supprimer une boîte :
+        # « local_part » + « domain » lui vaut un access_denied.
         request.assert_called_once_with(
-            'POST', '/delete/mailbox', {'mail_user': 'info', 'domain': 'dc.com'})
+            'POST', '/delete/mailbox', {'mail_user': 'info@dc.com'})
         self.assertFalse(mailbox.synced)
         self.assertFalse(mailbox.active)
 
@@ -114,7 +116,7 @@ class TestMailcowMailbox(TransactionCase):
                 'name': 'Info',
                 'description': '',
                 'active': '1',
-                'quota': 102400,
+                'quota': 104857600,
             },
             {
                 'username': 'support@other.com',
@@ -179,3 +181,18 @@ class TestMailcowMailbox(TransactionCase):
                 'password': 'une',
                 'confirm': 'deux',
             })
+
+    def test_sync_all_works_without_any_local_record(self):
+        """Amorcer une base vide : le domaine inconnu est créé à la volée."""
+        remote = {'data': [
+            {'username': 'info@dc.com', 'local_part': 'info', 'domain': 'dc.com',
+             'name': 'Info', 'description': '', 'active': '1',
+             'quota': 104857600},
+        ]}
+        with patch.object(MailcowClient, '_request', return_value=remote):
+            self.env['mailcow.mailbox'].action_sync_all_from_mailcow()
+        boite = self.env['mailcow.mailbox'].search([
+            ('local_part', '=', 'info'), ('domain_id.name', '=', 'dc.com')])
+        self.assertTrue(boite)
+        self.assertEqual(boite.quota_mb, 100)  # octets relus en mébioctets
+        self.assertTrue(boite.synced)

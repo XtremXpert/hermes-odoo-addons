@@ -1,6 +1,6 @@
 # Part of the mailcow_admin Odoo module. See LICENSE for details.
-from odoo import fields, models
-from odoo.exceptions import UserError
+from odoo import api, fields, models
+from odoo.exceptions import UserError, ValidationError
 
 from ..services.mailcow_client import MailcowClient
 
@@ -10,7 +10,7 @@ class MailcowAlias(models.Model):
     _description = 'Mailcow: alias'
     _order = 'domain_id, alias_name'
 
-    alias_name = fields.Char(string="Nom d'alias", required=True)
+    alias_name = fields.Char(string="Nom d'alias")
     domain_id = fields.Many2one(
         'mailcow.domain', string='Domaine', required=True,
         ondelete='cascade', index=True,
@@ -20,19 +20,45 @@ class MailcowAlias(models.Model):
     description = fields.Char(string='Description')
     synced = fields.Boolean(string='Synchronisé avec Mailcow')
     mailcow_id = fields.Char(string='ID Mailcow', readonly=True)
+    is_catch_all = fields.Boolean(
+        string='Fourre-tout',
+        help="Alias qui reçoit tout le courrier du domaine : son adresse est "
+             "« @domaine », sans partie locale.",
+    )
 
     _alias_domain_uniq = models.Constraint(
         'unique(alias_name, domain_id)',
         'Cet alias existe déjà sur ce domaine.')
+
+    @api.depends('alias_name', 'domain_id', 'domain_id.name', 'is_catch_all')
+    def _compute_display_name(self):
+        for alias in self:
+            if alias.is_catch_all or not alias.alias_name:
+                alias.display_name = '@%s' % (alias.domain_id.name or '')
+            else:
+                alias.display_name = '%s@%s' % (alias.alias_name,
+                                                alias.domain_id.name or '')
+
+    @api.constrains('alias_name', 'is_catch_all')
+    def _check_catch_all_name(self):
+        for alias in self:
+            if bool(alias.is_catch_all) != (not alias.alias_name):
+                raise ValidationError(
+                    "Un alias fourre-tout n'a pas de partie locale (« @domaine ») "
+                    "et un alias ordinaire en a une : cochez « Fourre-tout » pour "
+                    "un alias sans nom."
+                )
 
     # --- Actions Mailcow --------------------------------------------------
 
     def _payload(self):
         self.ensure_one()
         return {
-            'alias_name': self.alias_name,
-            'domain': self.domain_id.name,
-            'address': self.address_ids.mapped('address'),
+            # Mailcow attend l'adresse complète de l'alias (sans partie locale
+            # pour un fourre-tout) et ses destinations en une chaîne séparée
+            # par des virgules.
+            'address': '%s@%s' % (self.alias_name or '', self.domain_id.name),
+            'goto': ','.join(self.address_ids.mapped('address')),
             'active': '1' if self.active else '0',
             'description': self.description or '',
         }
@@ -66,8 +92,7 @@ class MailcowAlias(models.Model):
         for alias in self:
             client = MailcowClient(self.env)
             client._request('POST', '/delete/alias', {
-                'alias_name': alias.alias_name,
-                'domain': alias.domain_id.name,
+                'address': '%s@%s' % (alias.alias_name or '', alias.domain_id.name),
             })
             alias.write({'synced': False, 'active': False})
 
@@ -84,8 +109,17 @@ class MailcowAlias(models.Model):
         return records
 
     def action_sync_from_mailcow(self):
-        """Aligne l'état local sur le serveur (GET /get/alias/all)."""
+        """Synchronise depuis cette fiche (voir action_sync_all_from_mailcow)."""
         self.ensure_one()
+        return self.env['mailcow.alias'].action_sync_all_from_mailcow()
+
+    @api.model
+    def action_sync_all_from_mailcow(self):
+        """Aligne tout l'état local sur le serveur (GET /get/alias/all).
+
+        S'appelle sans aucune fiche locale : c'est ainsi qu'on amorce une base
+        vide, depuis l'en-tête d'une vue de liste ou le menu « Tout synchroniser ».
+        """
         client = MailcowClient(self.env)
         response = client._request('GET', '/get/alias/all', None)
         entries = response.get('data') if isinstance(response, dict) else response
@@ -96,10 +130,13 @@ class MailcowAlias(models.Model):
             # Mailcow met l'adresse de l'alias dans « address » et ses
             # destinations dans « goto » ; « alias_name » n'existe pas, et s'y
             # fier fait ignorer chaque entrée en silence.
-            adresse = entry.get('address') or entry.get('alias_name') or ''
-            alias_name = adresse.split('@')[0]
-            if not alias_name:
+            adresse = entry.get('address') or ''
+            if not adresse:
                 continue
+            # Un fourre-tout n'a pas de partie locale : son adresse est
+            # « @domaine », et il doit être importé comme tel.
+            alias_name = adresse.split('@')[0]
+            est_fourre_tout = bool(entry.get('is_catch_all')) or not alias_name
             destinations = entry.get('goto')
             if isinstance(destinations, str):
                 destinations = [item.strip() for item in destinations.split(',')
@@ -120,6 +157,7 @@ class MailcowAlias(models.Model):
                 'description': entry.get('description') or '',
                 'active': entry.get('active') in (1, '1', True),
                 'synced': True,
+                'is_catch_all': est_fourre_tout,
                 'address_ids': [(6, 0, self._address_records(destinations).ids)],
             }
             if entry.get('id') is not None:

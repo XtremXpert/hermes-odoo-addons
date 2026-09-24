@@ -6,6 +6,11 @@
         <field name="model">mailcow.domain</field>
         <field name="arch" type="xml">
             <list string="Domaines">
+                <header>
+                    <button name="action_sync_all_from_mailcow" type="object"
+                            string="Synchroniser depuis Mailcow"
+                            groups="mailcow_admin.group_mailcow_manager"/>
+                </header>
                 <field name="name"/>
                 <field name="description" optional="show"/>
                 <field name="quota_mb" string="Quota (Mo)" optional="show"/>

@@ -6,6 +6,11 @@
         <field name="model">mailcow.mailbox</field>
         <field name="arch" type="xml">
             <list string="Boîtes mail">
+                <header>
+                    <button name="action_sync_all_from_mailcow" type="object"
+                            string="Synchroniser depuis Mailcow"
+                            groups="mailcow_admin.group_mailcow_manager"/>
+                </header>
                 <field name="local_part"/>
                 <field name="domain_id"/>
                 <field name="name" optional="show"/>
