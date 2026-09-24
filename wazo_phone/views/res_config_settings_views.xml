@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="wazo_res_config_settings_view" model="ir.ui.view">
+        <field name="name">res.config.settings.wazo</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="inside">
+                <app string="Téléphonie Wazo" name="wazo"
+                     groups="wazo_phone.group_wazo_manager">
+                    <block title="Connexion Wazo Platform">
+                        <setting string="URL du serveur Wazo">
+                            <field name="wazo_url"
+                                   placeholder="ex : https://wazo.diverse-cite.com"/>
+                        </setting>
+                        <setting string="Token API Wazo">
+                            <field name="wazo_api_key" password="True"
+                                   placeholder="Token API généré dans Wazo"/>
+                        </setting>
+                        <setting string="Tenant (optionnel)">
+                            <field name="wazo_tenant_id"
+                                   placeholder="UUID du tenant, vide si mono-tenant"/>
+                        </setting>
+                        <setting string="Contexte des lignes">
+                            <field name="wazo_line_context"
+                                   placeholder="default"/>
+                        </setting>
+                        <setting string="Langue des messageries vocales">
+                            <field name="wazo_voicemail_language"
+                                   placeholder="fr_CA"/>
+                        </setting>
+                        <setting string="Test de connexion">
+                            <button name="action_test_wazo_connection"
+                                    type="object"
+                                    string="Tester la connexion"
+                                    class="btn-secondary"/>
+                            <field name="wazo_connection_ok"
+                                   widget="boolean_favorite"
+                                   readonly="1"/>
+                        </setting>
+                    </block>
+                    <block title="Softphone (module voip)"
+                           help="Nécessite le module « voip » d'Enterprise installé et le transport WebSocket (wss) d'Asterisk sur le serveur Wazo. Sans ces prérequis, la téléphonie fonctionne avec un poste SIP classique.">
+                        <setting string="Activer le pont softphone">
+                            <field name="wazo_softphone_enabled"
+                                   widget="boolean_button"
+                                   options="{'terminology': 'check'}"/>
+                        </setting>
+                        <setting string="URL WebSocket (wss)"
+                                 invisible="not wazo_softphone_enabled">
+                            <field name="wazo_ws_url"
+                                   placeholder="wss://wazo.diverse-cite.com"
+                                   invisible="not wazo_softphone_enabled"/>
+                        </setting>
+                        <setting string="Domaine SIP (PBX)"
+                                 invisible="not wazo_softphone_enabled">
+                            <field name="wazo_pbx_domain"
+                                   placeholder="wazo.diverse-cite.com"
+                                   invisible="not wazo_softphone_enabled"/>
+                        </setting>
+                        <setting string="Appliquer aux utilisateurs"
+                                 invisible="not wazo_softphone_enabled">
+                            <button name="action_ensure_voip_provider"
+                                    type="object"
+                                    string="Créer le provider et propager les identifiants"
+                                    class="btn-secondary"
+                                    invisible="not wazo_softphone_enabled"/>
+                            <div class="text-muted">
+                                Crée (ou met à jour) le provider « Wazo »
+                                et réapplique les identifiants SIP des
+                                utilisateurs synchronisés.
+                            </div>
+                        </setting>
+                    </block>
+                </app>
+            </xpath>
+        </field>
+    </record>
+</odoo>

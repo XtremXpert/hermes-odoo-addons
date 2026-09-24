@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="wazo_cdr_view_list" model="ir.ui.view">
+        <field name="name">wazo.cdr.list</field>
+        <field name="model">wazo.cdr</field>
+        <field name="arch" type="xml">
+            <list string="Journal d'appels Wazo" create="false" edit="false" delete="false">
+                <field name="date_start"/>
+                <field name="call_direction" widget="badge"/>
+                <field name="caller_num"/>
+                <field name="caller_name"/>
+                <field name="destination_num"/>
+                <field name="destination_name"/>
+                <field name="answered"/>
+                <field name="duration" sum="Total"/>
+                <field name="partner_id"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="wazo_cdr_view_form" model="ir.ui.view">
+        <field name="name">wazo.cdr.form</field>
+        <field name="model">wazo.cdr</field>
+        <field name="arch" type="xml">
+            <form string="Appel Wazo" create="false" edit="false">
+                <header>
+                    <button name="action_sync_cdrs" type="object"
+                            string="Synchroniser les 24 dernières heures"
+                            class="oe_highlight"
+                            groups="wazo_phone.group_wazo_manager"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group string="Appel">
+                            <field name="wazo_cdr_id" readonly="1"/>
+                            <field name="date_start"/>
+                            <field name="date_end"/>
+                            <field name="answered"/>
+                            <field name="duration"/>
+                            <field name="call_direction"/>
+                        </group>
+                        <group string="Parties">
+                            <field name="caller_num"/>
+                            <field name="caller_name"/>
+                            <field name="destination_num"/>
+                            <field name="destination_name"/>
+                            <field name="partner_id"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_wazo_cdr" model="ir.actions.act_window">
+        <field name="name">Journal d'appels</field>
+        <field name="res_model">wazo.cdr</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

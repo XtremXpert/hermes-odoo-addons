@@ -24,3 +24,8 @@ __pycache__/
 .env.*
 .vscode/
 .idea/
+
+# Scripts d'exploration locaux du module wazo_phone : ils portent des
+# identifiants de la VM de test (mot de passe de poste) et des essais jetables.
+# Le savoir utile est dans wazo_phone/doc/, pas ici.
+/wazo_phone/poc/

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="wazo_user_view_list" model="ir.ui.view">
+        <field name="name">wazo.user.list</field>
+        <field name="model">wazo.user</field>
+        <field name="arch" type="xml">
+            <list string="Utilisateurs Wazo">
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="extension"/>
+                <field name="wazo_state" widget="badge"
+                       decoration-success="wazo_state == 'synced'"
+                       decoration-warning="wazo_state == 'new'"
+                       decoration-danger="wazo_state == 'error'"/>
+                <field name="sip_username" optional="hide"/>
+                <field name="error_message" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="wazo_user_view_form" model="ir.ui.view">
+        <field name="name">wazo.user.form</field>
+        <field name="model">wazo.user</field>
+        <field name="arch" type="xml">
+            <form string="Utilisateur Wazo">
+                <header>
+                    <field name="wazo_state" widget="statusbar"
+                           statusbar_visible="new,synced,error"/>
+                    <button name="action_sync_wazo" type="object"
+                            string="Synchroniser sur Wazo"
+                            class="oe_highlight"
+                            invisible="wazo_state != 'new'"/>
+                    <button name="action_retry_sync" type="object"
+                            string="Réessayer la synchronisation"
+                            class="btn-warning"
+                            invisible="wazo_state != 'error'"/>
+                    <button name="action_delete_wazo" type="object"
+                            string="Supprimer les ressources Wazo"
+                            class="btn-danger"
+                            invisible="wazo_state != 'synced'"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group string="Informations">
+                            <field name="name"/>
+                            <field name="partner_id"/>
+                            <field name="extension"
+                                   help="Poste téléphonique attribué sur Wazo (chiffres)."/>
+                            <field name="active" invisible="1"/>
+                        </group>
+                        <group string="Identifiants SIP">
+                            <field name="sip_username"/>
+                            <field name="sip_password"
+                                   groups="wazo_phone.group_wazo_manager"
+                                   password="True"/>
+                            <field name="remote_user_id" readonly="1"/>
+                            <field name="remote_line_id" readonly="1"/>
+                            <field name="remote_extension_id" readonly="1"/>
+                        </group>
+                    </group>
+                    <group string="Dernier message d'erreur"
+                           invisible="wazo_state != 'error'">
+                        <field name="error_message" nolabel="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_wazo_user" model="ir.actions.act_window">
+        <field name="name">Utilisateurs Wazo</field>
+        <field name="res_model">wazo.user</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>
