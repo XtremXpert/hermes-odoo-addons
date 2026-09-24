@@ -5,6 +5,10 @@
         <field name="model">wazo.server.tenant</field>
         <field name="arch" type="xml">
             <list string="Tenants Wazo">
+                <header>
+                    <button name="action_adopt_from_wazo" type="object"
+                            string="Adopter les tenants du PBX"/>
+                </header>
                 <field name="name"/>
                 <field name="slug"/>
                 <field name="context_name"/>

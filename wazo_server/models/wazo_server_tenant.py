@@ -169,7 +169,11 @@ class WazoServerTenant(models.Model):
                 'url': url or '(à renseigner)',
                 'jeton': tenant.api_token or '(aucun)',
                 'tenant': tenant.remote_uuid,
-                'contexte': tenant.remote_context_name or tenant.context_name,
+                # Jamais de nom deviné ici : une fiche de remise qui donne un
+                # contexte que Wazo ne connaît pas envoie le client au mauvais
+                # endroit, sans que rien ne le signale.
+                'contexte': tenant.remote_context_name
+                            or '(inconnu — à lire sur le serveur Wazo)',
                 'admin': tenant.admin_username,
                 'mot_de_passe': tenant.admin_password or '(inconnu)',
                 'expiration': (fields.Datetime.to_string(
@@ -229,6 +233,164 @@ class WazoServerTenant(models.Model):
             if item.get('uuid') and item.get('uuid') == item.get('parent_uuid'):
                 return item['uuid']
         return None
+
+    # ------------------------------------------------------------------
+    # Adoption
+    # ------------------------------------------------------------------
+
+    def _remonter_a_la_racine(self, client, tenant_uuid):
+        """UUID de la racine, en partant du tenant donné.
+
+        Le listage des tenants est **cloisonné** par l'en-tête reçu : partir du
+        tenant des réglages ne montrerait que lui et ses enfants, et laisserait
+        le maître — donc les autres clients — invisibles.
+
+        L'en-tête doit viser le tenant **interrogé** : un tenant parent est hors
+        du sous-arbre du tenant courant, et sa fiche répond 404 si l'on garde
+        l'en-tête d'origine (mesuré en direct, « unknown-tenant » — ce n'est pas
+        un refus de permission mais du cloisonnement). On interroge donc chaque
+        tenant avec son propre en-tête.
+
+        Un tenant racine est son propre parent : c'est le seul repère sûr, le
+        champ « parent » n'existant pas côté API. La remontée est bornée, et une
+        fiche injoignable arrête la recherche sans faire échouer l'adoption.
+        """
+        identifiant = tenant_uuid
+        for _ in range(10):
+            if not identifiant:
+                return tenant_uuid
+            try:
+                fiche = self._client(identifiant).auth(
+                    'GET', '/tenants/%s' % identifiant) or {}
+            except WazoAPIError:
+                # Cloisonnement ou panne : on ne devine pas l'arborescence, on
+                # liste avec ce que l'en-tête laisse voir.
+                return identifiant
+            if not isinstance(fiche, dict):
+                return identifiant
+            parent = fiche.get('parent_uuid')
+            if not parent or parent == identifiant:
+                return identifiant
+            identifiant = parent
+        return identifiant
+
+    @api.model
+    def _slug_local(self, slug, name, pris=None):
+        """Identifiant acceptable par le modèle, tiré de ce que Wazo renvoie.
+
+        Wazo accepte des slugs plus larges que notre contrainte locale (tirets,
+        jusqu'à 80 caractères) : un tenant adopté ne doit pas faire échouer la
+        création de sa fiche. Le nom réel reste dans ``name``, et
+        ``remote_uuid`` est la vraie clé de rapprochement.
+        """
+        base = re.sub(r'[^a-zA-Z0-9_]', '_', slug or name or 'tenant')
+        base = base[:self._WAZO_SLUG_MAX] or 'tenant'
+        if not pris or base not in pris:
+            return base
+        for suffixe in range(2, 100):
+            candidat = '%s_%d' % (
+                base[:self._WAZO_SLUG_MAX - len(str(suffixe)) - 1], suffixe)
+            if candidat not in pris:
+                return candidat
+        return base
+
+    def _lire_contexte(self, identifiant, slug):
+        """Nom réel du contexte interne d'un tenant, lu avec **son** en-tête.
+
+        Wazo ajoute un suffixe au nom demandé : « ctx-<slug>-internal » devient
+        « ctx-<slug>-internal-<aléa> ». Le nom calculé localement n'est donc
+        qu'une approximation, et le publier dans la fiche de remise enverrait le
+        client au mauvais contexte. On lit donc la vérité sur le PBX ; si elle
+        reste hors d'atteinte, le champ demeure vide et la fiche dira
+        « inconnu » plutôt que d'inventer.
+
+        Le rapprochement se fait sur le préfixe, jamais sur le nom exact — c'est
+        précisément le suffixe qui est en jeu.
+        """
+        try:
+            reponse = self._client(identifiant).conf('GET', '/contexts') or {}
+        except WazoAPIError:
+            return {}
+        items = (reponse.get('items') if isinstance(reponse, dict)
+                 else reponse) or []
+        contextes = [item for item in items
+                     if isinstance(item, dict) and item.get('name')]
+        prefixe = 'ctx-%s-internal' % slug
+        retenus = [item for item in contextes if item['name'].startswith(prefixe)]
+        if not retenus:
+            retenus = [item for item in contextes if 'internal' in item['name']]
+        return retenus[0] if retenus else {}
+
+    @api.model
+    def action_adopt_from_wazo(self):
+        """Fait entrer dans Odoo les tenants déjà présents sur le PBX.
+
+        **Lecture seule côté PBX** : rien n'y est créé ni modifié. Les secrets
+        d'un tenant — jeton d'API, mot de passe administrateur — ne sont jamais
+        rendus par l'API : une fiche adoptée arrive donc sans eux. Ils se
+        ressaisissent depuis la fiche de remise, ou s'obtiennent par
+        « Renouveler le jeton », qui a besoin des identifiants administrateur
+        du tenant.
+
+        Les fiches déjà connues (même ``remote_uuid``) ne sont **pas** touchées :
+        écraser un jeton vivant serait le pire effet de bord possible.
+        """
+        client = self._client()
+        racine = self._remonter_a_la_racine(client, client.tenant_id)
+        reponse = self._client(racine).auth('GET', '/tenants') or {}
+        distants = (reponse.get('items') if isinstance(reponse, dict)
+                    else reponse) or []
+        par_uuid = {tenant['uuid']: tenant for tenant in distants
+                    if isinstance(tenant, dict) and tenant.get('uuid')}
+
+        connus = {tenant.remote_uuid: tenant
+                  for tenant in self.search([('remote_uuid', '!=', False)])}
+        pris = set(self.search([]).mapped('slug'))
+        adoptes, ignores = {}, 0
+        for identifiant, distant in sorted(par_uuid.items()):
+            if identifiant in connus:
+                ignores += 1
+                continue
+            slug = self._slug_local(distant.get('slug'), distant.get('name'), pris)
+            pris.add(slug)
+            adoptes[identifiant] = self.create({
+                'name': (distant.get('name') or distant.get('slug')
+                         or identifiant),
+                'slug': slug,
+                'remote_uuid': identifiant,
+                'state': 'created',
+            })
+        # Le nom réel du contexte se lit ensuite, tenant par tenant : Wazo le
+        # suffixe, et une fiche adoptée doit porter la vraie valeur — c'est
+        # celle que le client devra reporter dans wazo_phone.
+        for identifiant, fiche in adoptes.items():
+            contexte = self._lire_contexte(identifiant, fiche.slug)
+            if contexte:
+                fiche.remote_context_name = contexte.get('name')
+        # Le rattachement se fait en second passage : un enfant peut précéder son
+        # parent dans la réponse, et le parent peut n'être adopté qu'à ce tour.
+        for identifiant, fiche in adoptes.items():
+            distant = par_uuid.get(identifiant) or {}
+            parent_uuid = distant.get('parent_uuid')
+            if not parent_uuid or parent_uuid == identifiant:
+                continue
+            parent = adoptes.get(parent_uuid) or connus.get(parent_uuid)
+            if parent:
+                fiche.parent_id = parent.id
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'type': 'success' if adoptes else 'info',
+                'title': 'Adoption des tenants du PBX',
+                'message': (
+                    '%d tenant(s) adopté(s), %d déjà connu(s). Les jetons et '
+                    "mots de passe ne sont pas rendus par l'API : "
+                    'ressaisissez-les, ou renouvelez le jeton.'
+                    % (len(adoptes), ignores)),
+                'sticky': False,
+            },
+        }
 
     @staticmethod
     def _mot_de_passe():

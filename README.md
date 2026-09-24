@@ -58,14 +58,29 @@ n'hérite jamais de cette machinerie. Sur l'instance de l'**exploitant**, chaque
 poste et chaque groupe d'appel **choisit son tenant** — l'en-tête et le contexte
 envoyés en découlent — et le voit en permanence : colonne de liste, filtre et
 groupement. Un jeton qui a pu fuiter se **reprend** : « Renouveler le jeton » en
-fabrique un neuf et révoque l'ancien, sans détruire le tenant ni ses postes.
-47 tests.
+fabrique un neuf et révoque l'ancien, sans détruire le tenant ni ses postes. Un
+Wazo **déjà peuplé** se rattrape par « **Adopter les tenants du PBX** » : la
+liste est lue **à la racine** (le listage de wazo-auth est cloisonné — partir du
+tenant des réglages ne montrerait que lui et ses enfants), chaque fiche arrive
+avec son **contexte réel**, et les fiches déjà connues ne sont **jamais**
+touchées. Les secrets, eux, ne reviennent pas : le PBX ne rend ni jeton ni mot
+de passe d'administration — la fiche de remise les donne à ressaisir, et
+« Renouveler le jeton » les régénère.
+58 tests.
 
 **Limite connue, mesurée** : le jeton d'un tenant **ne le cloisonne pas**. Un
 jeton de tenant peut lire les données d'un autre tenant en changeant l'en-tête
 `Wazo-Tenant` (les ACL de Wazo sont des chaînes indépendantes du tenant). La
 frontière réelle se place à l'**URL** — un point d'entrée par tenant qui impose
 l'en-tête —, pas dans le jeton. Détail et mesures : `doc/P5_WAZO_SERVER_SPEC.md`.
+
+**Cloisonnement du listage, mesuré** : une liste de tenants ne montre que le
+sous-arbre du tenant porté par l'en-tête `Wazo-Tenant`. Un **parent** est donc
+hors d'atteinte avec l'en-tête de son enfant — `GET /tenants/<uuid>` répond
+**404 « unknown-tenant »**, et non un refus de permission. L'adoption remonte
+donc à la racine en interrogeant chaque tenant avec **son propre** en-tête. Le
+tenant `master` de Wazo n'a, lui, **aucun contexte** : la fiche de remise
+affiche « inconnu » plutôt que d'inventer un nom.
 
 ## Utilisation
 
@@ -106,7 +121,7 @@ odoo-bin -d t_test -i mailcow_admin,voipms_sms,asterisk_ari,wazo_phone,wazo_serv
   --stop-after-init --log-level=test
 ```
 
-Suite complète : **224 tests**, 0 échec.
+Suite complète : **237 tests**, 0 échec.
 
 Les tests **JavaScript** du softphone (`wazo_phone/static/tests/`) sont des tests
 **Node**, sans navigateur, et se lancent à part. 67 tests : arbitrage
