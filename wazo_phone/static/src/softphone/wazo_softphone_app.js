@@ -54,7 +54,7 @@ export class WazoSoftphoneApp extends Component {
      */
     _applyOverlayState() {
         const isDisplayed = this.softphone.isDisplayed;
-        const shouldBeOnTop = this.softphone.shouldBeOnTop();
+        const shouldBeOnTop = this.softphone.shouldBeOnTop;
         if (!isDisplayed) {
             this._hideSoftphone();
         } else if (!this.isShown) {

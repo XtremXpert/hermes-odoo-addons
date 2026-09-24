@@ -93,7 +93,24 @@ odoo-bin -d t_test -i mailcow_admin,voipms_sms,asterisk_ari,wazo_phone,wazo_serv
   --stop-after-init --log-level=test
 ```
 
+Les tests **JavaScript** du softphone (`wazo_phone/static/tests/`) sont des tests
+**Node**, sans navigateur, et se lancent à part. 67 tests : arbitrage
+multi-onglets, choix du moteur SIP, bundle SDK. Les ignorer n'est pas neutre —
+aucun test Python ne voit le JS.
+
+```sh
+node --test wazo_phone/static/tests/*.test.js
+```
+
 ## Notes
+
+- **Rien ne charge le client web dans un navigateur.** Une erreur JavaScript
+  (composant OWL, service, patch de vue) ne se voit ni dans les tests Python ni
+  dans les tests Node : les tests ci-dessus ne couvrent que la logique sans
+  navigateur. Après toute modification d'un fichier de `static/src/`, ouvrir
+  `/odoo` — c'est la seule vérification qui attrape cette classe de faute.
+  Et si le correctif semble sans effet, **lire les octets servis**, pas la
+  source : un paquet d'actifs en cache peut survivre à `-u <module>`.
 
 - Développés en TDD contre Odoo 20 (dev/master). Les API changent vite sur
   cette branche : se référer à la skill `odoo20-breaking-changes` si une
