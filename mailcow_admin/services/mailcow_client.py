@@ -1,11 +1,53 @@
 # Part of the mailcow_admin Odoo module. See LICENSE for details.
 """Client minimal de l'API Mailcow v1 (urllib standard, sans dépendance externe)."""
 
+from datetime import datetime, timezone
+
 import json
+import time
 import urllib.error
 import urllib.request
 
 from odoo.exceptions import UserError
+
+
+def en_nombre(valeur):
+    """Mailcow envoie parfois les nombres sous forme de texte (« 25 »)."""
+    try:
+        return float(valeur)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def en_date(valeur):
+    """Convertit un horodatage Unix de Mailcow en date Odoo.
+
+    L'API renvoie les dernières connexions en secondes depuis 1970, et 0 pour
+    « jamais ». Un affichage naïf casse : on convertit ici, une seule fois.
+    """
+    if isinstance(valeur, (int, float)) and valeur:
+        return datetime.fromtimestamp(float(valeur), timezone.utc).replace(tzinfo=None)
+    return False
+
+
+def refuser_la_disparition_totale(env, entries, modele, etiquette):
+    """Refuse de conclure à la disparition totale sur un listage vide.
+
+    Mailcow peut répondre « rien » sur une panne passagère. Conclure que tout a
+    disparu du serveur marquerait chaque fiche « non synchronisée » en silence :
+    un état faux, et c'est dans ces moments-là qu'on agit mal.
+    """
+    if entries:
+        return
+    # Seules les fiches crues présentes sur le serveur comptent : une fiche
+    # jamais poussée n'a rien à voir avec un serveur qui répond « rien ».
+    locales = env[modele].search_count([('synced', '=', True)])
+    if locales:
+        raise MailcowAPIError(
+            "Mailcow n'a renvoyé aucune %s alors que %d fiche(s) locale(s) "
+            "existent. Rien n'a été marqué comme disparu : vérifiez d'abord la "
+            "connexion au serveur." % (etiquette, locales)
+        )
 
 
 class MailcowAPIError(UserError):
@@ -46,18 +88,27 @@ class MailcowClient:
         # Request.add_header() capitalise les noms (X-api-key), ce qui
         # casserait une recherche sensible à la casse.
         request.headers['X-API-Key'] = self.api_key
-        try:
-            with urllib.request.urlopen(request) as response:
-                body = response.read().decode('utf-8')
-        except urllib.error.HTTPError as error:
-            raise MailcowAPIError(
-                'Échec de l\'appel à l\'API Mailcow (HTTP %d, %s %s) : %s'
-                % (error.code, method.upper(), path, error.reason)
-            ) from error
-        except urllib.error.URLError as error:
-            raise MailcowAPIError(
-                'Serveur Mailcow inaccessible (%s) : %s' % (url, error.reason)
-            ) from error
+        for tentative in (1, 2, 3):
+            try:
+                with urllib.request.urlopen(request) as response:
+                    body = response.read().decode('utf-8')
+                break
+            except urllib.error.HTTPError as error:
+                # 429 et les 5xx sont passagers : on reprend avant d'abandonner.
+                if error.code in (429, 500, 502, 503, 504) and tentative < 3:
+                    time.sleep(tentative)
+                    continue
+                raise MailcowAPIError(
+                    'Échec de l\'appel à l\'API Mailcow (HTTP %d, %s %s) : %s'
+                    % (error.code, method.upper(), path, error.reason)
+                ) from error
+            except urllib.error.URLError as error:
+                if tentative < 3:
+                    time.sleep(tentative)
+                    continue
+                raise MailcowAPIError(
+                    'Serveur Mailcow inaccessible (%s) : %s' % (url, error.reason)
+                ) from error
         try:
             result = json.loads(body)
         except json.JSONDecodeError as error:

@@ -1,29 +1,13 @@
 # Part of the mailcow_admin Odoo module. See LICENSE for details.
-from datetime import datetime, timezone
-
 from odoo import api, fields, models
 from odoo.exceptions import UserError
 
-from ..services.mailcow_client import MailcowClient
-
-
-def _en_nombre(valeur):
-    """Mailcow envoie parfois les nombres sous forme de texte (« 25 »)."""
-    try:
-        return float(valeur)
-    except (TypeError, ValueError):
-        return 0.0
-
-
-def _en_date(valeur):
-    """Convertit un horodatage Unix de Mailcow en date Odoo.
-
-    L'API renvoie les dernières connexions en secondes depuis 1970, et 0 pour
-    « jamais ». Un affichage naïf casse : le module convertit ici, une fois.
-    """
-    if isinstance(valeur, (int, float)) and valeur:
-        return datetime.fromtimestamp(float(valeur), timezone.utc).replace(tzinfo=None)
-    return False
+from ..services.mailcow_client import (
+    MailcowClient,
+    en_date as _en_date,
+    en_nombre as _en_nombre,
+    refuser_la_disparition_totale,
+)
 
 
 class MailcowMailbox(models.Model):
@@ -214,6 +198,8 @@ class MailcowMailbox(models.Model):
         client = MailcowClient(self.env)
         response = client._request('GET', '/get/mailbox/all', None)
         entries = response.get('data') if isinstance(response, dict) else response
+        refuser_la_disparition_totale(
+            self.env, entries, 'mailcow.mailbox', 'boîte mail')
         remote_keys = set()
         for entry in entries:
             if not isinstance(entry, dict) or not entry.get('domain'):

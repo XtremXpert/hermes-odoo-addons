@@ -2,7 +2,10 @@
 from odoo import api, fields, models
 from odoo.exceptions import UserError, ValidationError
 
-from ..services.mailcow_client import MailcowClient
+from ..services.mailcow_client import (
+    MailcowClient,
+    refuser_la_disparition_totale,
+)
 
 
 class MailcowAlias(models.Model):
@@ -163,6 +166,8 @@ class MailcowAlias(models.Model):
         client = MailcowClient(self.env)
         response = client._request('GET', '/get/alias/all', None)
         entries = response.get('data') if isinstance(response, dict) else response
+        refuser_la_disparition_totale(
+            self.env, entries, 'mailcow.alias', 'alias')
         remote_keys = set()
         for entry in entries:
             if not isinstance(entry, dict) or not entry.get('domain'):

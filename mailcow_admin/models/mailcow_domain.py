@@ -2,7 +2,11 @@
 from odoo import api, fields, models
 from odoo.exceptions import UserError
 
-from ..services.mailcow_client import MailcowClient
+from ..services.mailcow_client import (
+    MailcowClient,
+    en_nombre,
+    refuser_la_disparition_totale,
+)
 
 
 class MailcowDomain(models.Model):
@@ -126,6 +130,8 @@ class MailcowDomain(models.Model):
         client = MailcowClient(self.env)
         response = client._request('GET', '/get/domain/all', None)
         entries = response.get('data') if isinstance(response, dict) else response
+        refuser_la_disparition_totale(
+            self.env, entries, 'mailcow.domain', 'domaine')
         remote_ids = set()
         for entry in entries:
             if not isinstance(entry, dict):
@@ -140,7 +146,9 @@ class MailcowDomain(models.Model):
             values = {
                 'description': entry.get('description') or '',
                 # Mailcow renvoie les quotas en octets.
-                'quota_mb': int(entry.get('def_quota_for_mbox') or 0) // (1024 * 1024),
+                # Le quota peut arriver en texte : int() ferait lever la
+                # synchronisation sur une valeur parfaitement valide.
+                'quota_mb': int(en_nombre(entry.get('def_quota_for_mbox'))) // (1024 * 1024),
                 'active': entry.get('active') in (1, '1', True),
                 'synced': True,
             }
