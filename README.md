@@ -1,5 +1,7 @@
 # Addons custom Odoo (Diverse-Cité)
 
+[![CI](https://github.com/XtremXpert/hermes-odoo-addons/actions/workflows/ci.yml/badge.svg)](https://github.com/XtremXpert/hermes-odoo-addons/actions/workflows/ci.yml)
+
 Des modules Odoo maison écrits contre le build local d'Odoo 20
 (`~/hermes-dev/odoo20/`, branche `main`).
 
