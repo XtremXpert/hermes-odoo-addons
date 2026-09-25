@@ -14,6 +14,9 @@
                             string="Pousser la sélection vers Mailcow"
                             groups="mailcow_admin.group_mailcow_manager"
                             confirm="Créer et mettre à jour les fiches sélectionnées sur Mailcow ?"/>
+                    <button name="action_preview_sync_from_mailcow" type="object"
+                            string="Aperçu de la synchronisation"
+                            groups="mailcow_admin.group_mailcow_manager"/>
                     <button name="action_forget_locally" type="object"
                             string="Oublier les fiches sélectionnées"
                             groups="mailcow_admin.group_mailcow_manager"

@@ -62,6 +62,11 @@ class MailcowMailbox(models.Model):
 
     # --- Actions Mailcow --------------------------------------------------
 
+    def _designation(self):
+        """Une boîte se nomme par son adresse, jamais par son nom complet."""
+        self.ensure_one()
+        return self.email or self.display_name
+
     def _attr_payload(self, with_password=False):
         """Les attributs modifiables d'une boîte : le « attr » d'une édition.
 
@@ -191,11 +196,17 @@ class MailcowMailbox(models.Model):
 
     @api.model
     def action_sync_all_from_mailcow(self):
+        """Aligner tout l'état local sur le serveur (bouton et menu)."""
+        return self._sync_all_from_mailcow()
+
+    @api.model
+    def _sync_all_from_mailcow(self, dry_run=False):
         """Aligne tout l'état local sur le serveur (GET /get/mailbox/all).
 
         S'appelle sans aucune fiche locale : c'est ainsi qu'on amorce une base
         vide, depuis l'en-tête d'une vue de liste ou le menu « Tout synchroniser ».
         """
+        plan = []
         client = MailcowClient(self.env)
         response = client._request('GET', '/get/mailbox/all', None)
         entries = response.get('data') if isinstance(response, dict) else response
@@ -217,6 +228,10 @@ class MailcowMailbox(models.Model):
             remote_keys.add((local_part, domain_name))
             domain = self.env['mailcow.domain'].search([('name', '=', domain_name)], limit=1)
             if not domain:  # domaine vu côté serveur, créé à la volée
+                if dry_run:
+                    plan.append('%s « %s » : domaine à créer'
+                                % (self._description, domain_name))
+                    continue
                 domain = self.env['mailcow.domain'].create({'name': domain_name})
             mailbox = self.env['mailcow.mailbox'].search(
                 [('local_part', '=', local_part),
@@ -241,13 +256,21 @@ class MailcowMailbox(models.Model):
                 'last_smtp_login': _en_date(entry.get('last_smtp_login')),
                 'last_pop3_login': _en_date(entry.get('last_pop3_login')),
             }
+            etiquette = '%s@%s' % (local_part, domain_name)
             if mailbox:
-                mailbox.write(values)
+                self._poser(mailbox, values, plan, dry_run)
             else:
-                self.env['mailcow.mailbox'].create(
-                    dict(values, local_part=local_part, domain_id=domain.id))
+                self._creer('mailcow.mailbox',
+                            dict(values, local_part=local_part, domain_id=domain.id),
+                            plan, dry_run, etiquette)
         # Les boîtes locales absentes du serveur ne sont plus « synchronisées ».
-        self.env['mailcow.mailbox'].search([('active', '=', True)]).filtered(
-            lambda m: (m.local_part, m.domain_id.name) not in remote_keys
-        ).write({'synced': False})
-        return True
+        disparues = self.env['mailcow.mailbox'].search(
+            [('active', '=', True)]).filtered(
+            lambda m: (m.local_part, m.domain_id.name) not in remote_keys)
+        if dry_run:
+            for fiche in disparues:
+                plan.append('%s « %s » : disparue du serveur'
+                            % (self._description, fiche._designation()))
+        else:
+            disparues.write({'synced': False})
+        return plan

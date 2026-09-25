@@ -159,11 +159,17 @@ class MailcowAlias(models.Model):
 
     @api.model
     def action_sync_all_from_mailcow(self):
-        """Aligne tout l'état local sur le serveur (GET /get/alias/all).
+        """Aligner tout l'état local sur le serveur (bouton et menu)."""
+        return self._sync_all_from_mailcow()
+
+    @api.model
+    def _sync_all_from_mailcow(self, dry_run=False):
+        """Décrire, ou appliquer, l'état du serveur sur les fiches locales.
 
         S'appelle sans aucune fiche locale : c'est ainsi qu'on amorce une base
         vide, depuis l'en-tête d'une vue de liste ou le menu « Tout synchroniser ».
         """
+        plan = []
         client = MailcowClient(self.env)
         response = client._request('GET', '/get/alias/all', None)
         entries = response.get('data') if isinstance(response, dict) else response
@@ -192,6 +198,10 @@ class MailcowAlias(models.Model):
             domain = self.env['mailcow.domain'].search(
                 [('name', '=', entry['domain'])], limit=1)
             if not domain:  # domaine vu côté serveur, créé à la volée
+                if dry_run:
+                    plan.append('%s « %s » : domaine à créer'
+                                % (self._description, entry['domain']))
+                    continue
                 domain = self.env['mailcow.domain'].create({'name': entry['domain']})
             remote_keys.add((alias_name, domain.id))
             alias = self.env['mailcow.alias'].search(
@@ -205,19 +215,31 @@ class MailcowAlias(models.Model):
                 'synced': True,
                 'last_synced_on': fields.Datetime.now(),
                 'is_catch_all': est_fourre_tout,
-                'address_ids': [(6, 0, self._address_records(destinations).ids)],
             }
+            if not dry_run:
+                # En aperçu, on ne crée même pas les adresses de destination :
+                # décrire ne doit rien laisser derrière soi.
+                values['address_ids'] = [
+                    (6, 0, self._address_records(destinations).ids)]
             if entry.get('id') is not None:
                 values['mailcow_id'] = str(entry['id'])
+            etiquette = '%s@%s' % (alias_name, entry['domain'])
             if alias:
-                alias.write(values)
+                self._poser(alias, values, plan, dry_run)
             else:
-                self.env['mailcow.alias'].create(
-                    dict(values, alias_name=alias_name, domain_id=domain.id))
+                self._creer('mailcow.alias',
+                            dict(values, alias_name=alias_name, domain_id=domain.id),
+                            plan, dry_run, etiquette)
         # Les alias locaux absents du serveur ne sont plus « synchronisés ».
-        self.env['mailcow.alias'].search([('active', '=', True)]).filtered(
+        disparues = self.env['mailcow.alias'].search(
+            [('active', '=', True)]).filtered(
             # Odoo stocke False dans un Char vide : comparer False à ''
             # ferait passer le fourre-tout pour absent du serveur.
-            lambda a: ((a.alias_name or ''), a.domain_id.id) not in remote_keys
-        ).write({'synced': False})
-        return True
+            lambda a: ((a.alias_name or ''), a.domain_id.id) not in remote_keys)
+        if dry_run:
+            for fiche in disparues:
+                plan.append('%s « %s » : disparue du serveur'
+                            % (self._description, fiche._designation()))
+        else:
+            disparues.write({'synced': False})
+        return plan

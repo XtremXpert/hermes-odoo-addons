@@ -1,5 +1,5 @@
 # Part of the mailcow_admin Odoo module. See LICENSE for details.
-from odoo import fields, models
+from odoo import api, fields, models
 
 
 class MailcowSyncMixin(models.AbstractModel):
@@ -16,6 +16,78 @@ class MailcowSyncMixin(models.AbstractModel):
 
     last_synced_on = fields.Datetime(
         string='Dernière synchronisation', readonly=True)
+
+    def _designation(self):
+        """Comment nommer cette fiche dans un compte rendu.
+
+        Le nom affiché d'une boîte est son nom complet, parfois vide : il
+        vaut mieux l'adresse, qui ne l'est jamais.
+        """
+        self.ensure_one()
+        return self.display_name
+
+    @api.model
+    def action_preview_sync_from_mailcow(self):
+        """Ouvrir l'aperçu de ce qu'une synchronisation changerait.
+
+        Rien n'est écrit, ni dans Odoo ni sur le serveur : la lecture seule du
+        serveur suffit à décrire le plan.
+        """
+        plan = self._sync_all_from_mailcow(dry_run=True)
+        apercu = self.env['mailcow.sync.preview'].create({
+            'model_name': self._description,
+            'plan': '\n'.join(plan)
+                    or "Rien à changer : l'état local est déjà celui du serveur.",
+        })
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Aperçu de la synchronisation',
+            'res_model': 'mailcow.sync.preview',
+            'res_id': apercu.id,
+            'view_mode': 'form',
+            'target': 'new',
+        }
+
+    @api.model
+    def _ecarts(self, fiche, valeurs):
+        """Les champs dont le serveur s'écarte de la fiche locale."""
+        ecarts = []
+        for champ, valeur in valeurs.items():
+            if champ in ('synced', 'last_synced_on'):
+                continue
+            actuel = fiche[champ]
+            if isinstance(fiche._fields[champ], fields.Datetime):
+                # Ni la date vide côté serveur ni la date absente côté Odoo ne
+                # valent un changement : les deux se ramènent à None.
+                attendu = fields.Datetime.to_datetime(valeur) if valeur else None
+                if attendu != (actuel or None):
+                    ecarts.append(champ)
+            elif (actuel or '') != (valeur or ''):
+                # Odoo range False là où le serveur envoie une chaîne vide :
+                # les comparer tels quels annoncerait un changement perpétuel.
+                ecarts.append(champ)
+        return ecarts
+
+    @api.model
+    def _poser(self, fiche, valeurs, plan, dry_run):
+        """Écrire la fiche — sauf en aperçu, où l'on décrit et on s'arrête."""
+        if not dry_run:
+            fiche.write(valeurs)
+            return fiche
+        ecarts = self._ecarts(fiche, valeurs)
+        if ecarts:
+            plan.append('%s « %s » : %s'
+                        % (self._description, fiche._designation(),
+                           ', '.join(sorted(ecarts))))
+        return fiche
+
+    @api.model
+    def _creer(self, modele, valeurs, plan, dry_run, etiquette):
+        """Créer la fiche — sauf en aperçu, où l'on annonce seulement."""
+        if dry_run:
+            plan.append('%s « %s » : à créer' % (self._description, etiquette))
+            return self.env[modele]
+        return self.env[modele].create(valeurs)
 
     def action_push_to_mailcow(self):
         """Pousser vers Mailcow ce qui existe localement.

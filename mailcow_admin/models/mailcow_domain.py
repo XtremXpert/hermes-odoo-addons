@@ -123,11 +123,17 @@ class MailcowDomain(models.Model):
 
     @api.model
     def action_sync_all_from_mailcow(self):
-        """Aligne tout l'état local sur le serveur (GET /get/domain/all).
+        """Aligner tout l'état local sur le serveur (bouton et menu)."""
+        return self._sync_all_from_mailcow()
+
+    @api.model
+    def _sync_all_from_mailcow(self, dry_run=False):
+        """Décrire, ou appliquer, l'état du serveur sur les fiches locales.
 
         S'appelle sans aucune fiche locale : c'est ainsi qu'on amorce une base
         vide, depuis l'en-tête d'une vue de liste ou le menu « Tout synchroniser ».
         """
+        plan = []
         client = MailcowClient(self.env)
         response = client._request('GET', '/get/domain/all', None)
         entries = response.get('data') if isinstance(response, dict) else response
@@ -155,12 +161,17 @@ class MailcowDomain(models.Model):
                 'last_synced_on': fields.Datetime.now(),
             }
             if domain:
-                domain.write(values)
+                self._poser(domain, values, plan, dry_run)
             else:
-                self.env['mailcow.domain'].create(
-                    dict(values, name=nom))
+                self._creer('mailcow.domain', dict(values, name=nom),
+                            plan, dry_run, nom)
         # Les domaines locaux absents du serveur ne sont plus « synchronisés ».
-        self.env['mailcow.domain'].search(
-            [('name', 'not in', list(remote_ids)), ('active', '=', True)]
-        ).write({'synced': False})
-        return True
+        disparues = self.env['mailcow.domain'].search(
+            [('name', 'not in', list(remote_ids)), ('active', '=', True)])
+        if dry_run:
+            for fiche in disparues:
+                plan.append('%s « %s » : disparue du serveur'
+                            % (self._description, fiche._designation()))
+        else:
+            disparues.write({'synced': False})
+        return plan
