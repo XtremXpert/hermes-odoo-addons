@@ -15,6 +15,12 @@
                 <field name="domain_id"/>
                 <field name="name" optional="show"/>
                 <field name="quota_mb" string="Quota (Mo)" optional="show"/>
+                <field name="quota_used_mb" string="Utilisé (Mo)" optional="show"/>
+                <field name="percent_in_use" string="Occupation" optional="show"/>
+                <field name="last_imap_login" string="Dernière connexion" optional="show"/>
+                <field name="messages" string="Messages" optional="hide"/>
+                <field name="last_smtp_login" optional="hide"/>
+                <field name="last_pop3_login" optional="hide"/>
                 <field name="active"/>
                 <field name="synced" string="Synchronisé"/>
             </list>
@@ -76,6 +82,18 @@
                                    placeholder="Nécessaire à la création sur Mailcow"/>
                         </group>
                     </group>
+                    <group string="Utilisation" invisible="not synced">
+                        <group>
+                            <field name="quota_used_mb"/>
+                            <field name="percent_in_use"/>
+                            <field name="messages"/>
+                        </group>
+                        <group>
+                            <field name="last_imap_login"/>
+                            <field name="last_smtp_login"/>
+                            <field name="last_pop3_login"/>
+                        </group>
+                    </group>
                 </sheet>
             </form>
         </field>
@@ -90,6 +108,12 @@
                 <field name="name"/>
                 <field name="domain_id"/>
                 <filter string="Non synchronisées" name="not_synced" domain="[('synced', '=', False)]"/>
+                <filter string="Jamais vue en IMAP" name="jamais_imap"
+                        domain="[('last_imap_login', '=', False)]"/>
+                <filter string="Sans quota" name="sans_quota"
+                        domain="[('quota_mb', '=', 0)]"/>
+                <filter string="Occupation ≥ 80 %" name="quota_serre"
+                        domain="[('percent_in_use', '&gt;=', 80)]"/>
                 <separator/>
                 <filter string="Archivé" name="inactive" domain="[('active', '=', False)]"/>
             </search>

@@ -1,8 +1,29 @@
 # Part of the mailcow_admin Odoo module. See LICENSE for details.
+from datetime import datetime, timezone
+
 from odoo import api, fields, models
 from odoo.exceptions import UserError
 
 from ..services.mailcow_client import MailcowClient
+
+
+def _en_nombre(valeur):
+    """Mailcow envoie parfois les nombres sous forme de texte (« 25 »)."""
+    try:
+        return float(valeur)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _en_date(valeur):
+    """Convertit un horodatage Unix de Mailcow en date Odoo.
+
+    L'API renvoie les dernières connexions en secondes depuis 1970, et 0 pour
+    « jamais ». Un affichage naïf casse : le module convertit ici, une fois.
+    """
+    if isinstance(valeur, (int, float)) and valeur:
+        return datetime.fromtimestamp(float(valeur), timezone.utc).replace(tzinfo=None)
+    return False
 
 
 class MailcowMailbox(models.Model):
@@ -20,6 +41,16 @@ class MailcowMailbox(models.Model):
     quota_mb = fields.Integer(string='Quota (Mo)', default=0, help='0 = illimité')
     active = fields.Boolean(string='Actif', default=True)
     synced = fields.Boolean(string='Synchronisé avec Mailcow')
+    # Ce que Mailcow sait de chaque boîte et que le module ignorait.
+    # En décimal : une boîte de 87 Ko ne doit pas s'afficher à 0.
+    quota_used_mb = fields.Float(
+        string='Utilisé (Mo)', readonly=True, digits=(12, 2))
+    percent_in_use = fields.Float(
+        string='Occupation (%)', readonly=True, digits=(5, 1))
+    messages = fields.Integer(string='Messages', readonly=True)
+    last_imap_login = fields.Datetime(string='Dernière connexion IMAP', readonly=True)
+    last_smtp_login = fields.Datetime(string='Dernière connexion SMTP', readonly=True)
+    last_pop3_login = fields.Datetime(string='Dernière connexion POP3', readonly=True)
     password = fields.Char(
         string='Mot de passe',
         help="Utilisé à la création et à la réinitialisation. Jamais stocké dans Odoo.",
@@ -209,9 +240,18 @@ class MailcowMailbox(models.Model):
                 'name': entry.get('name') or '',
                 'description': entry.get('description') or '',
                 # Mailcow renvoie les quotas en octets (écriture en Mo).
-                'quota_mb': int(entry.get('quota') or 0) // (1024 * 1024),
+                # Les nombres peuvent arriver en texte : on convertit sans
+                # supposer, sinon un quota textuel ferait lever la synchro.
+                'quota_mb': int(_en_nombre(entry.get('quota'))) // (1024 * 1024),
                 'active': entry.get('active') in (1, '1', True),
                 'synced': True,
+                # L'usage réel, lu à chaque synchronisation.
+                'quota_used_mb': _en_nombre(entry.get('quota_used')) / (1024 * 1024),
+                'percent_in_use': _en_nombre(entry.get('percent_in_use')),
+                'messages': int(_en_nombre(entry.get('messages'))),
+                'last_imap_login': _en_date(entry.get('last_imap_login')),
+                'last_smtp_login': _en_date(entry.get('last_smtp_login')),
+                'last_pop3_login': _en_date(entry.get('last_pop3_login')),
             }
             if mailbox:
                 mailbox.write(values)

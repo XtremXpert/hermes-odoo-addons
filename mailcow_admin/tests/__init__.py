@@ -1,5 +1,6 @@
 from . import test_client
 from . import test_updates
+from . import test_usage
 from . import test_alias_identifiant
 from . import test_catchall_button
 from . import test_dkim_record
