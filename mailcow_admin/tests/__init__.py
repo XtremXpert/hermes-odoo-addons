@@ -16,3 +16,4 @@ from . import test_alias
 from . import test_alias_catchall
 from . import test_settings
 from . import test_access
+from . import test_notification

@@ -136,19 +136,23 @@ class MailcowClient:
         return entries
 
     def _notify(self, entry):
-        """Pousse une notification dans le client Odoo (best effort)."""
+        """Pousse une notification dans le client Odoo (best effort).
+
+        ``_bus_send`` et non ``_sendone`` : le bus d'Odoo recommande la
+        première, qui vise la connexion de l'utilisateur. Publier sur un canal
+        nommé à la main ne mène nulle part — rien dans ce module ne l'écoute —
+        et le nom d'un tel canal doit être imprévisible, ce que « mailcow »
+        n'est pas. Le type ``simple_notification`` est celui que le service
+        natif du bus affiche.
+        """
         try:  # noqa: SIM105 - reindenter le bloc enterrerait la raison
-            self.env['bus.bus']._sendone(
-                'mailcow',
+            self.env.user._bus_send(
+                'simple_notification',
                 {
-                    'type': 'notification',
-                    'data': {
-                        'title': 'Mailcow',
-                        'message': entry['msg'],
-                        'type': 'success' if entry.get('type') == 'success' else 'info',
-                        'sticky': True,
-                        'stacked': True,
-                    },
+                    'type': 'success' if entry.get('type') == 'success' else 'info',
+                    'title': 'Mailcow',
+                    'message': entry['msg'],
+                    'sticky': True,
                 },
             )
         except Exception:  # noqa: BLE001 - la notification ne doit pas casser l'action
