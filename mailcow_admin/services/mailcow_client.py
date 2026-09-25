@@ -135,6 +135,20 @@ class MailcowClient:
                 self._notify(entry)
         return entries
 
+    @staticmethod
+    def _texte_lisible(message):
+        """Rend lisible le message d'une réponse Mailcow.
+
+        Mailcow renvoie souvent une clé de traduction et ses arguments
+        (["domain_added", "exemple.com"]) plutôt qu'une phrase. Publiée telle
+        quelle, la liste afficherait du JSON dans le bandeau.
+        """
+        if isinstance(message, (list, tuple)):
+            return ' '.join(str(mot).replace('_', ' ') for mot in message)
+        if isinstance(message, dict):
+            return ' '.join(str(valeur) for valeur in message.values())
+        return str(message)
+
     def _notify(self, entry):
         """Pousse une notification dans le client Odoo (best effort).
 
@@ -151,7 +165,7 @@ class MailcowClient:
                 {
                     'type': 'success' if entry.get('type') == 'success' else 'info',
                     'title': 'Mailcow',
-                    'message': entry['msg'],
+                    'message': self._texte_lisible(entry['msg']),
                     'sticky': True,
                 },
             )

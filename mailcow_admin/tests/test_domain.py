@@ -30,13 +30,20 @@ class TestMailcowDomain(TransactionCase):
             return_value=[{'msg': 'domain_added', 'type': 'success'}],
         ) as request:
             domain.action_create_on_mailcow()
+        # La creation et l'edition ne parlent pas le meme vocabulaire.
+        # /add/domain attend defquota, maxquota et quota en MIO ; c'est ce que
+        # montre l'exemple de l'API (« defquota: 3072 », « maxquota: 10240 »),
+        # qui est aussi l'origine des valeurs par defaut du serveur.
+        # Lui envoyer les noms de l'edition (def_quota_for_mbox, en octets) ne
+        # produit ni erreur ni quota : Mailcow ignore ce qu'il ne connait pas
+        # et repond « success ».
         request.assert_called_once_with('POST', '/add/domain', {
             'domain': 'dc.com',
             'description': 'Mon domaine',
             'active': '1',
-            # Mailcow compte les quotas en octets : 100 Mo = 104857600.
-            'def_quota_for_mbox': 104857600,
-            'max_quota_for_domain': 104857600,
+            'defquota': 100,
+            'maxquota': 100,
+            'quota': 100,
         })
         self.assertTrue(domain.synced)
 
@@ -60,6 +67,32 @@ class TestMailcowDomain(TransactionCase):
                 'active': '1',
             },
         })
+
+    def test_update_on_mailcow_envoie_le_quota_en_mio(self):
+        """Un quota non nul doit partir en Mio, sous les noms de l'ecriture.
+
+        Mesure faite sur le serveur : /edit/domain accepte les cles
+        « def_quota_for_mbox » et « max_quota_for_domain » en les recopiant
+        dans son journal, repond « success », et n'applique rien. Ce sont les
+        noms de la RELECTURE. L'ecriture attend « defquota », « maxquota » et
+        « quota », en Mio.
+        """
+        domain = self.env['mailcow.domain'].create({
+            'name': 'dc.com', 'synced': True, 'quota_mb': 200,
+        })
+        with patch.object(
+            MailcowClient, '_request',
+            return_value=[{'msg': 'domain_modified', 'type': 'success'}],
+        ) as request:
+            domain.action_update_on_mailcow()
+        _, route, charge = request.call_args[0]
+        self.assertEqual(route, '/edit/domain')
+        attr = charge['attr']
+        self.assertEqual(attr.get('defquota'), 200)
+        self.assertEqual(attr.get('maxquota'), 200)
+        self.assertEqual(attr.get('quota'), 200)
+        self.assertNotIn('def_quota_for_mbox', attr)
+        self.assertNotIn('max_quota_for_domain', attr)
 
     def test_delete_on_mailcow_unsyncs_and_archives(self):
         domain = self.env['mailcow.domain'].create(
@@ -115,6 +148,40 @@ class TestMailcowDomain(TransactionCase):
 
         local_only = local_only.search([('name', '=', 'local-only.com')])
         self.assertFalse(local_only.synced)
+
+    def test_sync_revive_une_fiche_archivee_au_lieu_de_planter(self):
+        """Une fiche archivee qui reapparait sur le serveur doit revivre.
+
+        Le cas reel, rencontre en test sur un vrai domaine : on supprime un
+        domaine — l'action archive la fiche locale — puis le domaine
+        reapparait cote Mailcow. La synchronisation ne regardait que les
+        fiches actives, concluait qu'il manquait, et tentait d'en creer une
+        seconde : la contrainte d'unicite sur le nom faisait echouer toute la
+        synchronisation au lieu de simplement raviver la fiche.
+        """
+        fiche = self.env['mailcow.domain'].create({'name': 'revient.com'})
+        with patch.object(
+            MailcowClient, '_request',
+            return_value=[{'msg': 'domain_deleted', 'type': 'success'}],
+        ):
+            fiche.action_delete_on_mailcow()
+        self.assertFalse(fiche.active, "l'action de suppression doit archiver")
+
+        remote = {'data': [{
+            'domain_name': 'revient.com',
+            'description': 'de retour',
+            'active': '1',
+            'def_quota_for_mbox': 0,
+        }]}
+        with patch.object(MailcowClient, '_request', return_value=remote):
+            self.env['mailcow.domain'].action_sync_all_from_mailcow()
+
+        retrouvees = self.env['mailcow.domain'].with_context(active_test=False).search(
+            [('name', '=', 'revient.com')])
+        self.assertEqual(len(retrouvees), 1, "une seconde fiche a ete tentee")
+        self.assertTrue(retrouvees.active, "la fiche archivee n'a pas ete ravivee")
+        self.assertTrue(retrouvees.synced)
+        self.assertEqual(retrouvees.description, 'de retour')
 
     def test_sync_all_works_without_any_local_record(self):
         """Amorcer une base vide : aucune fiche locale n'est nécessaire."""

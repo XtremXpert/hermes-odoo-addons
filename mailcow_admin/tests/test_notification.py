@@ -44,6 +44,26 @@ class TestNotificationMailcow(TransactionCase):
             '__exit__': lambda soi, *reste: False,
         })()
 
+    def test_un_message_en_liste_reste_lisible(self):
+        """Mailcow renvoie parfois une cle de traduction, pas une phrase.
+
+        Releve sur le serveur : /add/domain repond
+        {"msg": ["domain_added", "test636.diverse-cite.com"]}. Coller cette
+        liste telle quelle dans le bandeau affiche du JSON a l'utilisateur.
+        """
+        publies = []
+        with patch.object(type(self.env['bus.bus']), '_sendone',
+                          side_effect=lambda *a, **k: publies.append(a)):
+            MailcowClient(self.env)._notify({
+                'type': 'success',
+                'msg': ['domain_added', 'test636.diverse-cite.com'],
+            })
+        self.assertEqual(len(publies), 1, "la notification n'a pas ete publiee")
+        message = publies[0][2]['message']
+        self.assertIsInstance(message, str, "le bandeau afficherait du JSON")
+        self.assertIn('domain added', message)
+        self.assertNotIn('["', message)
+
     def test_le_message_atteint_l_utilisateur(self):
         """La notification vise la connexion de l'utilisateur, pas un canal libre."""
         with patch('urllib.request.urlopen', return_value=self._reponse_portant(

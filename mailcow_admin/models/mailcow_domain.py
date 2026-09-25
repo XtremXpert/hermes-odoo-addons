@@ -38,8 +38,17 @@ class MailcowDomain(models.Model):
 
         Mailcow attend {"items": [domaine], "attr": {...}} et ignore un corps
         plat en répondant « success ». Le nom est l'identité, pas un attribut.
-        Les quotas sont en OCTETS ; un quota local à 0 vaut « illimité », on
-        n'envoie donc rien plutôt que d'effacer la politique du serveur.
+
+        Les quotas s'écrivent en MIO sous les noms « defquota », « maxquota »
+        et « quota » — les mêmes pour /add/domain et pour /edit/domain, comme
+        le montre l'exemple de l'API (« defquota: 3072 », « maxquota: 10240 »,
+        qui sont aussi les valeurs par défaut du serveur). « def_quota_for_mbox »
+        et « max_quota_for_domain » sont les noms de la RELECTURE : mesuré sur
+        le serveur, /edit/domain les recopie dans son journal, répond
+        « success », et n'applique rien.
+
+        Un quota local à 0 vaut « illimité » : on n'envoie rien plutôt que
+        d'écraser la politique de quotas du serveur.
         """
         self.ensure_one()
         attr = {
@@ -47,13 +56,17 @@ class MailcowDomain(models.Model):
             'active': '1' if self.active else '0',
         }
         if self.quota_mb > 0:
-            octets = self.quota_mb * 1024 * 1024
-            attr['def_quota_for_mbox'] = octets
-            attr['max_quota_for_domain'] = octets
+            attr['defquota'] = self.quota_mb
+            attr['maxquota'] = self.quota_mb
+            attr['quota'] = self.quota_mb
         return attr
 
     def _payload(self):
-        """La charge de création : le nom, plus les attributs modifiables."""
+        """La charge de création : le nom, plus les attributs modifiables.
+
+        Les deux routes d'écriture, /add/domain et /edit/domain, partagent le
+        vocabulaire décrit dans _attr_payload : les quotas s'y écrivent en MIO.
+        """
         self.ensure_one()
         return dict(self._attr_payload(), domain=self.name)
 
@@ -152,7 +165,12 @@ class MailcowDomain(models.Model):
             if not nom:
                 continue
             remote_ids.add(nom)
-            domain = self.env['mailcow.domain'].search([('name', '=', nom)], limit=1)
+            # Les fiches archivees comptent : une suppression archive la fiche
+            # locale, et le domaine qui reapparait ensuite doit etre ravive, pas
+            # recree — la contrainte d'unicite sur le nom ferait echouer toute
+            # la synchronisation.
+            domain = self.env['mailcow.domain'].with_context(
+                active_test=False).search([('name', '=', nom)], limit=1)
             values = {
                 'description': entry.get('description') or '',
                 # Mailcow renvoie les quotas en octets.
