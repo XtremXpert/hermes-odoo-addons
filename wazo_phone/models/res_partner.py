@@ -3,11 +3,10 @@
 
 import re
 
-from odoo.exceptions import UserError
-
 from odoo import api
 from odoo import fields
 from odoo import models
+from odoo.exceptions import UserError
 
 
 class ResPartner(models.Model):

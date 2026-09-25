@@ -1,10 +1,9 @@
 # Part of the asterisk_ari Odoo module. See LICENSE for details.
 """Historique des appels click-to-call (origination ARI)."""
 
-from odoo.exceptions import UserError
-
 from odoo import fields
 from odoo import models
+from odoo.exceptions import UserError
 
 from ..services.ari_client import ARI
 from ..services.ari_client import ARIConfigError

@@ -1,10 +1,9 @@
 # Part of the voipms_sms Odoo module. See LICENSE for details.
 """Réglages de connexion VoIP.ms (utilisateur + token)."""
 
-from odoo.exceptions import UserError
-
 from odoo import fields
 from odoo import models
+from odoo.exceptions import UserError
 
 from ..services.voipms_client import VoIPMSAPIError
 from ..services.voipms_client import VoIPMSClient

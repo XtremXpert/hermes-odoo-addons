@@ -1,9 +1,8 @@
 # Part of the mailcow_admin Odoo module. See LICENSE for details.
-from odoo.exceptions import UserError
-
 from odoo import api
 from odoo import fields
 from odoo import models
+from odoo.exceptions import UserError
 
 from ..services.mailcow_client import MailcowClient
 from ..services.mailcow_client import en_date as _en_date

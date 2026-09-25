@@ -26,14 +26,13 @@ from datetime import datetime
 
 _logger = logging.getLogger(__name__)
 
+from odoo import api
+from odoo import fields
+from odoo import models
 from odoo.addons.wazo_phone.services.wazo_client import WazoAPIError
 from odoo.addons.wazo_phone.services.wazo_client import WazoClient
 from odoo.exceptions import UserError
 from odoo.exceptions import ValidationError
-
-from odoo import api
-from odoo import fields
-from odoo import models
 
 #: Bloc remis à l'exploitant du tenant. Les libellés sont ceux des réglages de
 #: `wazo_phone` (« Réglages → Téléphonie Wazo ») : la fiche se recopie sans

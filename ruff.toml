@@ -44,6 +44,12 @@ ignore = [
 # fonctionne, mais sort de la convention du framework.
 force-single-line = true
 
+# Sans cette ligne, ruff décide que « odoo » est un paquet local ou tiers selon
+# qu'un dossier « odoo/ » existe à côté. Il existe chez moi (les sources) et pas
+# dans la CI : le même fichier était donc trié de deux façons, et le lint
+# passait ici en échouant là-bas. Déclaré ici, le tri ne dépend plus du disque.
+known-first-party = ["odoo"]
+
 [lint.per-file-ignores]
 # Odoo enregistre ses modèles, ses services et ses tests en les important :
 # « from . import mailcow_domain » n'est pas un import mort, c'est la

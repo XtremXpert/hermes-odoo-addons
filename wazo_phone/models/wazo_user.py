@@ -27,10 +27,9 @@ est annulée par la suite : en cas d'erreur en cours de flux, le
 message d'erreur précise l'étape échouée.
 """
 
-from odoo.exceptions import UserError
-
 from odoo import fields
 from odoo import models
+from odoo.exceptions import UserError
 
 from ..services.wazo_client import WazoAPIError
 

@@ -7,11 +7,10 @@ from datetime import UTC
 from datetime import datetime
 from datetime import timedelta
 
-from odoo.exceptions import UserError
-
 from odoo import api
 from odoo import fields
 from odoo import models
+from odoo.exceptions import UserError
 
 from ..services.wazo_client import WazoAPIError
 from ..services.wazo_client import WazoClient

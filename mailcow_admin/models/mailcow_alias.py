@@ -1,10 +1,9 @@
 # Part of the mailcow_admin Odoo module. See LICENSE for details.
-from odoo.exceptions import UserError
-from odoo.exceptions import ValidationError
-
 from odoo import api
 from odoo import fields
 from odoo import models
+from odoo.exceptions import UserError
+from odoo.exceptions import ValidationError
 
 from ..services.mailcow_client import MailcowClient
 from ..services.mailcow_client import refuser_la_disparition_totale
