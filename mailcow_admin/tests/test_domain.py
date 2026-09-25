@@ -249,6 +249,12 @@ class TestMailcowDomain(TransactionCase):
         en Python evite de refaire le calcul en JavaScript, ou il divergerait
         au premier changement de regle.
         """
+        # « boites » compte desormais les fiches, il ne somme plus l'occupation
+        # des domaines : on releve avant, et on ne mesure que l'ecart. Un compte
+        # absolu passerait sur la base de developpement et casserait sur une
+        # base neuve, comme en integration continue.
+        boites_avant = self.env['mailcow.domain'].donnees_tableau_de_bord()['totaux']['boites']
+
         d1 = self.env['mailcow.domain'].create({
             'name': 'un.com', 'active': True, 'synced': True,
             'mailboxes_used': 8, 'mailboxes_max': 10,
@@ -275,7 +281,7 @@ class TestMailcowDomain(TransactionCase):
         self.assertAlmostEqual(un['occupation'], 80.0)
         self.assertFalse(un['dkim'])
         self.assertGreaterEqual(donnees['totaux']['domaines'], 2)
-        self.assertGreaterEqual(donnees['totaux']['boites'], 9)
+        self.assertEqual(donnees['totaux']['boites'], boites_avant + 1)
         # La pression des quotas est desormais une alerte, avec son modele et
         # son filtre : c'est elle qui rend le chiffre actionnable.
         par_cle = {alerte['cle']: alerte for alerte in donnees['alertes']}
