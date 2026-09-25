@@ -12,6 +12,7 @@ from ..services.mailcow_client import (
 
 class MailcowMailbox(models.Model):
     _name = 'mailcow.mailbox'
+    _inherit = ['mailcow.sync.mixin']
     _description = 'Mailcow: boîte mail'
     _order = 'domain_id, local_part'
 
@@ -99,7 +100,7 @@ class MailcowMailbox(models.Model):
                 )
             client = MailcowClient(self.env)
             client._request('POST', '/add/mailbox', mailbox._base_payload(with_password=True))
-            mailbox.write({'synced': True})
+            mailbox.write({'last_synced_on': fields.Datetime.now(), 'synced': True})
             mailbox.password = False  # le mot de passe ne doit pas rester dans Odoo
 
     def action_make_catch_all(self):
@@ -158,7 +159,7 @@ class MailcowMailbox(models.Model):
                 'items': [mailbox.email],
                 'attr': mailbox._attr_payload(),
             })
-            mailbox.write({'synced': True})
+            mailbox.write({'last_synced_on': fields.Datetime.now(), 'synced': True})
 
     def action_reset_password(self):
         """Ouvre le wizard de réinitialisation du mot de passe."""
@@ -231,6 +232,7 @@ class MailcowMailbox(models.Model):
                 'quota_mb': int(_en_nombre(entry.get('quota'))) // (1024 * 1024),
                 'active': entry.get('active') in (1, '1', True),
                 'synced': True,
+                'last_synced_on': fields.Datetime.now(),
                 # L'usage réel, lu à chaque synchronisation.
                 'quota_used_mb': _en_nombre(entry.get('quota_used')) / (1024 * 1024),
                 'percent_in_use': _en_nombre(entry.get('percent_in_use')),

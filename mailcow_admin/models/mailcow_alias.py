@@ -10,6 +10,7 @@ from ..services.mailcow_client import (
 
 class MailcowAlias(models.Model):
     _name = 'mailcow.alias'
+    _inherit = ['mailcow.sync.mixin']
     _description = 'Mailcow: alias'
     _order = 'domain_id, alias_name'
 
@@ -84,7 +85,7 @@ class MailcowAlias(models.Model):
             alias._ensure_addresses()
             client = MailcowClient(self.env)
             client._request('POST', '/add/alias', alias._payload())
-            alias.write({'synced': True})
+            alias.write({'last_synced_on': fields.Datetime.now(), 'synced': True})
             identifiant = alias._remote_id()
             if identifiant:
                 alias.write({'mailcow_id': str(identifiant)})
@@ -128,7 +129,7 @@ class MailcowAlias(models.Model):
                 'items': [str(identifiant)],
                 'attr': alias._attr_payload(),
             })
-            alias.write({'synced': True, 'mailcow_id': str(identifiant)})
+            alias.write({'last_synced_on': fields.Datetime.now(), 'synced': True, 'mailcow_id': str(identifiant)})
 
     def action_delete_on_mailcow(self):
         """Supprime l'alias sur Mailcow, puis l'archive localement."""
@@ -202,6 +203,7 @@ class MailcowAlias(models.Model):
                 'description': entry.get('description') or '',
                 'active': entry.get('active') in (1, '1', True),
                 'synced': True,
+                'last_synced_on': fields.Datetime.now(),
                 'is_catch_all': est_fourre_tout,
                 'address_ids': [(6, 0, self._address_records(destinations).ids)],
             }

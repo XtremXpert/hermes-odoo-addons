@@ -11,6 +11,7 @@ from ..services.mailcow_client import (
 
 class MailcowDomain(models.Model):
     _name = 'mailcow.domain'
+    _inherit = ['mailcow.sync.mixin']
     _description = 'Mailcow: domaine'
     _order = 'name'
 
@@ -94,7 +95,7 @@ class MailcowDomain(models.Model):
         for domain in self:
             client = MailcowClient(self.env)
             client._request('POST', '/add/domain', domain._payload())
-            domain.write({'synced': True})
+            domain.write({'last_synced_on': fields.Datetime.now(), 'synced': True})
 
     def action_update_on_mailcow(self):
         """Réécrit l'état local sur Mailcow."""
@@ -104,7 +105,7 @@ class MailcowDomain(models.Model):
                 'items': [domain.name],
                 'attr': domain._attr_payload(),
             })
-            domain.write({'synced': True})
+            domain.write({'last_synced_on': fields.Datetime.now(), 'synced': True})
 
     def action_delete_on_mailcow(self):
         """Supprime le domaine sur Mailcow, puis l'archive localement."""
@@ -151,6 +152,7 @@ class MailcowDomain(models.Model):
                 'quota_mb': int(en_nombre(entry.get('def_quota_for_mbox'))) // (1024 * 1024),
                 'active': entry.get('active') in (1, '1', True),
                 'synced': True,
+                'last_synced_on': fields.Datetime.now(),
             }
             if domain:
                 domain.write(values)

@@ -10,6 +10,14 @@
                     <button name="action_sync_all_from_mailcow" type="object"
                             string="Synchroniser depuis Mailcow"
                             groups="mailcow_admin.group_mailcow_manager"/>
+                    <button name="action_forget_locally" type="object"
+                            string="Oublier les fiches sélectionnées"
+                            groups="mailcow_admin.group_mailcow_manager"
+                            confirm="Archiver les fiches sélectionnées ? Le serveur n'est pas touché."/>
+                    <button name="action_purge_local" type="object"
+                            string="Supprimer les fiches sélectionnées"
+                            groups="mailcow_admin.group_mailcow_manager"
+                            confirm="Supprimer définitivement ces fiches d'Odoo ? Le serveur n'est pas touché."/>
                 </header>
                 <field name="name"/>
                 <field name="description" optional="show"/>
@@ -99,6 +107,8 @@
                 <field name="name"/>
                 <field name="description"/>
                 <filter string="Non synchronisés" name="not_synced" domain="[('synced', '=', False)]"/>
+                <filter string="Disparues du serveur" name="disparues"
+                        domain="[('synced', '=', False), ('last_synced_on', '!=', False), ('active', '=', True)]"/>
                 <separator/>
                 <filter string="Archivé" name="inactive" domain="[('active', '=', False)]"/>
             </search>
