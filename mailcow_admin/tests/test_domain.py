@@ -289,6 +289,40 @@ class TestMailcowDomain(TransactionCase):
         self.assertEqual(par_cle['boites_serrees']['modele'], 'mailcow.mailbox')
         self.assertEqual(par_cle['boites_serrees']['filtre'][0][0], 'id')
 
+    def test_le_tableau_de_bord_donne_de_quoi_interagir(self):
+        """Ouvrir, trier, chercher : il faut de quoi designer chaque fiche.
+
+        Les listes portent l'identifiant de la fiche locale, pour qu'un clic
+        ouvre la bonne. Sans lui, l'interface n'aurait que le nom pour la
+        retrouver — ce qui casse des qu'un nom change.
+        """
+        domaine = self.env['mailcow.domain'].create({
+            'name': 'interaction.com', 'quota_mb': 100, 'synced': True,
+            'mailboxes_max': 5, 'aliases_max': 5,
+        })
+        boite = self.env['mailcow.mailbox'].create({
+            'local_part': 'clic', 'domain_id': domaine.id, 'quota_mb': 100,
+            'quota_used_mb': 12.5, 'messages': 7, 'active': True, 'synced': True,
+        })
+        alias = self.env['mailcow.alias'].create({
+            'alias_name': 'renvoi', 'domain_id': domaine.id, 'synced': True,
+        })
+
+        donnees = self.env['mailcow.domain'].donnees_tableau_de_bord()
+        boites = {b['id']: b for b in donnees['boites']}
+        alias_par_id = {a['id']: a for a in donnees['alias']}
+
+        self.assertIn(boite.id, boites)
+        self.assertEqual(boites[boite.id]['nom'], 'clic@interaction.com')
+        self.assertEqual(boites[boite.id]['domaine'], 'interaction.com')
+        self.assertEqual(boites[boite.id]['messages'], 7)
+        self.assertAlmostEqual(boites[boite.id]['pourcentage'], 12.5)
+        self.assertIn(alias.id, alias_par_id)
+        self.assertEqual(alias_par_id[alias.id]['nom'], 'renvoi@interaction.com')
+        self.assertFalse(alias_par_id[alias.id]['catch_all'])
+        # L'adresse de l'interface Mailcow, pour y renvoyer d'un clic.
+        self.assertIn('mailcow_url', donnees)
+
     def test_le_tableau_de_bord_signale_ce_qui_cloche(self):
         """Un tableau de bord sert a voir ce qui ne va pas, pas a compter.
 

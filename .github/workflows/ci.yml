@@ -59,7 +59,7 @@ jobs:
         run: python .github/scripts/verifier_les_xml.py
 
       - name: Tests JS
-        run: node --test 'wazo_phone/static/tests/*.test.js'
+        run: node --test '*/static/tests/*.test.js'
 
   odoo:
     name: Tests Odoo

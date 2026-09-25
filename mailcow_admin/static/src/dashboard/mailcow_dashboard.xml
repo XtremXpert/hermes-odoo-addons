@@ -1,28 +1,50 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
 
-    <!-- Tout ce qui appartient au composant est qualifie par « this. » : en
-         OWL 3, une reference nue ne trouve rien et le rendu echoue. -->
+    <!-- En OWL 3, tout ce qui appartient au composant se qualifie par « this. » :
+         une reference nue ne trouve rien et le rendu echoue. -->
     <t t-name="mailcow_admin.Dashboard">
         <div class="o_mailcow_dashboard p-3">
-            <div class="d-flex justify-content-between align-items-start mb-3">
+            <div class="d-flex justify-content-between align-items-start mb-2">
                 <div>
                     <h2 class="mb-1">Mailcow — vue d'ensemble</h2>
                     <p class="text-muted mb-0">
                         Ce que le serveur porte, ce qui approche de la limite, et ce qui dort.
                     </p>
                 </div>
-                <button class="btn btn-secondary" t-on-click="() => this.synchroniser()"
-                        t-att-disabled="this.state.synchro">
-                    <t t-if="this.state.synchro">Synchronisation…</t>
-                    <t t-else="">Synchroniser depuis Mailcow</t>
+                <div class="d-flex gap-2">
+                    <a t-if="this.lienMailcow" t-att-href="this.lienMailcow" target="_blank"
+                       rel="noreferrer" class="btn btn-link">Ouvrir Mailcow</a>
+                    <button class="btn btn-secondary" t-on-click="() => this.synchroniser()"
+                            t-att-disabled="this.state.synchro">
+                        <t t-if="this.state.synchro">Synchronisation…</t>
+                        <t t-else="">Synchroniser depuis Mailcow</t>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Le rafraichissement ne relit que l'etat local d'Odoo : il ne pese
+                 pas sur Mailcow. Tirer du serveur reste un geste explicite. -->
+            <div class="d-flex align-items-center gap-3 border rounded p-2 mb-3 bg-light">
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" id="mailcow_auto"
+                           t-att-checked="this.state.auto"
+                           t-on-change="() => (this.state.auto = !this.state.auto)"/>
+                    <label class="form-check-label" for="mailcow_auto">
+                        Rafraîchir tout seul, toutes les 30 secondes
+                    </label>
+                </div>
+                <span class="text-muted small">
+                    Dernière mise à jour : <span t-esc="this.heureMaj"/>
+                </span>
+                <button class="btn btn-sm btn-link p-0" t-on-click="() => this.charger()">
+                    Rafraîchir maintenant
                 </button>
             </div>
 
-            <p t-if="this.state.chargement">Chargement…</p>
+            <p t-if="this.state.chargement &amp;&amp; !this.state.donnees">Chargement…</p>
             <div t-elif="this.state.erreur" class="alert alert-danger" t-esc="this.state.erreur"/>
             <t t-else="">
-                <!-- Ce qui demande une decision, avant les chiffres. -->
                 <h4 class="mb-2" t-if="this.alertes.length">
                     À regarder
                     <span class="badge text-bg-secondary" t-esc="this.alertes.length"/>
@@ -45,7 +67,6 @@
                     </div>
                 </div>
 
-                <!-- Les chiffres du serveur, d'un coup d'oeil. -->
                 <div class="row g-3 mb-4">
                     <div class="col">
                         <div class="border rounded p-2 h-100">
@@ -78,30 +99,64 @@
                             <div class="text-muted small">
                                 sur <span t-esc="this.totaux.quota_alloue_mb"/> alloués
                                 <t t-if="this.totaux.boites_sans_quota">
-                                    — <span t-esc="this.totaux.boites_sans_quota"/>
-                                    boîte(s) sans quota
+                                    — <span t-esc="this.totaux.boites_sans_quota"/> sans quota
                                 </t>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Un domaine par ligne : plafond de boîtes, alias, DKIM, fraicheur. -->
-                <table class="table table-sm align-middle">
+                <ul class="nav nav-tabs">
+                    <li class="nav-item" t-foreach="this.onglets" t-as="onglet" t-key="onglet.cle">
+                        <a href="#"
+                           t-att-class="'nav-link' + (this.state.onglet === onglet.cle ? ' active' : '')"
+                           t-on-click="() => this.changerOnglet(onglet.cle)">
+                            <t t-esc="onglet.libelle"/>
+                            <span class="badge text-bg-secondary" t-esc="onglet.nombre"/>
+                        </a>
+                    </li>
+                </ul>
+
+                <div class="d-flex align-items-center gap-3 my-2">
+                    <input type="search" class="form-control" style="max-width: 22rem"
+                           placeholder="Rechercher…" t-att-value="this.state.recherche"
+                           t-on-input="(ev) => (this.state.recherche = ev.target.value)"/>
+                    <span class="text-muted small" t-esc="this.nombreAffiche"/>
+                    <button t-if="this.state.recherche" class="btn btn-sm btn-link p-0"
+                            t-on-click="() => (this.state.recherche = '')">Effacer</button>
+                </div>
+
+                <table t-if="this.state.onglet === 'domaines'" class="table table-sm align-middle">
                     <thead>
                         <tr>
-                            <th>Domaine</th>
+                            <th style="cursor: pointer" t-on-click="() => this.trierPar('nom')">
+                                Domaine<t t-esc="this.marqueTri('nom')"/>
+                            </th>
                             <th>État</th>
-                            <th class="text-end">Boîtes</th>
-                            <th style="width: 20%">Plafond atteint</th>
-                            <th class="text-end">Alias</th>
-                            <th class="text-end">Quota (Mo)</th>
+                            <th class="text-end" style="cursor: pointer"
+                                t-on-click="() => this.trierPar('boites_utilisees')">
+                                Boîtes<t t-esc="this.marqueTri('boites_utilisees')"/>
+                            </th>
+                            <th style="width: 18%; cursor: pointer"
+                                t-on-click="() => this.trierPar('occupation')">
+                                Plafond<t t-esc="this.marqueTri('occupation')"/>
+                            </th>
+                            <th class="text-end" style="cursor: pointer"
+                                t-on-click="() => this.trierPar('alias_utilises')">
+                                Alias<t t-esc="this.marqueTri('alias_utilises')"/>
+                            </th>
+                            <th class="text-end" style="cursor: pointer"
+                                t-on-click="() => this.trierPar('quota_mb')">
+                                Quota (Mo)<t t-esc="this.marqueTri('quota_mb')"/>
+                            </th>
                             <th>DKIM</th>
                             <th>Dernière synchro</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr t-foreach="this.domaines" t-as="domaine" t-key="domaine.id">
+                        <tr t-foreach="this.lignes" t-as="domaine" t-key="domaine.id"
+                            style="cursor: pointer"
+                            t-on-click="() => this.ouvrirFiche('mailcow.domain', domaine.id)">
                             <td><strong t-esc="domaine.nom"/></td>
                             <td>
                                 <span t-if="domaine.actif" class="badge text-bg-success">actif</span>
@@ -137,55 +192,103 @@
                     </tbody>
                 </table>
 
-                <div class="row g-4 mt-4">
-                    <div class="col-lg-6">
-                        <h5>Les plus gourmandes</h5>
-                        <table class="table table-sm">
-                            <thead>
-                                <tr>
-                                    <th>Boîte</th>
-                                    <th class="text-end">Taux</th>
-                                    <th class="text-end">Utilisé (Mo)</th>
-                                    <th class="text-end">Messages</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr t-foreach="this.grosses" t-as="boite" t-key="boite.id">
-                                    <td t-esc="boite.nom"/>
-                                    <!-- Un taux absent veut dire « sans plafond » : afficher
-                                         « 0 % » se lirait « vide ». -->
-                                    <td class="text-end"
-                                        t-esc="boite.pourcentage === null ? 'sans quota' : boite.pourcentage + ' %'"/>
-                                    <td class="text-end" t-esc="boite.quota_utilise_mb"/>
-                                    <td class="text-end" t-esc="boite.messages"/>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="col-lg-6">
-                        <h5>Les plus silencieuses</h5>
-                        <p class="text-muted small mb-2">
-                            Aucune connexion depuis quatre-vingt-dix jours : à fermer, ou à assumer.
-                        </p>
-                        <table class="table table-sm" t-if="this.dormantes.length">
-                            <thead>
-                                <tr>
-                                    <th>Boîte</th>
-                                    <th class="text-end">Dernière connexion</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr t-foreach="this.dormantes" t-as="boite" t-key="boite.id">
-                                    <td t-esc="boite.nom"/>
-                                    <td class="text-end text-muted" t-esc="boite.derniere_connexion"/>
-                                </tr>
-                            </tbody>
-                        </table>
-                        <p t-else="" class="text-muted">
-                            Aucune boîte dormante.
-                        </p>
-                    </div>
-                </div>
+                <table t-if="this.state.onglet === 'boites'" class="table table-sm align-middle">
+                    <thead>
+                        <tr>
+                            <th style="cursor: pointer" t-on-click="() => this.trierPar('nom')">
+                                Boîte<t t-esc="this.marqueTri('nom')"/>
+                            </th>
+                            <th style="cursor: pointer" t-on-click="() => this.trierPar('domaine')">
+                                Domaine<t t-esc="this.marqueTri('domaine')"/>
+                            </th>
+                            <th>État</th>
+                            <th class="text-end" style="cursor: pointer"
+                                t-on-click="() => this.trierPar('quota_utilise_mb')">
+                                Utilisé (Mo)<t t-esc="this.marqueTri('quota_utilise_mb')"/>
+                            </th>
+                            <th class="text-end" style="cursor: pointer"
+                                t-on-click="() => this.trierPar('pourcentage')">
+                                Taux<t t-esc="this.marqueTri('pourcentage')"/>
+                            </th>
+                            <th class="text-end" style="cursor: pointer"
+                                t-on-click="() => this.trierPar('messages')">
+                                Messages<t t-esc="this.marqueTri('messages')"/>
+                            </th>
+                            <th class="text-end" style="cursor: pointer"
+                                t-on-click="() => this.trierPar('derniere_connexion')">
+                                Dernière connexion<t t-esc="this.marqueTri('derniere_connexion')"/>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr t-foreach="this.lignes" t-as="boite" t-key="boite.id"
+                            style="cursor: pointer"
+                            t-on-click="() => this.ouvrirFiche('mailcow.mailbox', boite.id)">
+                            <td><strong t-esc="boite.nom"/></td>
+                            <td class="text-muted" t-esc="boite.domaine"/>
+                            <td>
+                                <span t-if="boite.active" class="badge text-bg-success">active</span>
+                                <span t-else="" class="badge text-bg-secondary">désactivée</span>
+                                <span t-if="!boite.synced" class="badge text-bg-warning ms-1">
+                                    non synchronisée
+                                </span>
+                            </td>
+                            <td class="text-end" t-esc="boite.quota_utilise_mb"/>
+                            <td class="text-end" t-esc="this.texteTaux(boite.pourcentage)"/>
+                            <td class="text-end" t-esc="boite.messages"/>
+                            <td class="text-end text-muted small"
+                                t-esc="boite.derniere_connexion or 'jamais'"/>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <table t-if="this.state.onglet === 'alias'" class="table table-sm align-middle">
+                    <thead>
+                        <tr>
+                            <th style="cursor: pointer" t-on-click="() => this.trierPar('nom')">
+                                Alias<t t-esc="this.marqueTri('nom')"/>
+                            </th>
+                            <th style="cursor: pointer" t-on-click="() => this.trierPar('domaine')">
+                                Domaine<t t-esc="this.marqueTri('domaine')"/>
+                            </th>
+                            <th class="text-end" style="cursor: pointer"
+                                t-on-click="() => this.trierPar('destinations')">
+                                Destinations<t t-esc="this.marqueTri('destinations')"/>
+                            </th>
+                            <th>Type</th>
+                            <th>État</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr t-foreach="this.lignes" t-as="un_alias" t-key="un_alias.id"
+                            style="cursor: pointer"
+                            t-on-click="() => this.ouvrirFiche('mailcow.alias', un_alias.id)">
+                            <td><strong t-esc="un_alias.nom"/></td>
+                            <td class="text-muted" t-esc="un_alias.domaine"/>
+                            <td class="text-end">
+                                <span t-if="un_alias.destinations" t-esc="un_alias.destinations"/>
+                                <span t-else="" class="badge text-bg-warning">aucune</span>
+                            </td>
+                            <td>
+                                <span t-if="un_alias.catch_all" class="badge text-bg-warning">
+                                    attrape-tout
+                                </span>
+                                <span t-else="" class="text-muted">renvoi</span>
+                            </td>
+                            <td>
+                                <span t-if="un_alias.active" class="badge text-bg-success">actif</span>
+                                <span t-else="" class="badge text-bg-secondary">inactif</span>
+                                <span t-if="!un_alias.synced" class="badge text-bg-warning ms-1">
+                                    non synchronisé
+                                </span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p t-if="!this.lignes.length" class="text-muted">
+                    Aucune ligne à montrer avec ces critères.
+                </p>
             </t>
         </div>
     </t>

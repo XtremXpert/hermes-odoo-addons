@@ -373,8 +373,47 @@ class MailcowDomain(models.Model):
             key=lambda b: (derniere_connexion(b) is not None,
                            derniere_connexion(b) or fields.Datetime.now()))[:10]
         allouees = [b.quota_mb for b in boites if b.quota_mb]
+
+        # Les listes completes, avec l'identifiant de chaque fiche : c'est ce
+        # qui permet de trier, de chercher, et d'ouvrir la bonne. Un instantane
+        # suffit — le tableau se rafraichit en relisant cet appel, il
+        # n'interroge pas Mailcow a chaque coup d'oeil.
+        def ligne_boite(boite):
+            return {
+                'id': boite.id,
+                'nom': boite.email,
+                'domaine': boite.domain_id.name,
+                'quota_mb': boite.quota_mb,
+                'quota_utilise_mb': round(boite.quota_used_mb, 1),
+                'pourcentage': taux_affiche(boite),
+                'messages': boite.messages,
+                'active': boite.active,
+                'synced': boite.synced,
+                'derniere_connexion': (
+                    derniere_connexion(boite).strftime('%Y-%m-%d')
+                    if derniere_connexion(boite) else ''),
+            }
+
+        def ligne_alias(un_alias):
+            # L'adresse complete, telle que Mailcow la nomme : la partie locale
+            # seule ne dirait rien a la lecture d'un tableau.
+            return {
+                'id': un_alias.id,
+                'nom': '%s@%s' % (un_alias.alias_name, un_alias.domain_id.name),
+                'domaine': un_alias.domain_id.name,
+                'destinations': len(un_alias.address_ids),
+                'catch_all': un_alias.is_catch_all,
+                'active': un_alias.active,
+                'synced': un_alias.synced,
+            }
+
         return {
+            # get_str, pas get_param : c'est l'accesseur de cette version.
+            'mailcow_url': self.env['ir.config_parameter'].get_str(
+                'mailcow.base_url', default=''),
             'domaines': lignes,
+            'boites': [ligne_boite(boite) for boite in boites],
+            'alias': [ligne_alias(un_alias) for un_alias in alias],
             'alertes': alertes,
             'grosses_boites': [{
                 'id': boite.id,
