@@ -13,7 +13,7 @@ Administer un serveur Mailcow v1 depuis Odoo
 * Configuration de la connexion (URL + clé API) dans les réglages
 """,
     'version': '19.5.1.0.0',
-    'depends': ['base'],
+    'depends': ['base', 'mail'],
     'data': [
         'security/mailcow_admin_groups.xml',
         'security/ir.access.csv',

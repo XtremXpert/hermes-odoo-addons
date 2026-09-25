@@ -106,6 +106,7 @@ class MailcowMailbox(models.Model):
             client = MailcowClient(self.env)
             client._request('POST', '/add/mailbox', mailbox._base_payload(with_password=True))
             mailbox.write({'last_synced_on': fields.Datetime.now(), 'synced': True})
+            mailbox._journaliser('Boîte %s créée sur Mailcow.' % mailbox.email)
             mailbox.password = False  # le mot de passe ne doit pas rester dans Odoo
 
     def action_make_catch_all(self):
@@ -165,6 +166,7 @@ class MailcowMailbox(models.Model):
                 'attr': mailbox._attr_payload(),
             })
             mailbox.write({'last_synced_on': fields.Datetime.now(), 'synced': True})
+            mailbox._journaliser('Mise à jour poussée vers Mailcow.')
 
     def action_reset_password(self):
         """Ouvre le wizard de réinitialisation du mot de passe."""
@@ -188,6 +190,7 @@ class MailcowMailbox(models.Model):
                 'mail_user': mailbox.email,
             })
             mailbox.write({'synced': False, 'active': False})
+            mailbox._journaliser('Supprimée de Mailcow, et archivée ici.')
 
     def action_sync_from_mailcow(self):
         """Synchronise depuis cette fiche (voir action_sync_all_from_mailcow)."""

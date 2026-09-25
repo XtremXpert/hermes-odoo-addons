@@ -12,10 +12,19 @@ class MailcowSyncMixin(models.AbstractModel):
     """
 
     _name = 'mailcow.sync.mixin'
+    _inherit = ['mail.thread']
     _description = 'Mailcow : suivi de synchronisation'
 
     last_synced_on = fields.Datetime(
         string='Dernière synchronisation', readonly=True)
+
+    def _journaliser(self, corps):
+        """Noter dans le fil de la fiche ce qui vient d'être fait sur Mailcow.
+
+        Le fil porte l'auteur et l'heure : on n'y répète que le geste.
+        """
+        for fiche in self:
+            fiche.message_post(body=corps, subtype_xmlid='mail.mt_note')
 
     def _designation(self):
         """Comment nommer cette fiche dans un compte rendu.

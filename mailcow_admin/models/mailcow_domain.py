@@ -96,6 +96,7 @@ class MailcowDomain(models.Model):
             client = MailcowClient(self.env)
             client._request('POST', '/add/domain', domain._payload())
             domain.write({'last_synced_on': fields.Datetime.now(), 'synced': True})
+            domain._journaliser('Domaine %s créé sur Mailcow.' % domain.name)
 
     def action_update_on_mailcow(self):
         """Réécrit l'état local sur Mailcow."""
@@ -106,6 +107,7 @@ class MailcowDomain(models.Model):
                 'attr': domain._attr_payload(),
             })
             domain.write({'last_synced_on': fields.Datetime.now(), 'synced': True})
+            domain._journaliser('Mise à jour poussée vers Mailcow.')
 
     def action_delete_on_mailcow(self):
         """Supprime le domaine sur Mailcow, puis l'archive localement."""
@@ -115,6 +117,7 @@ class MailcowDomain(models.Model):
             domain.mailboxes.write({'synced': False})
             domain.aliases.write({'synced': False})
             domain.write({'synced': False, 'active': False})
+            domain._journaliser('Supprimé de Mailcow, et archivé ici.')
 
     def action_sync_from_mailcow(self):
         """Synchronise depuis cette fiche (voir action_sync_all_from_mailcow)."""

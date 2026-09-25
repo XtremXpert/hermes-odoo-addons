@@ -86,6 +86,8 @@ class MailcowAlias(models.Model):
             client = MailcowClient(self.env)
             client._request('POST', '/add/alias', alias._payload())
             alias.write({'last_synced_on': fields.Datetime.now(), 'synced': True})
+            alias._journaliser('Alias %s créé sur Mailcow.'
+                               % (alias.alias_name or '@%s' % alias.domain_id.name))
             identifiant = alias._remote_id()
             if identifiant:
                 alias.write({'mailcow_id': str(identifiant)})
@@ -130,6 +132,7 @@ class MailcowAlias(models.Model):
                 'attr': alias._attr_payload(),
             })
             alias.write({'last_synced_on': fields.Datetime.now(), 'synced': True, 'mailcow_id': str(identifiant)})
+            alias._journaliser('Mise à jour poussée vers Mailcow.')
 
     def action_delete_on_mailcow(self):
         """Supprime l'alias sur Mailcow, puis l'archive localement."""
@@ -139,6 +142,7 @@ class MailcowAlias(models.Model):
                 'address': '%s@%s' % (alias.alias_name or '', alias.domain_id.name),
             })
             alias.write({'synced': False, 'active': False})
+            alias._journaliser('Supprimé de Mailcow, et archivé ici.')
 
     def _address_records(self, addresses):
         """Renvoie (en créant au besoin) les enregistrements d'adresse."""
