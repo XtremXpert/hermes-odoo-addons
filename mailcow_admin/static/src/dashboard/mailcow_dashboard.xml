@@ -6,32 +6,32 @@
             <h2 class="mb-1">Mailcow — vue d'ensemble</h2>
             <p class="text-muted">Ce que le serveur porte, et ce qui approche de la limite.</p>
 
-            <p t-if="state.chargement">Chargement…</p>
-            <div t-elif="state.erreur" class="alert alert-danger" t-esc="state.erreur"/>
+            <p t-if="this.state.chargement">Chargement…</p>
+            <div t-elif="this.state.erreur" class="alert alert-danger" t-esc="this.state.erreur"/>
             <t t-else="">
                 <div class="row mb-3">
                     <div class="col">
                         <div class="border rounded p-2">
                             <div class="text-muted small">Domaines</div>
-                            <div class="fs-3" t-esc="totaux.domaines"/>
+                            <div class="fs-3" t-esc="this.totaux.domaines"/>
                         </div>
                     </div>
                     <div class="col">
                         <div class="border rounded p-2">
                             <div class="text-muted small">Boîtes</div>
-                            <div class="fs-3" t-esc="totaux.boites"/>
+                            <div class="fs-3" t-esc="this.totaux.boites"/>
                         </div>
                     </div>
                     <div class="col">
                         <div class="border rounded p-2">
                             <div class="text-muted small">Boîtes au-dessus de 80 %</div>
-                            <div class="fs-3" t-esc="totaux.boites_serrees"/>
+                            <div class="fs-3" t-esc="this.totaux.boites_serrees"/>
                         </div>
                     </div>
                     <div class="col">
                         <div class="border rounded p-2">
                             <div class="text-muted small">Quota consommé (Mo)</div>
-                            <div class="fs-3" t-esc="totaux.quota_utilise_mb"/>
+                            <div class="fs-3" t-esc="this.totaux.quota_utilise_mb"/>
                         </div>
                     </div>
                 </div>
@@ -50,7 +50,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr t-foreach="domaines" t-as="domaine" t-key="domaine.id">
+                        <tr t-foreach="this.domaines" t-as="domaine" t-key="domaine.id">
                             <td><strong t-esc="domaine.nom"/></td>
                             <td>
                                 <span t-if="domaine.actif" class="badge text-bg-success">actif</span>
@@ -66,7 +66,7 @@
                             </td>
                             <td>
                                 <div class="progress" style="height: 1.1rem">
-                                    <div t-att-class="classeOccupation(domaine.occupation)"
+                                    <div t-att-class="this.classeOccupation(domaine.occupation)"
                                          t-att-style="'width: ' + domaine.occupation + '%'"
                                          t-esc="domaine.occupation + ' %'"/>
                                 </div>
@@ -86,8 +86,8 @@
                     </tbody>
                 </table>
 
-                <h4 class="mt-4" t-if="serrees.length">Boîtes au-dessus de 80 % de leur quota</h4>
-                <table t-if="serrees.length" class="table table-sm">
+                <h4 class="mt-4" t-if="this.serrees.length">Boîtes au-dessus de 80 % de leur quota</h4>
+                <table t-if="this.serrees.length" class="table table-sm">
                     <thead>
                         <tr>
                             <th>Boîte</th>
@@ -97,7 +97,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr t-foreach="serrees" t-as="boite" t-key="boite.nom">
+                        <tr t-foreach="this.serrees" t-as="boite" t-key="boite.nom">
                             <td t-esc="boite.nom"/>
                             <td class="text-end" t-esc="boite.pourcentage + ' %'"/>
                             <td class="text-end" t-esc="boite.quota_utilise_mb"/>
