@@ -87,6 +87,54 @@ class MailcowMailbox(models.Model):
             mailbox.write({'synced': True})
             mailbox.password = False  # le mot de passe ne doit pas rester dans Odoo
 
+    def action_make_catch_all(self):
+        """Fait de cette boîte le fourre-tout de son domaine.
+
+        Un fourre-tout est un alias dont l'adresse est « @domaine » : s'il en
+        existe déjà un, il est réorienté, sinon il est créé.
+        """
+        self.ensure_one()
+        if not self.synced:
+            raise UserError(
+                "Créez d'abord la boîte « %s » sur Mailcow : un fourre-tout doit "
+                "pointer vers une adresse qui existe." % self.email
+            )
+        domaine = self.domain_id
+        adresse = self.env['mailcow.email_address'].search(
+            [('address', '=', self.email)], limit=1)
+        if not adresse:
+            adresse = self.env['mailcow.email_address'].create(
+                {'address': self.email})
+        fourre_tout = self.env['mailcow.alias'].search(
+            [('domain_id', '=', domaine.id), ('is_catch_all', '=', True)],
+            limit=1,
+        )
+        if fourre_tout:
+            fourre_tout.write({'address_ids': [(6, 0, [adresse.id])]})
+            if fourre_tout.synced:
+                fourre_tout.action_update_on_mailcow()
+            else:
+                fourre_tout.action_create_on_mailcow()
+        else:
+            fourre_tout = self.env['mailcow.alias'].create({
+                'domain_id': domaine.id,
+                'is_catch_all': True,
+                'address_ids': [(6, 0, [adresse.id])],
+                'description': 'Fourre-tout, depuis la boîte %s' % self.email,
+            })
+            fourre_tout.action_create_on_mailcow()
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'type': 'success',
+                'title': 'Mailcow',
+                'sticky': False,
+                'message': 'Le fourre-tout de %s pointe vers %s.'
+                           % (domaine.name, self.email),
+            },
+        }
+
     def action_update_on_mailcow(self):
         """Réécrit l'état local sur Mailcow (jamais le mot de passe)."""
         for mailbox in self:

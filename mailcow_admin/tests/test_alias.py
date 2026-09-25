@@ -37,7 +37,7 @@ class TestMailcowAlias(TransactionCase):
             return_value=[{'msg': 'alias_added', 'type': 'success'}],
         ) as request:
             alias.action_create_on_mailcow()
-        request.assert_called_once_with('POST', '/add/alias', {
+        request.assert_any_call('POST', '/add/alias', {
             'address': 'info@dc.com',
             'goto': 'info@dc.com,admin@dc.com',
             'active': '1',
@@ -128,7 +128,7 @@ class TestMailcowAlias(TransactionCase):
             return_value=[{'msg': 'alias_added', 'type': 'success'}],
         ) as request:
             alias.action_create_on_mailcow()
-        request.assert_called_once_with('POST', '/add/alias', {
+        request.assert_any_call('POST', '/add/alias', {
             'address': '@dc.com',
             'goto': 'info@dc.com,admin@dc.com',
             'active': '1',

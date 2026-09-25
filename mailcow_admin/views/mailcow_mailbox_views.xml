@@ -39,6 +39,11 @@
                             string="Changer le mot de passe"
                             invisible="not synced"
                             groups="mailcow_admin.group_mailcow_manager"/>
+                    <button name="action_make_catch_all" type="object"
+                            string="En faire le fourre-tout"
+                            invisible="not synced"
+                            groups="mailcow_admin.group_mailcow_manager"
+                            confirm="Faire de cette boîte le fourre-tout de son domaine ?"/>
                     <button name="action_delete_on_mailcow" type="object"
                             string="Supprimer de Mailcow" danger="1"
                             invisible="not synced"

@@ -42,6 +42,10 @@
                     <button name="action_sync_from_mailcow" type="object"
                             string="Synchroniser depuis Mailcow"
                             groups="mailcow_admin.group_mailcow_manager"/>
+                    <button name="action_fetch_dkim" type="object"
+                            string="Enregistrement DKIM"
+                            invisible="not synced"
+                            groups="mailcow_admin.group_mailcow_manager"/>
                 </header>
                 <sheet>
                     <widget name="web_ribbon" title="Non synchronisé" bgcolor="bg-danger" invisible="synced"/>
@@ -56,6 +60,8 @@
                         <group string="Mailcow">
                             <field name="synced"/>
                             <field name="quota_mb"/>
+                            <field name="dkim_record" widget="text"
+                                   invisible="not dkim_record"/>
                         </group>
                     </group>
                     <notebook>

@@ -1,5 +1,6 @@
 # Part of the mailcow_admin Odoo module. See LICENSE for details.
 from odoo import api, fields, models
+from odoo.exceptions import UserError
 
 from ..services.mailcow_client import MailcowClient
 
@@ -12,6 +13,11 @@ class MailcowDomain(models.Model):
     name = fields.Char(string='Domaine', required=True, index=True)
     description = fields.Char(string='Description')
     quota_mb = fields.Integer(string='Quota (Mo)', default=0, help='0 = illimité')
+    dkim_record = fields.Text(
+        string='Enregistrement DKIM (DNS)',
+        readonly=True,
+        help="La ligne à publier dans le DNS du domaine. Jamais la clé privée.",
+    )
     active = fields.Boolean(string='Actif', default=True)
     synced = fields.Boolean(string='Synchronisé avec Mailcow')
     mailboxes = fields.One2many('mailcow.mailbox', 'domain_id', string='Boîtes mail')
@@ -45,6 +51,39 @@ class MailcowDomain(models.Model):
         """La charge de création : le nom, plus les attributs modifiables."""
         self.ensure_one()
         return dict(self._attr_payload(), domain=self.name)
+
+    def action_fetch_dkim(self):
+        """Relit la clé DKIM PUBLIQUE du domaine, à publier dans le DNS.
+
+        Mailcow renvoie aussi la clé privée dans la même réponse : elle n'est
+        jamais lue ici, et donc jamais rangée dans Odoo.
+        """
+        self.ensure_one()
+        client = MailcowClient(self.env)
+        reponse = client._request('GET', '/get/dkim/%s' % self.name, None)
+        if isinstance(reponse, list) and reponse:
+            reponse = reponse[0]
+        if not isinstance(reponse, dict) or not reponse.get('dkim_txt'):
+            raise UserError(
+                "Le serveur n'a pas renvoyé de clé DKIM publique pour « %s »."
+                % self.name
+            )
+        selecteur = reponse.get('dkim_selector') or 'dkim'
+        valeur = reponse['dkim_txt']
+        if isinstance(valeur, list):
+            valeur = ''.join(valeur)
+        self.dkim_record = '%s._domainkey.%s   TXT   "%s"' % (
+            selecteur, self.name, valeur)
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'type': 'success',
+                'title': 'Mailcow',
+                'sticky': False,
+                'message': "L'enregistrement DKIM de %s est prêt." % self.name,
+            },
+        }
 
     def action_create_on_mailcow(self):
         """Crée le domaine sur Mailcow (ou le met à jour s'il existe déjà)."""

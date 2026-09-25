@@ -72,12 +72,19 @@ class MailcowAlias(models.Model):
             )
 
     def action_create_on_mailcow(self):
-        """Crée l'alias sur Mailcow."""
+        """Crée l'alias sur Mailcow, puis range son identifiant.
+
+        La réponse de création ne le donne pas : on le relit, sans quoi la
+        première modification devrait aller le chercher elle-même.
+        """
         for alias in self:
             alias._ensure_addresses()
             client = MailcowClient(self.env)
             client._request('POST', '/add/alias', alias._payload())
             alias.write({'synced': True})
+            identifiant = alias._remote_id()
+            if identifiant:
+                alias.write({'mailcow_id': str(identifiant)})
 
     def _attr_payload(self):
         """Les attributs modifiables d'un alias : le « attr » d'une édition.
