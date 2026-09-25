@@ -1,48 +1,99 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
 
+    <!-- Tout ce qui appartient au composant est qualifie par « this. » : en
+         OWL 3, une reference nue ne trouve rien et le rendu echoue. -->
     <t t-name="mailcow_admin.Dashboard">
         <div class="o_mailcow_dashboard p-3">
-            <h2 class="mb-1">Mailcow — vue d'ensemble</h2>
-            <p class="text-muted">Ce que le serveur porte, et ce qui approche de la limite.</p>
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h2 class="mb-1">Mailcow — vue d'ensemble</h2>
+                    <p class="text-muted mb-0">
+                        Ce que le serveur porte, ce qui approche de la limite, et ce qui dort.
+                    </p>
+                </div>
+                <button class="btn btn-secondary" t-on-click="() => this.synchroniser()"
+                        t-att-disabled="this.state.synchro">
+                    <t t-if="this.state.synchro">Synchronisation…</t>
+                    <t t-else="">Synchroniser depuis Mailcow</t>
+                </button>
+            </div>
 
             <p t-if="this.state.chargement">Chargement…</p>
             <div t-elif="this.state.erreur" class="alert alert-danger" t-esc="this.state.erreur"/>
             <t t-else="">
-                <div class="row mb-3">
+                <!-- Ce qui demande une decision, avant les chiffres. -->
+                <h4 class="mb-2" t-if="this.alertes.length">
+                    À regarder
+                    <span class="badge text-bg-secondary" t-esc="this.alertes.length"/>
+                </h4>
+                <p t-else="" class="text-success">
+                    Rien à signaler : aucun plafond atteint, aucun compte dormant, aucun alias cassé.
+                </p>
+                <div class="row g-2 mb-4">
+                    <div class="col-md-6 col-xl-4" t-foreach="this.alertes" t-as="alerte"
+                         t-key="alerte.cle">
+                        <button class="card w-100 text-start p-2 h-100 border-0 shadow-sm"
+                                t-on-click="() => this.ouvrirAlerte(alerte)">
+                            <div class="d-flex align-items-center gap-2">
+                                <span t-att-class="'badge fs-5 ' + this.classeGravite(alerte.gravite)"
+                                      t-esc="alerte.nombre"/>
+                                <span class="fw-semibold" t-esc="alerte.libelle"/>
+                            </div>
+                            <div class="text-muted small mt-1" t-esc="alerte.detail"/>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Les chiffres du serveur, d'un coup d'oeil. -->
+                <div class="row g-3 mb-4">
                     <div class="col">
-                        <div class="border rounded p-2">
+                        <div class="border rounded p-2 h-100">
                             <div class="text-muted small">Domaines</div>
                             <div class="fs-3" t-esc="this.totaux.domaines"/>
                         </div>
                     </div>
                     <div class="col">
-                        <div class="border rounded p-2">
+                        <div class="border rounded p-2 h-100">
                             <div class="text-muted small">Boîtes</div>
                             <div class="fs-3" t-esc="this.totaux.boites"/>
                         </div>
                     </div>
                     <div class="col">
-                        <div class="border rounded p-2">
-                            <div class="text-muted small">Boîtes au-dessus de 80 %</div>
-                            <div class="fs-3" t-esc="this.totaux.boites_serrees"/>
+                        <div class="border rounded p-2 h-100">
+                            <div class="text-muted small">Alias</div>
+                            <div class="fs-3" t-esc="this.totaux.alias"/>
                         </div>
                     </div>
                     <div class="col">
-                        <div class="border rounded p-2">
+                        <div class="border rounded p-2 h-100">
+                            <div class="text-muted small">Messages</div>
+                            <div class="fs-3" t-esc="this.totaux.messages"/>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="border rounded p-2 h-100">
                             <div class="text-muted small">Quota consommé (Mo)</div>
                             <div class="fs-3" t-esc="this.totaux.quota_utilise_mb"/>
+                            <div class="text-muted small">
+                                sur <span t-esc="this.totaux.quota_alloue_mb"/> alloués
+                                <t t-if="this.totaux.boites_sans_quota">
+                                    — <span t-esc="this.totaux.boites_sans_quota"/>
+                                    boîte(s) sans quota
+                                </t>
+                            </div>
                         </div>
                     </div>
                 </div>
 
+                <!-- Un domaine par ligne : plafond de boîtes, alias, DKIM, fraicheur. -->
                 <table class="table table-sm align-middle">
                     <thead>
                         <tr>
                             <th>Domaine</th>
                             <th>État</th>
                             <th class="text-end">Boîtes</th>
-                            <th style="width: 22%">Plafond atteint</th>
+                            <th style="width: 20%">Plafond atteint</th>
                             <th class="text-end">Alias</th>
                             <th class="text-end">Quota (Mo)</th>
                             <th>DKIM</th>
@@ -86,26 +137,55 @@
                     </tbody>
                 </table>
 
-                <h4 class="mt-4" t-if="this.serrees.length">Boîtes au-dessus de 80 % de leur quota</h4>
-                <table t-if="this.serrees.length" class="table table-sm">
-                    <thead>
-                        <tr>
-                            <th>Boîte</th>
-                            <th class="text-end">Occupation</th>
-                            <th class="text-end">Utilisé (Mo)</th>
-                            <th class="text-end">Quota (Mo)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr t-foreach="this.serrees" t-as="boite" t-key="boite.nom">
-                            <td t-esc="boite.nom"/>
-                            <td class="text-end" t-esc="boite.pourcentage + ' %'"/>
-                            <td class="text-end" t-esc="boite.quota_utilise_mb"/>
-                            <td class="text-end" t-esc="boite.quota_mb"/>
-                        </tr>
-                    </tbody>
-                </table>
-                <p t-else="" class="text-muted">Aucune boîte au-dessus de 80 % de son quota.</p>
+                <div class="row g-4 mt-4">
+                    <div class="col-lg-6">
+                        <h5>Les plus gourmandes</h5>
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Boîte</th>
+                                    <th class="text-end">Taux</th>
+                                    <th class="text-end">Utilisé (Mo)</th>
+                                    <th class="text-end">Messages</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="this.grosses" t-as="boite" t-key="boite.id">
+                                    <td t-esc="boite.nom"/>
+                                    <!-- Un taux absent veut dire « sans plafond » : afficher
+                                         « 0 % » se lirait « vide ». -->
+                                    <td class="text-end"
+                                        t-esc="boite.pourcentage === null ? 'sans quota' : boite.pourcentage + ' %'"/>
+                                    <td class="text-end" t-esc="boite.quota_utilise_mb"/>
+                                    <td class="text-end" t-esc="boite.messages"/>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="col-lg-6">
+                        <h5>Les plus silencieuses</h5>
+                        <p class="text-muted small mb-2">
+                            Aucune connexion depuis quatre-vingt-dix jours : à fermer, ou à assumer.
+                        </p>
+                        <table class="table table-sm" t-if="this.dormantes.length">
+                            <thead>
+                                <tr>
+                                    <th>Boîte</th>
+                                    <th class="text-end">Dernière connexion</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="this.dormantes" t-as="boite" t-key="boite.id">
+                                    <td t-esc="boite.nom"/>
+                                    <td class="text-end text-muted" t-esc="boite.derniere_connexion"/>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <p t-else="" class="text-muted">
+                            Aucune boîte dormante.
+                        </p>
+                    </div>
+                </div>
             </t>
         </div>
     </t>

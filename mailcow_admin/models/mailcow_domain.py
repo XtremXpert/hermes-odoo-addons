@@ -1,4 +1,6 @@
 # Part of the mailcow_admin Odoo module. See LICENSE for details.
+from datetime import timedelta
+
 from odoo import api
 from odoo import fields
 from odoo import models
@@ -35,6 +37,10 @@ class MailcowDomain(models.Model):
         string='Alias maximum', default=0, help='0 = valeur du serveur.')
     mailboxes_used = fields.Integer(string='Boîtes utilisées', readonly=True)
     aliases_used = fields.Integer(string='Alias utilisés', readonly=True)
+    # Au-dela de ce nombre de jours sans aucune connexion, un compte ouvert
+    # est dit dormant : il occupe une place et une surface d'attaque sans servir.
+    JOURS_AVANT_DORMANCE = 90
+
     occupation_boites = fields.Float(
         string='Occupation', compute='_compute_occupation',
         help='Part du plafond de boîtes déjà utilisée, en pourcentage.')
@@ -200,34 +206,202 @@ class MailcowDomain(models.Model):
                     domaine.last_synced_on.strftime('%Y-%m-%d %H:%M')
                     if domaine.last_synced_on else ''),
             })
-        boites = self.env['mailcow.mailbox'].search([])
+        boites = self.env['mailcow.mailbox'].with_context(active_test=False).search([])
+        alias = self.env['mailcow.alias'].with_context(active_test=False).search([])
 
         def pourcentage(boite):
-            """Part du quota consommée.
+            """Part du quota consommée, ou rien si la boîte est sans plafond.
 
             Calculée à partir des deux quotas locaux plutôt que lue dans
             « percent_in_use » : ce dernier n'est rempli que par une
             synchronisation, si bien qu'une boîte créée entre deux
-            synchronisations paraîtrait vide. Une seule règle, ici.
-            """
-            if boite.quota_mb:
-                return 100.0 * boite.quota_used_mb / boite.quota_mb
-            return boite.percent_in_use
+            synchronisations paraîtrait vide.
 
-        serrees = boites.filtered(lambda boite: pourcentage(boite) >= 80.0)
+            Un quota à zéro veut dire « sans limite » : rendre 0 % se lirait
+            « vide », soit exactement le contraire. Rien, plutôt qu'un faux zéro.
+            """
+            if not boite.quota_mb:
+                return None
+            return 100.0 * boite.quota_used_mb / boite.quota_mb
+
+        def est_serree(boite):
+            taux = pourcentage(boite)
+            return taux is not None and taux >= 80.0
+
+        def taux_affiche(boite):
+            taux = pourcentage(boite)
+            return None if taux is None else round(taux, 1)
+
+        def derniere_connexion(boite):
+            """La plus récente des trois, ou rien si le compte n'a jamais servi."""
+            dates = [
+                quand for quand in (
+                    boite.last_imap_login, boite.last_smtp_login, boite.last_pop3_login)
+                if quand
+            ]
+            return max(dates) if dates else None
+
+        seuil = fields.Datetime.now() - timedelta(days=self.JOURS_AVANT_DORMANCE)
+        actives = boites.filtered('active')
+        serrees = actives.filtered(est_serree)
+        dormantes = actives.filtered(
+            lambda boite: derniere_connexion(boite) is None
+            or derniere_connexion(boite) < seuil)
+
+        au_plafond = domaines.filtered(
+            lambda domaine: domaine.mailboxes_max
+            and domaine.mailboxes_used >= domaine.mailboxes_max)
+        sans_dkim = domaines.filtered(lambda domaine: domaine.active and not domaine.dkim_record)
+        sans_destination = alias.filtered('active').filtered(
+            lambda a: not a.is_catch_all and not a.address_ids)
+        catch_all = alias.filtered('active').filtered('is_catch_all')
+        sans_tls = actives.filtered(
+            lambda boite: not boite.tls_enforce_in or not boite.tls_enforce_out)
+        desactivees = boites.filtered(lambda boite: not boite.active)
+
+        # Chaque alerte porte le modèle à ouvrir et le filtre à appliquer : le
+        # composant n'a aucune condition à réécrire, il suit ce qu'on lui désigne.
+        # La règle vit donc au même endroit que les autres règles du module, et
+        # se teste sans navigateur.
+        alertes = [
+            {
+                'cle': 'domaines_au_plafond',
+                'libelle': 'Domaines au plafond de boîtes',
+                'gravite': 'danger',
+                'detail': 'Mailcow refusera la prochaine boîte créée.',
+                'modele': 'mailcow.domain',
+                'filtre': [('id', 'in', au_plafond.ids)],
+                'nombre': len(au_plafond),
+            },
+            {
+                'cle': 'boites_serrees',
+                'libelle': 'Boîtes au-dessus de 80 % de leur quota',
+                'gravite': 'attention',
+                'detail': 'La prochaine pièce jointe volumineuse passera mal.',
+                'modele': 'mailcow.mailbox',
+                'filtre': [('id', 'in', serrees.ids)],
+                'nombre': len(serrees),
+            },
+            {
+                'cle': 'boites_desactivees',
+                'libelle': 'Boîtes désactivées',
+                'gravite': 'attention',
+                'detail': "Fermées sans être supprimées : l'adresse existe toujours.",
+                'modele': 'mailcow.mailbox',
+                'filtre': [('id', 'in', desactivees.ids)],
+                'nombre': len(desactivees),
+            },
+            {
+                'cle': 'boites_dormantes',
+                'libelle': 'Boîtes sans connexion depuis %d jours' % self.JOURS_AVANT_DORMANCE,
+                'gravite': 'attention',
+                'detail': 'Comptes ouverts, jamais utilisés : à fermer ou à assumer.',
+                'modele': 'mailcow.mailbox',
+                'filtre': [('id', 'in', dormantes.ids)],
+                'nombre': len(dormantes),
+            },
+            {
+                'cle': 'tls_non_impose',
+                'libelle': 'Boîtes sans TLS obligatoire',
+                'gravite': 'danger',
+                'detail': 'Une connexion en clair reste possible sur ces comptes.',
+                'modele': 'mailcow.mailbox',
+                'filtre': [('id', 'in', sans_tls.ids)],
+                'nombre': len(sans_tls),
+            },
+            {
+                'cle': 'alias_sans_destination',
+                'libelle': 'Alias sans destination',
+                'gravite': 'attention',
+                'detail': 'Ces adresses reçoivent et ne transmettent nulle part.',
+                'modele': 'mailcow.alias',
+                'filtre': [('id', 'in', sans_destination.ids)],
+                'nombre': len(sans_destination),
+            },
+            {
+                'cle': 'catch_all',
+                'libelle': 'Alias attrape-tout',
+                'gravite': 'attention',
+                'detail': 'Tout ce qui est mal orthographié arrive quand même.',
+                'modele': 'mailcow.alias',
+                'filtre': [('id', 'in', catch_all.ids)],
+                'nombre': len(catch_all),
+            },
+            {
+                'cle': 'dkim_absent',
+                'libelle': 'Domaines sans clé DKIM enregistrée',
+                'gravite': 'attention',
+                'detail': 'Sans DKIM, ces envois se font plus souvent refuser.',
+                'modele': 'mailcow.domain',
+                'filtre': [('id', 'in', sans_dkim.ids)],
+                'nombre': len(sans_dkim),
+            },
+            {
+                'cle': 'domaines_non_synchronises',
+                'libelle': 'Domaines non synchronisés',
+                'gravite': 'information',
+                'detail': 'Fiches locales jamais confirmées par le serveur.',
+                'modele': 'mailcow.domain',
+                'filtre': [('synced', '=', False)],
+                'nombre': len(domaines.filtered(lambda d: not d.synced)),
+            },
+            {
+                'cle': 'boites_non_synchronisees',
+                'libelle': 'Boîtes non synchronisées',
+                'gravite': 'information',
+                'detail': 'Fiches locales jamais confirmées par le serveur.',
+                'modele': 'mailcow.mailbox',
+                'filtre': [('synced', '=', False)],
+                'nombre': len(boites.filtered(lambda b: not b.synced)),
+            },
+            {
+                'cle': 'alias_non_synchronises',
+                'libelle': 'Alias non synchronisés',
+                'gravite': 'information',
+                'detail': 'Fiches locales jamais confirmées par le serveur.',
+                'modele': 'mailcow.alias',
+                'filtre': [('synced', '=', False)],
+                'nombre': len(alias.filtered(lambda a: not a.synced)),
+            },
+        ]
+
+        grosses = boites.sorted(lambda b: b.quota_used_mb, reverse=True)[:10]
+        # Les comptes jamais utilisés d'abord : ce sont les cas les plus nets,
+        # et les cacher derrière le plafond de dix serait les absoudre.
+        recentes = sorted(
+            dormantes,
+            key=lambda b: (derniere_connexion(b) is not None,
+                           derniere_connexion(b) or fields.Datetime.now()))[:10]
+        allouees = [b.quota_mb for b in boites if b.quota_mb]
         return {
             'domaines': lignes,
-            'boites_serrees': [{
+            'alertes': alertes,
+            'grosses_boites': [{
+                'id': boite.id,
                 'nom': boite.email,
-                'pourcentage': round(pourcentage(boite), 1),
+                'pourcentage': taux_affiche(boite),
                 'quota_utilise_mb': round(boite.quota_used_mb, 1),
                 'quota_mb': boite.quota_mb,
-            } for boite in serrees],
+                'messages': boite.messages,
+            } for boite in grosses],
+            'dormantes': [{
+                'id': boite.id,
+                'nom': boite.email,
+                'derniere_connexion': (
+                    derniere_connexion(boite).strftime('%Y-%m-%d')
+                    if derniere_connexion(boite) else 'jamais'),
+            } for boite in recentes],
             'totaux': {
                 'domaines': len(domaines),
-                'boites': sum(ligne['boites_utilisees'] for ligne in lignes),
+                'boites': len(boites),
+                'alias': len(alias),
+                'messages': sum(boites.mapped('messages')),
+                'quota_utilise_mb': round(sum(boites.mapped('quota_used_mb')), 1),
+                'quota_alloue_mb': sum(allouees),
+                'boites_sans_quota': len(boites) - len(allouees),
                 'boites_serrees': len(serrees),
-                'quota_utilise_mb': round(sum(boite.quota_used_mb for boite in boites), 1),
+                'boites_dormantes': len(dormantes),
+                'alertes': len([alerte for alerte in alertes if alerte['nombre']]),
             },
         }
 

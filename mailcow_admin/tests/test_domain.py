@@ -1,8 +1,10 @@
 # Part of the mailcow_admin Odoo module. See LICENSE for details.
 """Tests des actions push/pull sur mailcow.domain."""
 
+from datetime import timedelta
 from unittest.mock import patch
 
+from odoo import fields
 from odoo.addons.mailcow_admin.services.mailcow_client import MailcowClient
 from odoo.tests import TransactionCase
 from odoo.tests import tagged
@@ -274,9 +276,96 @@ class TestMailcowDomain(TransactionCase):
         self.assertFalse(un['dkim'])
         self.assertGreaterEqual(donnees['totaux']['domaines'], 2)
         self.assertGreaterEqual(donnees['totaux']['boites'], 9)
-        # La pression des quotas : la boite au-dela de 80 % doit ressortir.
-        serrees = [b['nom'] for b in donnees['boites_serrees']]
-        self.assertIn('presque-plein@un.com', serrees)
+        # La pression des quotas est desormais une alerte, avec son modele et
+        # son filtre : c'est elle qui rend le chiffre actionnable.
+        par_cle = {alerte['cle']: alerte for alerte in donnees['alertes']}
+        self.assertEqual(par_cle['boites_serrees']['nombre'], 1)
+        self.assertEqual(par_cle['boites_serrees']['modele'], 'mailcow.mailbox')
+        self.assertEqual(par_cle['boites_serrees']['filtre'][0][0], 'id')
+
+    def test_le_tableau_de_bord_signale_ce_qui_cloche(self):
+        """Un tableau de bord sert a voir ce qui ne va pas, pas a compter.
+
+        Chaque alerte porte le modele a ouvrir et le filtre a appliquer : le
+        composant se contente de suivre, et la regle vit au meme endroit que
+        les autres regles du module.
+        """
+        # Les tests tournent sur la base reelle : on releve l etat avant, et on
+        # ne mesure que l ecart. Un compte absolu dependrait du decor.
+        avant = {
+            a['cle']: a['nombre']
+            for a in self.env['mailcow.domain'].donnees_tableau_de_bord()['alertes']
+        }
+
+        domaine = self.env['mailcow.domain'].create({
+            'name': 'alerte.com', 'description': 'x', 'quota_mb': 100,
+            'mailboxes_max': 10, 'aliases_max': 10,
+            'dkim_record': 'v=DKIM1; k=rsa; p=abc',
+        })
+        # Une boite desactivee.
+        self.env['mailcow.mailbox'].create({
+            'local_part': 'desactivee', 'domain_id': domaine.id,
+            'quota_mb': 100, 'active': False, 'synced': True,
+        })
+        # Une boite ouverte mais sans usage depuis plus d'un an, sans TLS impose.
+        self.env['mailcow.mailbox'].create({
+            'local_part': 'dormante', 'domain_id': domaine.id,
+            'quota_mb': 100, 'active': True, 'synced': True,
+            'tls_enforce_in': False,
+            'last_smtp_login': fields.Datetime.now() - timedelta(days=400),
+        })
+        # Un alias sans destination, et un attrape-tout.
+        # « alias_name » ne porte que la partie locale, et un fourre-tout a
+        # un nom vide : le module le refuse autrement, a raison.
+        self.env['mailcow.alias'].create({
+            'alias_name': 'perdu', 'domain_id': domaine.id, 'synced': True,
+        })
+        self.env['mailcow.alias'].create({
+            'alias_name': '', 'domain_id': domaine.id,
+            'is_catch_all': True, 'synced': True,
+        })
+
+        donnees = self.env['mailcow.domain'].donnees_tableau_de_bord()
+        apres = {a['cle']: a['nombre'] for a in donnees['alertes']}
+
+        # Chaque fiche creee ici doit faire bouger exactement une alerte.
+        self.assertEqual(apres['boites_desactivees'], avant['boites_desactivees'] + 1)
+        self.assertEqual(apres['boites_dormantes'], avant['boites_dormantes'] + 1)
+        self.assertEqual(apres['tls_non_impose'], avant['tls_non_impose'] + 1)
+        self.assertEqual(apres['alias_sans_destination'],
+                         avant['alias_sans_destination'] + 1)
+        self.assertEqual(apres['catch_all'], avant['catch_all'] + 1)
+
+        # Chaque alerte doit etre actionnable : un modele et un filtre.
+        for alerte in donnees['alertes']:
+            self.assertTrue(alerte['modele'], alerte['cle'])
+            self.assertIsInstance(alerte['filtre'], list, alerte['cle'])
+
+        # Une boite sans quota ne peut pas afficher un taux : « 0 % » se lirait
+        # « vide » alors qu'elle est sans limite. Rien, plutot qu'un faux zero.
+        sans_plafond = self.env['mailcow.mailbox'].create({
+            'local_part': 'sans-plafond', 'domain_id': domaine.id,
+            'quota_mb': 0, 'quota_used_mb': 500.0, 'active': True, 'synced': True,
+        })
+        # Une boite qui n'a jamais servi est la plus dormante de toutes : elle
+        # doit figurer dans la liste, et non seulement dans le compte.
+        jamais = self.env['mailcow.mailbox'].create({
+            'local_part': 'jamais-connectee', 'domain_id': domaine.id,
+            'quota_mb': 100, 'active': True, 'synced': True,
+        })
+        seconde = self.env['mailcow.domain'].donnees_tableau_de_bord()
+        ligne = [b for b in seconde['grosses_boites'] if b['id'] == sans_plafond.id]
+        self.assertTrue(ligne, "la boite sans quota doit figurer dans les gourmandes")
+        self.assertIsNone(ligne[0]['pourcentage'])
+        self.assertIn(jamais.id, [b['id'] for b in seconde['dormantes']],
+                      "une boite jamais utilisee doit figurer dans les dormantes")
+
+        # Les totaux enrichis.
+        self.assertGreaterEqual(donnees['totaux']['boites'], 2)
+        self.assertGreaterEqual(donnees['totaux']['alias'], 2)
+        self.assertIn('messages', donnees['totaux'])
+        self.assertIn('quota_alloue_mb', donnees['totaux'])
+        self.assertIn('grosses_boites', donnees)
 
     def test_sync_all_works_without_any_local_record(self):
         """Amorcer une base vide : aucune fiche locale n'est nécessaire."""

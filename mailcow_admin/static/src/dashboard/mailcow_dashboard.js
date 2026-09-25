@@ -1,22 +1,17 @@
 /** @odoo-module **/
-/* Tableau de bord Mailcow — lecture seule.
+/* Tableau de bord Mailcow.
 
-   Deux regles d'OWL 3, qui ont coute un plantage en production :
+   Regles d'OWL 3, apprises a la dure sur ce meme fichier :
 
-   1. L'etat reactif se fabrique avec « proxy », pas avec un objet litteral.
-      C'est ce proxy qui forme la portee du gabarit : un objet simple y reste
-      invisible, et le gabarit lit alors « chargement » sur undefined.
-      Mesure sur ce client web : 119 composants sur 120 font ainsi.
-
+   1. L'etat reactif se fabrique avec « proxy », pas avec un objet litteral :
+      c'est ce proxy qui forme la portee du gabarit.
    2. Dans un gabarit, tout ce qui appartient au composant se qualifie par
-      « this. » : this.state, this.totaux, this.domaines, this.classeOccupation.
-      Mesure : 225 gabarits qualifies, 19 non qualifies.
+      « this. ».
 
-   useState et les references nues sont de l'OWL 2. La couche
-   owl2/owl3_compatibility_layer.js fait tourner du code OWL 2 sur OWL 3, mais
-   ce composant, lui, est ecrit directement en OWL 3.
-
-   Le calcul reste cote serveur : voir mailcow.domain.donnees_tableau_de_bord. */
+   Toutes les regles metier vivent cote serveur, dans
+   mailcow.domain.donnees_tableau_de_bord : quelles boites sont dormantes,
+   quels domaines sont au plafond, quel filtre ouvrir. Le composant affiche
+   et navigue, il ne decide rien. */
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { Component, onWillStart, proxy } from "@odoo/owl";
@@ -26,32 +21,55 @@ export class MailcowDashboard extends Component {
 
     setup() {
         this.orm = useService("orm");
-        // proxy, et non un objet litteral : en OWL 3 c'est cet etat reactif
-        // qui forme la portee du gabarit. Un objet simple reste invisible au
-        // gabarit, qui lit alors « chargement » sur undefined. C'est la cause
-        // exacte du plantage « Cannot read properties of undefined ».
-        this.state = proxy({ chargement: true, donnees: null, erreur: null });
-        onWillStart(async () => {
-            try {
-                this.state.donnees = await this.orm.call(
-                    "mailcow.domain", "donnees_tableau_de_bord", []);
-            } catch (erreur) {
-                this.state.erreur = erreur.message || String(erreur);
-            }
-            this.state.chargement = false;
+        this.action = useService("action");
+        this.notification = useService("notification");
+        this.state = proxy({
+            chargement: true,
+            donnees: null,
+            erreur: null,
+            synchro: false,
         });
+        onWillStart(() => this.charger());
+    }
+
+    async charger() {
+        this.state.erreur = null;
+        try {
+            this.state.donnees = await this.orm.call(
+                "mailcow.domain",
+                "donnees_tableau_de_bord",
+                []
+            );
+        } catch (erreur) {
+            this.state.erreur = erreur.message || String(erreur);
+        }
+        this.state.chargement = false;
+    }
+
+    get donnees() {
+        return this.state.donnees || {};
     }
 
     get domaines() {
-        return (this.state.donnees && this.state.donnees.domaines) || [];
+        return this.donnees.domaines || [];
+    }
+
+    /** Seules les alertes non vides meritent une carte : le serveur les renvoie
+        toutes, y compris a zero, pour rester testable. */
+    get alertes() {
+        return (this.donnees.alertes || []).filter((alerte) => alerte.nombre > 0);
     }
 
     get totaux() {
-        return (this.state.donnees && this.state.donnees.totaux) || {};
+        return this.donnees.totaux || {};
     }
 
-    get serrees() {
-        return (this.state.donnees && this.state.donnees.boites_serrees) || [];
+    get grosses() {
+        return this.donnees.grosses_boites || [];
+    }
+
+    get dormantes() {
+        return this.donnees.dormantes || [];
     }
 
     /** La classe de la barre, selon la part du plafond deja consommee. */
@@ -60,6 +78,42 @@ export class MailcowDashboard extends Component {
             return "progress-bar bg-danger";
         }
         return pourcentage >= 60 ? "progress-bar bg-warning" : "progress-bar bg-success";
+    }
+
+    /** Une alerte porte la gravite en clair : « danger », « attention ». */
+    classeGravite(gravite) {
+        if (gravite === "danger") {
+            return "text-bg-danger";
+        }
+        return gravite === "attention" ? "text-bg-warning" : "text-bg-secondary";
+    }
+
+    /** Ouvrir la liste filtree que l'alerte designe : c'est le seul geste utile
+        devant un chiffre qui derange. */
+    ouvrirAlerte(alerte) {
+        this.action.doAction({
+            type: "ir.actions.act_window",
+            name: alerte.libelle,
+            res_model: alerte.modele,
+            domain: alerte.filtre,
+            views: [
+                [false, "list"],
+                [false, "form"],
+            ],
+        });
+    }
+
+    /** Tirer l'etat du serveur, puis relire : un bouton, jamais un minuteur. */
+    async synchroniser() {
+        this.state.synchro = true;
+        try {
+            await this.orm.call("mailcow.domain", "action_sync_all_from_mailcow", []);
+            await this.charger();
+            this.notification.add("Synchronise depuis Mailcow.", { type: "success" });
+        } catch (erreur) {
+            this.notification.add(erreur.message || String(erreur), { type: "danger" });
+        }
+        this.state.synchro = false;
     }
 }
 
