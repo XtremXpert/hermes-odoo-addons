@@ -1,5 +1,6 @@
 from . import test_client
 from . import test_updates
+from . import test_poussee
 from . import test_disparues
 from . import test_robustesse
 from . import test_usage

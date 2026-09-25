@@ -17,6 +17,31 @@ class MailcowSyncMixin(models.AbstractModel):
     last_synced_on = fields.Datetime(
         string='Dernière synchronisation', readonly=True)
 
+    def action_push_to_mailcow(self):
+        """Pousser vers Mailcow ce qui existe localement.
+
+        Ce qui n'a jamais été créé est créé, ce qui est connu est mis à jour.
+        Les fiches archivées sont ignorées : elles ont été retirées du serveur,
+        et les repousser le ressusciterait sans qu'on l'ait demandé.
+        """
+        creees = mises_a_jour = 0
+        for fiche in self.filtered('active'):
+            if fiche.synced:
+                fiche.action_update_on_mailcow()
+                mises_a_jour += 1
+            else:
+                fiche.action_create_on_mailcow()
+                creees += 1
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'type': 'success', 'title': 'Mailcow', 'sticky': False,
+                'message': '%d créée(s), %d mise(s) à jour sur Mailcow.'
+                           % (creees, mises_a_jour),
+            },
+        }
+
     def action_forget_locally(self):
         """Retirer la fiche locale sans toucher au serveur.
 
