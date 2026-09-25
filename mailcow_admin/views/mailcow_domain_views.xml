@@ -29,6 +29,8 @@
                 <field name="name"/>
                 <field name="description" optional="show"/>
                 <field name="quota_mb" string="Quota (Mo)" optional="show"/>
+                <field name="occupation_boites" widget="progressbar"
+                       string="Boîtes" optional="show"/>
                 <field name="synced" string="Synchronisé"/>
                 <field name="active" readonly="1"/>
             </list>
@@ -75,6 +77,20 @@
                         <group string="Mailcow">
                             <field name="synced"/>
                             <field name="quota_mb"/>
+                            <label for="mailboxes_used" string="Boîtes"/>
+                            <div class="o_row">
+                                <field name="mailboxes_used" class="oe_inline"/>
+                                <span class="oe_inline">sur</span>
+                                <field name="mailboxes_max" class="oe_inline"/>
+                                <field name="occupation_boites" widget="progressbar"
+                                       class="oe_inline"/>
+                            </div>
+                            <label for="aliases_used" string="Alias"/>
+                            <div class="o_row">
+                                <field name="aliases_used" class="oe_inline"/>
+                                <span class="oe_inline">sur</span>
+                                <field name="aliases_max" class="oe_inline"/>
+                            </div>
                             <field name="dkim_record" widget="text"
                                    invisible="not dkim_record"/>
                         </group>

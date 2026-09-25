@@ -11,8 +11,9 @@ Administer un serveur Mailcow v1 depuis Odoo
 * Synchronisation (import) depuis le serveur Mailcow
 * Réinitialisation des mots de passe (jamais stockés dans Odoo)
 * Configuration de la connexion (URL + clé API) dans les réglages
+* Tableau de bord : occupation des domaines, plafonds atteints, pression des quotas
 """,
-    'version': '19.5.1.0.0',
+    'version': '19.5.2.0.0',
     'depends': ['base', 'mail'],
     'data': [
         'security/mailcow_admin_groups.xml',
@@ -25,8 +26,22 @@ Administer un serveur Mailcow v1 depuis Odoo
         'views/mailcow_alias_views.xml',
         'views/res_config_settings_views.xml',
         'views/mailcow_admin_menus.xml',
+        'views/mailcow_dashboard_views.xml',
         'views/mailcow_sync_views.xml',
     ],
+    'assets': {
+        'web.assets_backend': [
+            # Sans ordre explicite, Odoo trie les modules du paquet et place
+            # mailcow_admin avant « web » (« mai » < « web ») : nos fichiers
+            # passeraient devant module_loader.js, qui définit odoo.define, et
+            # le client web mourrait au chargement sans la moindre erreur côté
+            # serveur. La directive « après le chargeur » ne dépend ni des noms
+            # ni du tri. Même recette que dans wazo_phone.
+            ('after', 'web/static/src/module_loader.js',
+             'mailcow_admin/static/src/dashboard/*.js'),
+            'mailcow_admin/static/src/dashboard/*.xml',
+        ],
+    },
     'author': 'Benoît Vézina',
     'license': 'LGPL-3',
     'installable': True,

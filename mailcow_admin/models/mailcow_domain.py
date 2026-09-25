@@ -25,6 +25,27 @@ class MailcowDomain(models.Model):
     )
     active = fields.Boolean(string='Actif', default=True)
     synced = fields.Boolean(string='Synchronisé avec Mailcow')
+    mailboxes_max = fields.Integer(
+        string='Boîtes maximum', default=0,
+        help="0 = valeur du serveur. Au-delà de ce plafond, Mailcow refuse "
+             "toute nouvelle boîte : une limite atteinte ne se voyait nulle "
+             "part avant que la création échoue.",
+    )
+    aliases_max = fields.Integer(
+        string='Alias maximum', default=0, help='0 = valeur du serveur.')
+    mailboxes_used = fields.Integer(string='Boîtes utilisées', readonly=True)
+    aliases_used = fields.Integer(string='Alias utilisés', readonly=True)
+    occupation_boites = fields.Float(
+        string='Occupation', compute='_compute_occupation',
+        help='Part du plafond de boîtes déjà utilisée, en pourcentage.')
+
+    @api.depends('mailboxes_used', 'mailboxes_max')
+    def _compute_occupation(self):
+        for domaine in self:
+            domaine.occupation_boites = (
+                100.0 * domaine.mailboxes_used / domaine.mailboxes_max
+                if domaine.mailboxes_max else 0.0)
+
     mailboxes = fields.One2many('mailcow.mailbox', 'domain_id', string='Boîtes mail')
     aliases = fields.One2many('mailcow.alias', 'domain_id', string='Alias')
 
@@ -59,6 +80,13 @@ class MailcowDomain(models.Model):
             attr['defquota'] = self.quota_mb
             attr['maxquota'] = self.quota_mb
             attr['quota'] = self.quota_mb
+        # Les plafonds s'écrivent en NOMBRE DE BOÎTES et D'ALIAS — ni en Mio ni
+        # en octets. Comme pour les quotas, un 0 local vaut « valeur du
+        # serveur » : ne rien envoyer plutôt que d'imposer zéro.
+        if self.mailboxes_max > 0:
+            attr['mailboxes'] = self.mailboxes_max
+        if self.aliases_max > 0:
+            attr['aliases'] = self.aliases_max
         return attr
 
     def _payload(self):
@@ -143,6 +171,67 @@ class MailcowDomain(models.Model):
         return self._sync_all_from_mailcow()
 
     @api.model
+    def donnees_tableau_de_bord(self):
+        """Tout ce qu'affiche le tableau de bord, calculé une seule fois.
+
+        Le calcul reste côté serveur. Compter les boîtes, jauger les quotas et
+        repérer les domaines au bord de leur plafond doit obéir aux règles du
+        module, pas à une deuxième version écrite en JavaScript qui
+        divergerait au premier changement.
+        """
+        domaines = self.with_context(active_test=False).search([])
+        lignes = []
+        for domaine in domaines:
+            lignes.append({
+                'id': domaine.id,
+                'nom': domaine.name,
+                'actif': domaine.active,
+                'synced': domaine.synced,
+                'boites_utilisees': domaine.mailboxes_used,
+                'boites_max': domaine.mailboxes_max,
+                'alias_utilises': domaine.aliases_used,
+                'alias_max': domaine.aliases_max,
+                # L'occupation est un champ calculé du modèle : une seule
+                # définition de « 8 sur 10 », ici.
+                'occupation': round(domaine.occupation_boites, 1),
+                'quota_mb': domaine.quota_mb,
+                'dkim': bool(domaine.dkim_record),
+                'derniere_synchro': (
+                    domaine.last_synced_on.strftime('%Y-%m-%d %H:%M')
+                    if domaine.last_synced_on else ''),
+            })
+        boites = self.env['mailcow.mailbox'].search([])
+
+        def pourcentage(boite):
+            """Part du quota consommée.
+
+            Calculée à partir des deux quotas locaux plutôt que lue dans
+            « percent_in_use » : ce dernier n'est rempli que par une
+            synchronisation, si bien qu'une boîte créée entre deux
+            synchronisations paraîtrait vide. Une seule règle, ici.
+            """
+            if boite.quota_mb:
+                return 100.0 * boite.quota_used_mb / boite.quota_mb
+            return boite.percent_in_use
+
+        serrees = boites.filtered(lambda boite: pourcentage(boite) >= 80.0)
+        return {
+            'domaines': lignes,
+            'boites_serrees': [{
+                'nom': boite.email,
+                'pourcentage': round(pourcentage(boite), 1),
+                'quota_utilise_mb': round(boite.quota_used_mb, 1),
+                'quota_mb': boite.quota_mb,
+            } for boite in serrees],
+            'totaux': {
+                'domaines': len(domaines),
+                'boites': sum(ligne['boites_utilisees'] for ligne in lignes),
+                'boites_serrees': len(serrees),
+                'quota_utilise_mb': round(sum(boite.quota_used_mb for boite in boites), 1),
+            },
+        }
+
+    @api.model
     def _sync_all_from_mailcow(self, dry_run=False):
         """Décrire, ou appliquer, l'état du serveur sur les fiches locales.
 
@@ -177,6 +266,12 @@ class MailcowDomain(models.Model):
                 # Le quota peut arriver en texte : int() ferait lever la
                 # synchronisation sur une valeur parfaitement valide.
                 'quota_mb': int(en_nombre(entry.get('def_quota_for_mbox'))) // (1024 * 1024),
+                # L'occupation et les plafonds du domaine : ce qui permet de
+                # voir « 8 sur 10 » avant que la onzième boîte soit refusée.
+                'mailboxes_used': int(en_nombre(entry.get('mboxes_in_domain'))),
+                'aliases_used': int(en_nombre(entry.get('aliases_in_domain'))),
+                'mailboxes_max': int(en_nombre(entry.get('max_num_mboxes_for_domain'))),
+                'aliases_max': int(en_nombre(entry.get('max_num_aliases_for_domain'))),
                 'active': entry.get('active') in (1, '1', True),
                 'synced': True,
                 'last_synced_on': fields.Datetime.now(),

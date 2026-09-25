@@ -183,6 +183,101 @@ class TestMailcowDomain(TransactionCase):
         self.assertTrue(retrouvees.synced)
         self.assertEqual(retrouvees.description, 'de retour')
 
+    def test_sync_lit_les_plafonds_et_l_occupation(self):
+        """Le domaine doit rapporter combien de boites il porte, et sa limite.
+
+        Sans ces quatre valeurs, impossible d'afficher « 8 sur 10 » : le
+        modele ne les relisait pas, et une limite atteinte ne se voyait nulle
+        part avant que la creation echoue cote serveur.
+        """
+        remote = {'data': [{
+            'domain_name': 'dc.com',
+            'description': '',
+            'active': '1',
+            'def_quota_for_mbox': 0,
+            'mboxes_in_domain': 8,
+            'max_num_mboxes_for_domain': 10,
+            'aliases_in_domain': 3,
+            'max_num_aliases_for_domain': 400,
+        }]}
+        with patch.object(MailcowClient, '_request', return_value=remote):
+            self.env['mailcow.domain'].action_sync_all_from_mailcow()
+        domaine = self.env['mailcow.domain'].search([('name', '=', 'dc.com')])
+        self.assertEqual(domaine.mailboxes_used, 8)
+        self.assertEqual(domaine.mailboxes_max, 10)
+        self.assertEqual(domaine.aliases_used, 3)
+        self.assertEqual(domaine.aliases_max, 400)
+
+    def test_les_plafonds_partent_en_nombre_entier(self):
+        """Les plafonds s'ecrivent en nombre, pas en Mio ni en octets.
+
+        /add/domain et /edit/domain attendent « mailboxes » et « aliases »
+        (l'exemple de l'API donne 10 et 400). Un plafond local a 0 ne doit
+        rien envoyer : c'est « la valeur du serveur », pas « zero ».
+        """
+        domaine = self.env['mailcow.domain'].create({
+            'name': 'dc.com', 'description': 'x', 'quota_mb': 100,
+            'mailboxes_max': 25, 'aliases_max': 200,
+        })
+        with patch.object(
+            MailcowClient, '_request',
+            return_value=[{'msg': 'domain_added', 'type': 'success'}],
+        ) as request:
+            domaine.action_create_on_mailcow()
+        _, route, charge = request.call_args[0]
+        self.assertEqual(route, '/add/domain')
+        self.assertEqual(charge['mailboxes'], 25)
+        self.assertEqual(charge['aliases'], 200)
+
+        # Un domaine sans plafond n'en envoie aucun.
+        sans = self.env['mailcow.domain'].create({'name': 'sans.com'})
+        with patch.object(
+            MailcowClient, '_request',
+            return_value=[{'msg': 'domain_added', 'type': 'success'}],
+        ) as request2:
+            sans.action_create_on_mailcow()
+        _, _, charge2 = request2.call_args[0]
+        self.assertNotIn('mailboxes', charge2)
+        self.assertNotIn('aliases', charge2)
+
+    def test_le_tableau_de_bord_agrege_les_domaines(self):
+        """Le calcul est fait cote serveur, pas dans le navigateur.
+
+        Une seule source de verite : compter les boites et jauger les quotas
+        en Python evite de refaire le calcul en JavaScript, ou il divergerait
+        au premier changement de regle.
+        """
+        d1 = self.env['mailcow.domain'].create({
+            'name': 'un.com', 'active': True, 'synced': True,
+            'mailboxes_used': 8, 'mailboxes_max': 10,
+            'aliases_used': 3, 'aliases_max': 400,
+        })
+        self.env['mailcow.domain'].create({
+            'name': 'deux.com', 'active': True, 'synced': True,
+            'mailboxes_used': 1, 'mailboxes_max': 10,
+        })
+        self.env['mailcow.mailbox'].create({
+            'local_part': 'presque-plein', 'domain_id': d1.id,
+            'quota_mb': 100, 'quota_used_mb': 95, 'active': True,
+        })
+        donnees = self.env['mailcow.domain'].donnees_tableau_de_bord()
+
+        # Les tests tournent sur la base reelle : viser les fiches creees ici,
+        # jamais un compte absolu, qui dependrait du decor.
+        noms = [ligne['nom'] for ligne in donnees['domaines']]
+        self.assertIn('un.com', noms)
+        self.assertIn('deux.com', noms)
+        un = [ligne for ligne in donnees['domaines'] if ligne['nom'] == 'un.com'][0]
+        self.assertEqual(un['boites_utilisees'], 8)
+        self.assertEqual(un['boites_max'], 10)
+        self.assertAlmostEqual(un['occupation'], 80.0)
+        self.assertFalse(un['dkim'])
+        self.assertGreaterEqual(donnees['totaux']['domaines'], 2)
+        self.assertGreaterEqual(donnees['totaux']['boites'], 9)
+        # La pression des quotas : la boite au-dela de 80 % doit ressortir.
+        serrees = [b['nom'] for b in donnees['boites_serrees']]
+        self.assertIn('presque-plein@un.com', serrees)
+
     def test_sync_all_works_without_any_local_record(self):
         """Amorcer une base vide : aucune fiche locale n'est nécessaire."""
         remote = {'data': [
