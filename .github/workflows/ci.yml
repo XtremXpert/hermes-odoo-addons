@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Une poussée qui en remplace une autre annule la première : rien ne sert de
+# faire tourner deux fois la même suite.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Odoo avance vite et casse des choses : la CI épingle le commit sur lequel
+  # les tests ont réellement été validés, plutôt que de suivre master.
+  # Pour avancer : remplacer par le commit voulu, relancer, corriger, repousser.
+  ODOO_COMMIT: 9c2e8fb1b09c0fbdc01d773a33663a7eaf0522f1
+  MODULES: asterisk_ari,mailcow_admin,voipms_sms,wazo_phone,wazo_server
+
+jobs:
+  qualite:
+    name: Qualité
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: "22"
+
+      - name: Lint — erreurs réelles seulement
+        run: |
+          python -m pip install --quiet ruff==0.16.9
+          # E9 : erreurs de syntaxe ; F63, F7 : comparaisons et expressions
+          # impossibles ; F82 : noms indéfinis. Le reste du catalogue ruff
+          # compte 373 trouvailles préexistantes dans ce dépôt : en faire une
+          # porte d'entrée transformerait la CI en rouge permanent.
+          # « poc » est exclu : il n'est pas versionné et porte des secrets.
+          # $MODULES est joint par des virgules pour « --init » d'Odoo :
+          # ruff, lui, attend des chemins séparés par des espaces.
+          ruff check --select E9,F63,F7,F82 ${MODULES//,/ } --exclude poc
+
+      - name: Syntaxe Python des fichiers versionnés
+        run: |
+          # La liste vient de git : ce qui n'est pas versionné n'est pas
+          # vérifié, et notamment pas les scripts locaux du dossier « poc ».
+          python -m compileall -q $(git ls-files '*.py')
+
+      - name: XML bien formé
+        run: python .github/scripts/verifier_les_xml.py
+
+      - name: Tests JS
+        run: node --test 'wazo_phone/static/tests/*.test.js'
+
+  odoo:
+    name: Tests Odoo
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: odoo
+          POSTGRES_PASSWORD: odoo
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Bibliothèques système d'Odoo
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            libldap2-dev libsasl2-dev libpq-dev libxml2-dev libxslt1-dev \
+            libjpeg-dev zlib1g-dev libffi-dev
+
+      - name: Odoo au commit épinglé
+        run: |
+          git clone --quiet --filter=blob:none --no-checkout \
+            https://github.com/odoo/odoo.git odoo
+          git -C odoo checkout --quiet $ODOO_COMMIT
+
+      - name: Dépendances Python d'Odoo
+        run: python -m pip install --quiet -r odoo/requirements.txt
+
+      - name: Tests des cinq modules, sur une base neuve
+        run: |
+          python odoo/odoo-bin \
+            --addons-path=odoo/addons,. \
+            --db_host=127.0.0.1 --db_port=5432 \
+            --db_user=odoo --db_password=odoo \
+            --database=hermes_ci \
+            --init=$MODULES \
+            --test-enable \
+            --test-tags=/asterisk_ari,/mailcow_admin,/voipms_sms,/wazo_phone,/wazo_server \
+            --stop-after-init --no-http --max-cron-threads=0 --log-level=test
