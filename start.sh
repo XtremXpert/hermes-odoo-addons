@@ -6,8 +6,10 @@
 # fork() sans exec() (workers Odoo, multiprocessing), macOS tue alors le
 # processus (SIGSEGV dans _os_log_preferences_refresh).
 #
-# Usage : ./start.sh [options odoo-bin supplementaires]
+# Usage : ./start.sh [options ou sous-commande odoo-bin]
 #   ex. ./start.sh -u wazo_phone --stop-after-init
+#       ./start.sh --workers 2
+#       ./start.sh shell --no-http < script.py
 set -euo pipefail
 
 cd "$(dirname "$0")"
@@ -22,8 +24,12 @@ for arg in "$@"; do
     esac
 done
 
-if $has_db; then
-    exec .venv/bin/python odoo/odoo-bin -c conf/odoo.conf "$@"
-else
-    exec .venv/bin/python odoo/odoo-bin -c conf/odoo.conf --database odoo20 "$@"
+args=("$@")
+if ! $has_db; then
+    args+=(--database odoo20)
 fi
+
+# Les arguments passent AVANT les options fixes. Une sous-commande (« shell »,
+# « db », « scaffold »...) doit venir avant les options, sinon odoo-bin la prend
+# pour un argument du serveur et refuse : « unrecognized parameters: shell ».
+exec .venv/bin/python odoo/odoo-bin "${args[@]}" -c conf/odoo.conf
