@@ -27,6 +27,17 @@ class ResConfigSettings(models.TransientModel):
         200 avec un corps vide, ce qui ferait passer un échec pour un succès.
         """
         client = MailcowClient(self.env)
+        # La version d'abord : elle se lit sur une route qui répond toujours,
+        # et savoir quel serveur on pilote évite bien des suppositions.
+        try:
+            version = client._request('GET', '/get/status/version')
+        except Exception:                       # noqa: BLE001 — la version n'est pas vitale
+            version = None
+        if isinstance(version, list) and version and isinstance(version[0], dict):
+            version = version[0].get('version')
+        elif not isinstance(version, str):
+            version = None
+
         response = client._request('GET', '/get/domain/all')
         entries = response.get('data') if isinstance(response, dict) else response
         count = len([e for e in entries if isinstance(e, dict)])
@@ -52,8 +63,10 @@ class ResConfigSettings(models.TransientModel):
             'params': {
                 'title': 'Mailcow',
                 'message': (
-                    'Connexion à Mailcow réussie : %d domaine(s) trouvé(s).'
-                    % count
+                    'Connexion à Mailcow réussie : %d domaine(s) trouvé(s)'
+                    '%s.'
+                    % (count,
+                       ' — serveur %s' % version if version else '')
                 ),
                 'type': 'success',
                 'sticky': False,

@@ -1,6 +1,7 @@
 from . import test_client
 from . import test_updates
 from . import test_journal
+from . import test_lot6
 from . import test_apercu
 from . import test_poussee
 from . import test_disparues

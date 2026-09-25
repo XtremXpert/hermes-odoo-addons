@@ -1,5 +1,6 @@
 from . import mailcow_sync_mixin
 from . import mailcow_sync_preview
+from . import mailcow_app_password_wizard
 from . import mailcow_email_address
 from . import mailcow_domain
 from . import mailcow_mailbox

@@ -21,6 +21,7 @@ Administer un serveur Mailcow v1 depuis Odoo
         'views/mailcow_domain_views.xml',
         'views/mailcow_mailbox_views.xml',
         'views/mailcow_mailbox_password_wizard_views.xml',
+        'views/mailcow_app_password_wizard_views.xml',
         'views/mailcow_alias_views.xml',
         'views/res_config_settings_views.xml',
         'views/mailcow_admin_menus.xml',

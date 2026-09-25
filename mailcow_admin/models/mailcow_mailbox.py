@@ -109,6 +109,22 @@ class MailcowMailbox(models.Model):
             mailbox._journaliser('Boîte %s créée sur Mailcow.' % mailbox.email)
             mailbox.password = False  # le mot de passe ne doit pas rester dans Odoo
 
+    def action_create_app_password(self):
+        """Ouvrir l'assistant qui créera un mot de passe applicatif.
+
+        Mailcow rend ce mot de passe en clair et ne le garde pas : il est créé
+        ici, montré une fois, et rangé nulle part.
+        """
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Nouveau mot de passe applicatif',
+            'res_model': 'mailcow.app.password.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {'default_mailbox_id': self.id},
+        }
+
     def action_make_catch_all(self):
         """Fait de cette boîte le fourre-tout de son domaine.
 

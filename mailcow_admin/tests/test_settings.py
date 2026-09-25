@@ -50,7 +50,12 @@ class TestMailcowSettings(TransactionCase):
             MailcowClient, '_request', return_value={'data': []},
         ) as request:
             self.settings.action_test_mailcow_connection()
-        request.assert_called_once_with('GET', '/get/domain/all')
+        appels = [appel.args for appel in request.call_args_list]
+        self.assertIn(('GET', '/get/domain/all'), appels,
+                      "la route de listage /all n'a pas été utilisée")
+        self.assertNotIn('111', ' '.join(chemin for _, chemin in appels),
+                         'une route par identifiant (111) a été utilisée, '
+                         'alors qu elle répond 200 avec un corps vide')
 
     def test_connection_warns_when_the_server_returns_nothing(self):
         """Un corps vide ne doit jamais être annoncé comme un succès."""

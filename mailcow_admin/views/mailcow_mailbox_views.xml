@@ -60,6 +60,10 @@
                             string="Changer le mot de passe"
                             invisible="not synced"
                             groups="mailcow_admin.group_mailcow_manager"/>
+                    <button name="action_create_app_password" type="object"
+                            string="Mot de passe applicatif"
+                            invisible="not synced"
+                            groups="mailcow_admin.group_mailcow_manager"/>
                     <button name="action_make_catch_all" type="object"
                             string="En faire le fourre-tout"
                             invisible="not synced"

@@ -8,3 +8,4 @@ access_mailcow_mailbox_manager,mailcow.mailbox manager,mailcow.mailbox,mailcow_a
 access_mailcow_alias_user,mailcow.alias user,mailcow.alias,mailcow_admin.group_mailcow_user,cru,
 access_mailcow_alias_manager,mailcow.alias manager,mailcow.alias,mailcow_admin.group_mailcow_manager,crud,
 access_mailcow_mailbox_password_manager,mailcow.mailbox.password manager,mailcow.mailbox.password,mailcow_admin.group_mailcow_manager,crud,
+access_mailcow_app_password_manager,mailcow.app.password.wizard manager,mailcow.app.password.wizard,mailcow_admin.group_mailcow_manager,crud,
