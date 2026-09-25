@@ -7,7 +7,8 @@ utilisateur ordinaire, et encore moins entre ses mains.
 """
 
 from odoo.exceptions import AccessError
-from odoo.tests import TransactionCase, tagged
+from odoo.tests import TransactionCase
+from odoo.tests import tagged
 
 
 @tagged('wazo_server', 'post_install', '-at_install')

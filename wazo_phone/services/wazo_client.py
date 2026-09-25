@@ -248,7 +248,7 @@ class WazoClient:
                 raw = response.read()
         except urllib.error.HTTPError as error:
             detail = ''
-            try:
+            try:  # noqa: SIM105 - un corps d erreur illisible ne doit pas masquer l erreur
                 detail = error.read().decode('utf-8', 'replace')[:500]
             except (OSError, AttributeError):
                 pass

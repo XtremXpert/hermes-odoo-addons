@@ -23,10 +23,12 @@ idempotent existant).
 
 from unittest.mock import patch
 
-from odoo.exceptions import UserError, ValidationError
-from odoo.tests import TransactionCase, tagged
-
-from odoo.addons.wazo_phone.services.wazo_client import WazoAPIError, WazoClient
+from odoo.addons.wazo_phone.services.wazo_client import WazoAPIError
+from odoo.addons.wazo_phone.services.wazo_client import WazoClient
+from odoo.exceptions import UserError
+from odoo.exceptions import ValidationError
+from odoo.tests import TransactionCase
+from odoo.tests import tagged
 
 CONTEXTE = 'ctx-test-internal-dad46d8d-02df-4cf9-b92c-2f3bc736f039'
 

@@ -6,12 +6,10 @@ import json
 import urllib.error
 from unittest.mock import patch
 
-from odoo.tests import TransactionCase, tagged
-
-from odoo.addons.mailcow_admin.services.mailcow_client import (
-    MailcowAPIError,
-    MailcowClient,
-)
+from odoo.addons.mailcow_admin.services.mailcow_client import MailcowAPIError
+from odoo.addons.mailcow_admin.services.mailcow_client import MailcowClient
+from odoo.tests import TransactionCase
+from odoo.tests import tagged
 
 
 class MailcowClientTestBase(TransactionCase):

@@ -17,13 +17,11 @@ d'où ``remote_user_uuid`` sur ``wazo.user``.
 
 from unittest.mock import patch
 
-from odoo.exceptions import UserError, ValidationError
-from odoo.tests import tagged
-
 from odoo.addons.wazo_phone.services.wazo_client import WazoClient
-from odoo.addons.wazo_phone.tests.test_extension_validation import (
-    WazoValidationTestBase,
-)
+from odoo.addons.wazo_phone.tests.test_extension_validation import WazoValidationTestBase
+from odoo.exceptions import UserError
+from odoo.exceptions import ValidationError
+from odoo.tests import tagged
 
 
 class _RingGroupBase(WazoValidationTestBase):
@@ -38,7 +36,8 @@ class _RingGroupBase(WazoValidationTestBase):
         """Commandes du lien membre — qui porte la **priorité** de sonnerie."""
         priorites = list(priorites) if priorites else [10] * len(utilisateurs)
         return [(0, 0, {'user_id': utilisateur.id, 'priority': priorite})
-                for utilisateur, priorite in zip(utilisateurs, priorites)]
+                for utilisateur, priorite in zip(utilisateurs, priorites,
+                                                  strict=False)]
 
     def _synced_user(self, extension, uuid):
         """Utilisateur Odoo déjà synchronisé — donc pourvu de son uuid Wazo."""

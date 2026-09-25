@@ -1,12 +1,12 @@
 # Part of the mailcow_admin Odoo module. See LICENSE for details.
 """Client minimal de l'API Mailcow v1 (urllib standard, sans dépendance externe)."""
 
-from datetime import datetime, timezone
-
 import json
 import time
 import urllib.error
 import urllib.request
+from datetime import UTC
+from datetime import datetime
 
 from odoo.exceptions import UserError
 
@@ -26,7 +26,7 @@ def en_date(valeur):
     « jamais ». Un affichage naïf casse : on convertit ici, une seule fois.
     """
     if isinstance(valeur, (int, float)) and valeur:
-        return datetime.fromtimestamp(float(valeur), timezone.utc).replace(tzinfo=None)
+        return datetime.fromtimestamp(float(valeur), UTC).replace(tzinfo=None)
     return False
 
 
@@ -137,7 +137,7 @@ class MailcowClient:
 
     def _notify(self, entry):
         """Pousse une notification dans le client Odoo (best effort)."""
-        try:
+        try:  # noqa: SIM105 - reindenter le bloc enterrerait la raison
             self.env['bus.bus']._sendone(
                 'mailcow',
                 {

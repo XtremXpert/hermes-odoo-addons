@@ -23,10 +23,16 @@ une dérive entre les deux copies ; d'où ce mixin.
 import logging
 import re
 
-from odoo import api, fields, models
-from odoo.exceptions import UserError, ValidationError
+from odoo.exceptions import UserError
+from odoo.exceptions import ValidationError
 
-from ..services.wazo_client import WazoAPIError, WazoClient, in_ranges
+from odoo import api
+from odoo import fields
+from odoo import models
+
+from ..services.wazo_client import WazoAPIError
+from ..services.wazo_client import WazoClient
+from ..services.wazo_client import in_ranges
 
 _logger = logging.getLogger(__name__)
 
@@ -149,7 +155,9 @@ class WazoExtensionMixin(models.AbstractModel):
         liste nue (tests, versions antérieures).
         """
         result = client.conf('GET', '/extensions')
-        if isinstance(result, dict):
+        # Un if/else se lit mieux ici que l'expression conditionnelle que
+        # suggère la règle : le cas « liste nue » mérite sa propre ligne.
+        if isinstance(result, dict):  # noqa: SIM108
             items = result.get('items') or []
         else:
             items = result or []

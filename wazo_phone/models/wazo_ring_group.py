@@ -22,8 +22,12 @@ wazo_extension_mixin.WazoExtensionMixin`, ici avec ``_extension_type = 'group'``
 
 import re
 
-from odoo import api, fields, models
-from odoo.exceptions import UserError, ValidationError
+from odoo.exceptions import UserError
+from odoo.exceptions import ValidationError
+
+from odoo import api
+from odoo import fields
+from odoo import models
 
 from ..services.wazo_client import WazoAPIError
 

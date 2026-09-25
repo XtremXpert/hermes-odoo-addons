@@ -3,12 +3,18 @@
 
 import logging
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import UTC
+from datetime import datetime
+from datetime import timedelta
 
-from odoo import api, fields, models
 from odoo.exceptions import UserError
 
-from ..services.wazo_client import WazoAPIError, WazoClient
+from odoo import api
+from odoo import fields
+from odoo import models
+
+from ..services.wazo_client import WazoAPIError
+from ..services.wazo_client import WazoClient
 
 _logger = logging.getLogger(__name__)
 
@@ -25,7 +31,7 @@ def _parse_wazo_datetime(value):
     except ValueError:
         return False
     if moment.tzinfo is not None:
-        moment = moment.astimezone(timezone.utc).replace(tzinfo=None)
+        moment = moment.astimezone(UTC).replace(tzinfo=None)
     return moment
 
 
@@ -154,7 +160,7 @@ class WazoCdr(models.Model):
         ``limit_days`` derniers jours. Retourne le nombre de CDR créés.
         """
         client = WazoClient(self.env)
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        now = datetime.now(UTC).replace(tzinfo=None)
         until = until or now
         since = since or (until - timedelta(days=limit_days))
         created = 0

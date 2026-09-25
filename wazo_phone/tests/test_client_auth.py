@@ -12,9 +12,9 @@ import base64
 import io
 from unittest.mock import patch
 
-from odoo.tests import TransactionCase, tagged
-
 from odoo.addons.wazo_phone.services.wazo_client import WazoClient
+from odoo.tests import TransactionCase
+from odoo.tests import tagged
 
 
 class WazoTokenTestBase(TransactionCase):

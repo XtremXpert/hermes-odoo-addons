@@ -23,7 +23,8 @@ Ce module est indépendant du module « voip » d'Enterprise : il sert
 NOTRE softphone, et n'est jamais un no-op de disponibilité.
 """
 
-from odoo import fields, models
+from odoo import fields
+from odoo import models
 
 
 class WazoUserSoftphone(models.Model):

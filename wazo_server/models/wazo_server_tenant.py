@@ -26,13 +26,14 @@ from datetime import datetime
 
 _logger = logging.getLogger(__name__)
 
-from odoo import api, fields, models
-from odoo.exceptions import UserError, ValidationError
+from odoo.addons.wazo_phone.services.wazo_client import WazoAPIError
+from odoo.addons.wazo_phone.services.wazo_client import WazoClient
+from odoo.exceptions import UserError
+from odoo.exceptions import ValidationError
 
-from odoo.addons.wazo_phone.services.wazo_client import (
-    WazoAPIError,
-    WazoClient,
-)
+from odoo import api
+from odoo import fields
+from odoo import models
 
 #: Bloc remis à l'exploitant du tenant. Les libellés sont ceux des réglages de
 #: `wazo_phone` (« Réglages → Téléphonie Wazo ») : la fiche se recopie sans
@@ -408,7 +409,10 @@ class WazoServerTenant(models.Model):
         if not horodatage:
             return False
         try:
-            return datetime.strptime(str(horodatage)[:19], '%Y-%m-%dT%H:%M:%S')
+            # Odoo range ses dates en UTC naïf : c'est la convention que
+            # respecte ce convertisseur, et un fuseau ici la contredirait.
+            return datetime.strptime(  # noqa: DTZ007
+                str(horodatage)[:19], '%Y-%m-%dT%H:%M:%S')
         except (TypeError, ValueError):
             return False
 

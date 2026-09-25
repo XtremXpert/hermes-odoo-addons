@@ -16,10 +16,12 @@ de vérifier **pour quel tenant** chaque appel a été fait.
 
 from unittest.mock import patch
 
-from odoo.exceptions import UserError, ValidationError
-from odoo.tests import TransactionCase, tagged
-
-from odoo.addons.wazo_phone.services.wazo_client import WazoAPIError, WazoClient
+from odoo.addons.wazo_phone.services.wazo_client import WazoAPIError
+from odoo.addons.wazo_phone.services.wazo_client import WazoClient
+from odoo.exceptions import UserError
+from odoo.exceptions import ValidationError
+from odoo.tests import TransactionCase
+from odoo.tests import tagged
 
 #: Racine du serveur : c'est elle qui reçoit les tenants créés.
 MAITRE = '1a34f9bb-ddb7-4218-895b-58d1c1e36cae'
@@ -209,7 +211,7 @@ class TestTenantCreation(WazoServerTestBase):
     def test_token_is_asked_with_the_tenant_password(self):
         """Le jeton est demandé avec les identifiants du tenant, en Basic."""
         tenant = self._create_tenant()
-        appels, jetons, repondre = self._faux_serveur()
+        _appels, jetons, repondre = self._faux_serveur()
         with self._patch(repondre):
             tenant.action_create_on_wazo()
         self.assertEqual(len(jetons), 1)
@@ -220,7 +222,7 @@ class TestTenantCreation(WazoServerTestBase):
     def test_tenant_identifier_is_recorded_before_the_rest(self):
         """Un échec après la création du tenant laisse sa trace."""
         tenant = self._create_tenant()
-        appels, _, repondre = self._faux_serveur(
+        _appels, _, repondre = self._faux_serveur(
             erreur_sur=('confd', '/contexts'))
         with self._patch(repondre):
             self.assertFalse(tenant.action_create_on_wazo())
@@ -230,7 +232,7 @@ class TestTenantCreation(WazoServerTestBase):
 
     def test_credentials_are_kept_for_the_tenant(self):
         tenant = self._create_tenant()
-        appels, jetons, repondre = self._faux_serveur()
+        _appels, _jetons, repondre = self._faux_serveur()
         with self._patch(repondre):
             tenant.action_create_on_wazo()
         self.assertEqual(tenant.state, 'created')
@@ -244,7 +246,7 @@ class TestTenantCreation(WazoServerTestBase):
 
     def test_creation_is_refused_twice(self):
         tenant = self._create_tenant()
-        appels, _, repondre = self._faux_serveur()
+        _appels, _, repondre = self._faux_serveur()
         with self._patch(repondre):
             tenant.action_create_on_wazo()
             with self.assertRaises(UserError):
@@ -256,7 +258,7 @@ class TestTenantDeletion(WazoServerTestBase):
 
     def _tenant_cree(self):
         tenant = self._create_tenant()
-        appels, _, repondre = self._faux_serveur()
+        _appels, _, repondre = self._faux_serveur()
         with self._patch(repondre):
             tenant.action_create_on_wazo()
         self.assertEqual(tenant.state, 'created', 'création de départ ratée')
@@ -265,7 +267,7 @@ class TestTenantDeletion(WazoServerTestBase):
     def test_deletion_is_refused_while_the_tenant_has_postes(self):
         """Un tenant qui porte des postes ne se supprime pas par distraction."""
         tenant = self._tenant_cree()
-        appels, _, repondre = self._faux_serveur(utilisateurs_distants=3,
+        _appels, _, repondre = self._faux_serveur(utilisateurs_distants=3,
                                                  lignes_distantes=3)
         with self._patch(repondre):
             with self.assertRaises(UserError) as ctx:
@@ -319,7 +321,7 @@ class TestTenantResume(WazoServerTestBase):
     def _tenant_interrompu(self):
         """Un tenant dont la création a échoué après sa création sur Wazo."""
         tenant = self._create_tenant()
-        appels, _, repondre = self._faux_serveur(
+        _appels, _, repondre = self._faux_serveur(
             erreur_sur=('confd', '/contexts'))
         with self._patch(repondre):
             self.assertFalse(tenant.action_create_on_wazo())
@@ -403,14 +405,14 @@ class TestTenantResume(WazoServerTestBase):
     def test_a_created_tenant_is_not_resumed(self):
         """Un tenant abouti ne se reprend pas : la garde reste en place."""
         tenant = self._tenant_cree_pour_reprise()
-        appels, _, repondre = self._faux_serveur()
+        _appels, _, repondre = self._faux_serveur()
         with self._patch(repondre):
             with self.assertRaises(UserError):
                 tenant.action_create_on_wazo()
 
     def _tenant_cree_pour_reprise(self):
         tenant = self._create_tenant()
-        appels, _, repondre = self._faux_serveur()
+        _appels, _, repondre = self._faux_serveur()
         with self._patch(repondre):
             tenant.action_create_on_wazo()
         return tenant
@@ -426,7 +428,7 @@ class TestTenantHandover(WazoServerTestBase):
 
     def _tenant_cree(self):
         tenant = self._create_tenant()
-        appels, _, repondre = self._faux_serveur()
+        _appels, _, repondre = self._faux_serveur()
         with self._patch(repondre):
             tenant.action_create_on_wazo()
         self.assertEqual(tenant.state, 'created')

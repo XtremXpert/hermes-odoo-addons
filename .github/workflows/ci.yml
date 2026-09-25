@@ -38,14 +38,16 @@ jobs:
       - name: Lint — erreurs réelles seulement
         run: |
           python -m pip install --quiet ruff==0.16.9
-          # E9 : erreurs de syntaxe ; F63, F7 : comparaisons et expressions
-          # impossibles ; F82 : noms indéfinis. Le reste du catalogue ruff
-          # compte 373 trouvailles préexistantes dans ce dépôt : en faire une
-          # porte d'entrée transformerait la CI en rouge permanent.
+          # Les conventions du dépôt sont dans ruff.toml, avec leur raison :
+          # l'apostrophe française, le formatage en « % », et surtout les
+          # imports des __init__.py — qui sont des déclarations, pas des
+          # imports morts, et dont l'ordre n'est pas alphabétique.
+          # Sans ce fichier, le catalogue complet relèverait 373 trouvailles
+          # dont l'immense majorité sont des faux positifs.
           # « poc » est exclu : il n'est pas versionné et porte des secrets.
           # $MODULES est joint par des virgules pour « --init » d'Odoo :
           # ruff, lui, attend des chemins séparés par des espaces.
-          ruff check --select E9,F63,F7,F82 ${MODULES//,/ } --exclude poc
+          ruff check ${MODULES//,/ } --exclude poc
 
       - name: Syntaxe Python des fichiers versionnés
         run: |

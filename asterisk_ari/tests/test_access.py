@@ -2,7 +2,8 @@
 """Tests des droits d'accès du module asterisk_ari."""
 
 from odoo.exceptions import AccessError
-from odoo.tests import TransactionCase, tagged
+from odoo.tests import TransactionCase
+from odoo.tests import tagged
 
 
 @tagged('asterisk_ari', 'post_install', '-at_install')

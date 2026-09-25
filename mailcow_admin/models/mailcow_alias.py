@@ -1,11 +1,13 @@
 # Part of the mailcow_admin Odoo module. See LICENSE for details.
-from odoo import api, fields, models
-from odoo.exceptions import UserError, ValidationError
+from odoo.exceptions import UserError
+from odoo.exceptions import ValidationError
 
-from ..services.mailcow_client import (
-    MailcowClient,
-    refuser_la_disparition_totale,
-)
+from odoo import api
+from odoo import fields
+from odoo import models
+
+from ..services.mailcow_client import MailcowClient
+from ..services.mailcow_client import refuser_la_disparition_totale
 
 
 class MailcowAlias(models.Model):
@@ -131,7 +133,8 @@ class MailcowAlias(models.Model):
                 'items': [str(identifiant)],
                 'attr': alias._attr_payload(),
             })
-            alias.write({'last_synced_on': fields.Datetime.now(), 'synced': True, 'mailcow_id': str(identifiant)})
+            alias.write({'last_synced_on': fields.Datetime.now(),
+                         'synced': True, 'mailcow_id': str(identifiant)})
             alias._journaliser('Mise à jour poussée vers Mailcow.')
 
     def action_delete_on_mailcow(self):

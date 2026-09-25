@@ -5,7 +5,8 @@ from unittest.mock import patch
 
 from odoo.tests.common import TransactionCase
 
-from ..services.mailcow_client import MailcowAPIError, MailcowClient
+from ..services.mailcow_client import MailcowAPIError
+from ..services.mailcow_client import MailcowClient
 
 
 class FausseReponse:

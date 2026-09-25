@@ -13,7 +13,8 @@ on retombe sur les réglages. C'est ce qui permet à un tenant d'installer
 `wazo_phone` seul : le champ n'existe alors nulle part.
 """
 
-from odoo import fields, models
+from odoo import fields
+from odoo import models
 
 
 class WazoServerTenantSelection(models.AbstractModel):

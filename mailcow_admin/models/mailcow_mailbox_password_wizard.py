@@ -1,6 +1,9 @@
 # Part of the mailcow_admin Odoo module. See LICENSE for details.
-from odoo import _, fields, models
 from odoo.exceptions import ValidationError
+
+from odoo import _
+from odoo import fields
+from odoo import models
 
 from ..services.mailcow_client import MailcowClient
 

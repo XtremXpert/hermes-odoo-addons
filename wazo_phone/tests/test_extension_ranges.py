@@ -21,13 +21,10 @@ import io
 import json
 from unittest.mock import patch
 
-from odoo.tests import tagged
-
-from odoo.addons.wazo_phone.services.wazo_client import (
-    WazoClient,
-    in_ranges,
-)
+from odoo.addons.wazo_phone.services.wazo_client import WazoClient
+from odoo.addons.wazo_phone.services.wazo_client import in_ranges
 from odoo.addons.wazo_phone.tests.test_client import WazoClientTestBase
+from odoo.tests import tagged
 
 CONTEXTE = 'ctx-test-internal-dad46d8d-02df-4cf9-b92c-2f3bc736f039'
 

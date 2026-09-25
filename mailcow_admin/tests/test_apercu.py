@@ -60,7 +60,7 @@ class TestApercu(TransactionCase):
         self.assertTrue(disparue.synced, 'une fiche a été marquée disparue')
 
     def test_un_serveur_identique_n_annonce_rien_pour_cette_fiche(self):
-        calme = self.env['mailcow.mailbox'].create({
+        self.env['mailcow.mailbox'].create({
             'local_part': 'calme', 'domain_id': self.domain.id,
             'name': 'pareil', 'synced': True})
         with patch.object(MailcowClient, '_request',

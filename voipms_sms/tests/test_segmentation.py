@@ -7,16 +7,13 @@ Contrats validés en production (voipms_reply_watch.py) :
 - messages vides ou > 1600 caractères rejetés localement.
 """
 
+from odoo.addons.voipms_sms.services.sms_segmentation import MAX_GLOBAL
+from odoo.addons.voipms_sms.services.sms_segmentation import MAX_SEGMENT
+from odoo.addons.voipms_sms.services.sms_segmentation import SEGMENT_PREFIX_LEN
+from odoo.addons.voipms_sms.services.sms_segmentation import normalize_nanp
+from odoo.addons.voipms_sms.services.sms_segmentation import split_sms
 from odoo.tests import tagged
 from odoo.tests.common import BaseCase
-
-from odoo.addons.voipms_sms.services.sms_segmentation import (
-    MAX_GLOBAL,
-    MAX_SEGMENT,
-    SEGMENT_PREFIX_LEN,
-    normalize_nanp,
-    split_sms,
-)
 
 
 @tagged('voipms_sms', 'post_install', '-at_install')

@@ -19,7 +19,9 @@ reste utilisable tel quel, avec poste SIP classique).
 
 import logging
 
-from odoo import api, fields, models
+from odoo import api
+from odoo import fields
+from odoo import models
 
 from ..services.wazo_client import WazoAPIError
 

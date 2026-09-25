@@ -10,12 +10,10 @@ import json
 from unittest.mock import patch
 from urllib.error import HTTPError
 
-from odoo.tests import TransactionCase, tagged
-
-from odoo.addons.wazo_phone.services.wazo_client import (
-    WazoAPIError,
-    WazoClient,
-)
+from odoo.addons.wazo_phone.services.wazo_client import WazoAPIError
+from odoo.addons.wazo_phone.services.wazo_client import WazoClient
+from odoo.tests import TransactionCase
+from odoo.tests import tagged
 
 
 class WazoClientTestBase(TransactionCase):

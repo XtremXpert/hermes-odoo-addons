@@ -84,7 +84,7 @@ class ARI:
         except urllib.error.HTTPError as error:
             try:
                 detail = error.read().decode(errors='replace')
-            except Exception:
+            except Exception:  # noqa: BLE001 - ne pas masquer l'erreur d'origine
                 detail = str(error)
             raise ARIError('Erreur ARI %s : %s' % (error.code, detail)) from None
         except urllib.error.URLError as error:

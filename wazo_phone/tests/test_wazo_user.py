@@ -10,10 +10,11 @@ d'authentification via ``authd`` (``POST /api/auth/0.1/users``).
 
 from unittest.mock import patch
 
+from odoo.addons.wazo_phone.services.wazo_client import WazoAPIError
+from odoo.addons.wazo_phone.services.wazo_client import WazoClient
 from odoo.exceptions import UserError
-from odoo.tests import TransactionCase, tagged
-
-from odoo.addons.wazo_phone.services.wazo_client import WazoAPIError, WazoClient
+from odoo.tests import TransactionCase
+from odoo.tests import tagged
 
 
 def _conf_side_effect(calls, fail_at=None):

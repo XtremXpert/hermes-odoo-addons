@@ -27,8 +27,10 @@ est annulée par la suite : en cas d'erreur en cours de flux, le
 message d'erreur précise l'étape échouée.
 """
 
-from odoo import fields, models
 from odoo.exceptions import UserError
+
+from odoo import fields
+from odoo import models
 
 from ..services.wazo_client import WazoAPIError
 
@@ -149,7 +151,7 @@ class WazoUser(models.Model):
         context = self._wazo_line_context()
         # Mot de passe SIP de registration, généré localement puis stocké
         # dans la base (le champ n'est jamais relu côté authd).
-        import secrets  # noqa: PLC0415
+        import secrets
         sip_password = secrets.token_urlsafe(24)
         parts = (self.name or '').split()
         firstname = parts[0] if parts else 'Utilisateur'
@@ -238,7 +240,7 @@ class WazoUser(models.Model):
             # lieu d'être transformé en état d'erreur silencieux, et rien n'a
             # été créé sur Wazo.
             raise
-        except Exception as error:
+        except Exception as error:  # noqa: BLE001 - consigner plutôt que remonter
             # L'échec est consigné sur la ligne (état 'Erreur' + message
             # visible dans le formulaire) plutôt que de remonter l'exception :
             # le rollback transactionnel effacerait sinon l'état d'erreur.
@@ -335,7 +337,7 @@ class WazoUser(models.Model):
             # d'utilisateur.
             if self.remote_sip_id:
                 client.auth('DELETE', '/users/%s' % self.remote_sip_id)
-        except Exception as error:
+        except Exception as error:  # noqa: BLE001 - consigner plutôt que remonter
             # Comme à la synchronisation : on consigne l'échec sur la ligne
             # au lieu de remonter l'exception, pour que l'état d'erreur ne
             # soit pas effacé par le rollback transactionnel. Les

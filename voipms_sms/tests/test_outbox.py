@@ -3,10 +3,11 @@
 
 from unittest.mock import patch
 
+from odoo.addons.voipms_sms.services.voipms_client import VoIPMSAPIError
+from odoo.addons.voipms_sms.services.voipms_client import VoIPMSClient
 from odoo.exceptions import UserError
-from odoo.tests import TransactionCase, tagged
-
-from odoo.addons.voipms_sms.services.voipms_client import VoIPMSAPIError, VoIPMSClient
+from odoo.tests import TransactionCase
+from odoo.tests import tagged
 
 
 @tagged('voipms_sms', 'post_install', '-at_install')

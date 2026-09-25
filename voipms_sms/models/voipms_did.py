@@ -1,11 +1,14 @@
 # Part of the voipms_sms Odoo module. See LICENSE for details.
 """DID : numéro d'émetteur de SMS (appartenant au compte VoIP.ms)."""
 
-from odoo import api, fields, models
 from odoo.exceptions import UserError
 
-from ..services.voipms_client import VoIPMSClient
+from odoo import api
+from odoo import fields
+from odoo import models
+
 from ..services.sms_segmentation import normalize_nanp
+from ..services.voipms_client import VoIPMSClient
 
 
 class VoIPMSDid(models.Model):

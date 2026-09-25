@@ -1,12 +1,13 @@
 # Part of the wazo_phone Odoo module. See LICENSE for details.
 """Tests du journal d'appels Wazo (CDR) : upsert, dates, matching contact."""
 
-from datetime import datetime, timezone
+from datetime import UTC
+from datetime import datetime
 from unittest.mock import patch
 
-from odoo.tests import TransactionCase, tagged
-
 from odoo.addons.wazo_phone.models.wazo_cdr import _parse_wazo_datetime
+from odoo.tests import TransactionCase
+from odoo.tests import tagged
 
 
 @tagged('wazo_phone', 'post_install', '-at_install')
@@ -164,5 +165,5 @@ class TestWazoCdrSync(TransactionCase):
 
     def test_now_utc_helper_is_naive(self):
         # La fenêtre par défaut doit rester naive (fuseau UTC)
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        now = datetime.now(UTC).replace(tzinfo=None)
         self.assertIsNone(now.tzinfo)

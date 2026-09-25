@@ -1,5 +1,7 @@
 # Part of the mailcow_admin Odoo module. See LICENSE for details.
-from odoo import api, fields, models
+from odoo import api
+from odoo import fields
+from odoo import models
 
 
 class MailcowSyncMixin(models.AbstractModel):

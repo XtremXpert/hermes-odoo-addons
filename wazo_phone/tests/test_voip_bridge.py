@@ -7,10 +7,9 @@ tests couvrent le comportement du pont en état « indisponible »
 dépendre de ``voip.provider``.
 """
 
+from odoo.addons.wazo_phone.services.wazo_client import WazoAPIError
 from odoo.tests import tagged
 from odoo.tests.common import TransactionCase
-
-from odoo.addons.wazo_phone.services.wazo_client import WazoAPIError
 
 
 def _tuples(options):

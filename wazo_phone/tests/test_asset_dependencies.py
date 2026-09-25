@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Le manifeste doit déclarer les modules dont dépend le JavaScript du client.
 
 Un module qui importe ``@web/...`` ou ``@odoo/owl`` sans déclarer ``web`` se fait

@@ -8,7 +8,8 @@ la boîte ne retient que le geste.
 """
 import secrets
 
-from odoo import fields, models
+from odoo import fields
+from odoo import models
 
 from ..services.mailcow_client import MailcowClient
 
@@ -42,7 +43,7 @@ class MailcowAppPasswordWizard(models.TransientModel):
         help="Le nom que portera ce mot de passe sur le serveur "
              "(ex. wordpress, telephone, scanner).")
     protocols = fields.Selection(
-        [('all', 'Tous les protocoles (recommandé)')] + PROTOCOLES,
+        [('all', 'Tous les protocoles (recommandé)'), *PROTOCOLES],
         string='Protocoles', default='all', required=True)
 
     def action_create_app_password(self):

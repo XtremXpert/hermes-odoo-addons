@@ -2,7 +2,6 @@
 # sinon la fiche reste muette jusqu'à la prochaine synchronisation.
 from unittest.mock import patch
 
-from odoo.exceptions import UserError
 from odoo.tests.common import TransactionCase
 
 from ..services.mailcow_client import MailcowClient

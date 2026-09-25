@@ -1,10 +1,14 @@
 # Part of the asterisk_ari Odoo module. See LICENSE for details.
 """Historique des appels click-to-call (origination ARI)."""
 
-from odoo import fields, models
 from odoo.exceptions import UserError
 
-from ..services.ari_client import ARI, ARIConfigError, ARIError
+from odoo import fields
+from odoo import models
+
+from ..services.ari_client import ARI
+from ..services.ari_client import ARIConfigError
+from ..services.ari_client import ARIError
 
 
 class AsteriskCall(models.Model):
@@ -64,7 +68,7 @@ class AsteriskCall(models.Model):
         if not self.ari_call_id:
             raise UserError("Aucun appel ARI actif sur cette ligne.")
         client = ARI(self.env)
-        try:
+        try:  # noqa: SIM105 - meilleur effort : le commentaire dit pourquoi on se tait
             client.hangup(self.ari_call_id)
         except ARIError:
             # Meilleur effort : l'appel a peut-être déjà fini côté PBX.

@@ -1,9 +1,11 @@
 # Part of the wazo_phone Odoo module. See LICENSE for details.
 """Réglages de connexion Wazo (URL, token API, tenant)."""
 
-from odoo import fields, models
+from odoo import fields
+from odoo import models
 
-from ..services.wazo_client import WazoAPIError, WazoClient
+from ..services.wazo_client import WazoAPIError
+from ..services.wazo_client import WazoClient
 
 
 class ResConfigSettings(models.TransientModel):

@@ -3,10 +3,11 @@
 
 from unittest.mock import patch
 
+from odoo.addons.asterisk_ari.services.ari_client import ARI
+from odoo.addons.asterisk_ari.services.ari_client import ARIError
 from odoo.exceptions import UserError
-from odoo.tests import TransactionCase, tagged
-
-from odoo.addons.asterisk_ari.services.ari_client import ARI, ARIError
+from odoo.tests import TransactionCase
+from odoo.tests import tagged
 
 
 @tagged('asterisk_ari', 'post_install', '-at_install')

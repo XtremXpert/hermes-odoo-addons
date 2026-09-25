@@ -2,7 +2,8 @@
 """Tests des droits d'accès du module Mailcow Admin."""
 
 from odoo.exceptions import AccessError
-from odoo.tests import TransactionCase, tagged
+from odoo.tests import TransactionCase
+from odoo.tests import tagged
 
 
 @tagged('mailcow_admin', 'post_install', '-at_install')

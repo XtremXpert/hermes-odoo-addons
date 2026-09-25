@@ -15,9 +15,12 @@ rien ne peut diverger du réel — le choix déjà retenu pour les plages (§1 d
 spec), appliqué au même raisonnement.
 """
 
-from odoo import api, fields, models
+from odoo import api
+from odoo import fields
+from odoo import models
 
-from ..services.wazo_client import WazoClient, in_ranges
+from ..services.wazo_client import WazoClient
+from ..services.wazo_client import in_ranges
 from .wazo_extension_mixin import OTHER_TYPE_LABELS
 
 #: Libellés lisibles des rattachements. Les clés sont celles des relations de

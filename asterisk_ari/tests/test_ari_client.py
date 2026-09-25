@@ -14,13 +14,11 @@ import urllib.error
 import urllib.parse
 from unittest.mock import patch
 
-from odoo.tests import TransactionCase, tagged
-
-from odoo.addons.asterisk_ari.services.ari_client import (
-    ARI,
-    ARIConfigError,
-    ARIError,
-)
+from odoo.addons.asterisk_ari.services.ari_client import ARI
+from odoo.addons.asterisk_ari.services.ari_client import ARIConfigError
+from odoo.addons.asterisk_ari.services.ari_client import ARIError
+from odoo.tests import TransactionCase
+from odoo.tests import tagged
 
 
 def _fake_cm(body=b''):

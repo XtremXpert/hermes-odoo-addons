@@ -1,8 +1,9 @@
 # Part of the asterisk_ari Odoo module. See LICENSE for details.
 """Bouton click-to-call sur la fiche partenaire."""
 
-from odoo import models
 from odoo.exceptions import UserError
+
+from odoo import models
 
 
 class ResPartner(models.Model):

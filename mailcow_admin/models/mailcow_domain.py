@@ -1,12 +1,13 @@
 # Part of the mailcow_admin Odoo module. See LICENSE for details.
-from odoo import api, fields, models
 from odoo.exceptions import UserError
 
-from ..services.mailcow_client import (
-    MailcowClient,
-    en_nombre,
-    refuser_la_disparition_totale,
-)
+from odoo import api
+from odoo import fields
+from odoo import models
+
+from ..services.mailcow_client import MailcowClient
+from ..services.mailcow_client import en_nombre
+from ..services.mailcow_client import refuser_la_disparition_totale
 
 
 class MailcowDomain(models.Model):

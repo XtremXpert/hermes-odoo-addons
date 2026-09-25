@@ -3,10 +3,11 @@
 
 from unittest.mock import patch
 
-from odoo.exceptions import UserError, ValidationError
-from odoo.tests import TransactionCase, tagged
-
 from odoo.addons.mailcow_admin.services.mailcow_client import MailcowClient
+from odoo.exceptions import UserError
+from odoo.exceptions import ValidationError
+from odoo.tests import TransactionCase
+from odoo.tests import tagged
 
 
 @tagged('mailcow_admin', 'post_install', '-at_install')

@@ -2,7 +2,8 @@
 """Tests des accès : groupe utilisateur en lecture seule, gestionnaire en écriture."""
 
 from odoo.exceptions import AccessError
-from odoo.tests import TransactionCase, tagged
+from odoo.tests import TransactionCase
+from odoo.tests import tagged
 
 
 @tagged('wazo_phone', 'post_install', '-at_install')

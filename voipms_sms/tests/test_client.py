@@ -7,12 +7,10 @@ L'API REST v1 utilise des paramètres GET encodés dans l'URL
 
 from unittest.mock import patch
 
-from odoo.tests import TransactionCase, tagged
-
-from odoo.addons.voipms_sms.services.voipms_client import (
-    VoIPMSAPIError,
-    VoIPMSClient,
-)
+from odoo.addons.voipms_sms.services.voipms_client import VoIPMSAPIError
+from odoo.addons.voipms_sms.services.voipms_client import VoIPMSClient
+from odoo.tests import TransactionCase
+from odoo.tests import tagged
 
 
 class VoIPMSClientTestBase(TransactionCase):
@@ -29,7 +27,8 @@ class VoIPMSClientTestBase(TransactionCase):
         """Appele le client et retourne l'objet Request capturé."""
         import io
         import json
-        from urllib.parse import parse_qs, urlparse
+        from urllib.parse import parse_qs
+        from urllib.parse import urlparse
         body = json.dumps({'status': 'success', 'data': []}).encode('utf-8')
         fake_cm = type('CM', (), {
             '__enter__': lambda self: io.BytesIO(body),
@@ -57,7 +56,7 @@ class TestVoIPMSClientRequest(VoIPMSClientTestBase):
         self.assertEqual(params['method'], 'getDIDsInfo')
 
     def test_send_sms_sends_did_dst_and_message(self):
-        request, params = self._call_with(
+        _request, params = self._call_with(
             'sendSMS', did='14184803381',
             dst='14184541752', message='Bonjour')
         self.assertEqual(params['method'], 'sendSMS')

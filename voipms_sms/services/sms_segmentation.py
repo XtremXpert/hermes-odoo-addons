@@ -30,8 +30,6 @@ def normalize_nanp(value):
 
 
 def _segment_count(total_len):
-    prefix = '%d/%d ' % (99, 99)  # longueur maximale du préfixe
-    prefix_len = len(prefix)
     for n in range(1, 21):
         body = MAX_SEGMENT - len('%d/%d ' % (n, n))
         if n * body >= total_len:

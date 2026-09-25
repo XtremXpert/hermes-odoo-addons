@@ -1,0 +1,76 @@
+# Les conventions de ce dépôt, dites une fois pour toutes.
+#
+# Le catalogue complet de ruff relève 373 trouvailles ici, dont la grande
+# majorité sont des faux positifs de conventions qu'Odoo impose, ou un choix de
+# style assumé dans tout le dépôt. Ce fichier écarte ces cas, avec leur raison,
+# pour que ce qui reste soit vraiment à corriger — et pour que la CI puisse
+# vérifier plus que des erreurs de syntaxe.
+
+target-version = "py312"
+line-length = 100
+
+[lint]
+select = [
+    "E",   # pycodestyle : mise en forme
+    "W",   # pycodestyle : avertissements
+    "F",   # pyflakes : noms indéfinis, variables mortes
+    "I",   # ordre des imports
+    "UP",  # syntaxe modernisée
+    "B",   # pièges classiques
+    "SIM", # simplifications
+    "RUF", # règles propres à ruff
+    "DTZ", # dates sans fuseau horaire
+    "BLE", # exceptions avalées
+    "C4",  # compréhensions
+]
+
+ignore = [
+    # RUF001 : le code et les commentaires sont en français, l'apostrophe
+    # typographique « ’ » y est normale. La règle la prend pour un accent grave.
+    "RUF001",
+    # UP031 : le dépôt formate en « % ». C'est un choix, appliqué partout,
+    # et le réécrire produirait 151 lignes de diff sans changer un seul
+    # comportement. Le style des f-strings s'appliquera au code neuf.
+    "UP031",
+    # RUF012 : Odoo exige des attributs de classe en listes et dictionnaires
+    # (« _inherit = ['mail.thread'] », « _description = ... »). Les rendre
+    # immuables casserait le chargement des modèles.
+    "RUF012",
+]
+
+[lint.isort]
+# Odoo veut un import par ligne dans ses « __init__.py » : la ligne unique dit
+# quel modèle on enregistre, et l'erreur d'import reste lisible. Les fusionner
+# fonctionne, mais sort de la convention du framework.
+force-single-line = true
+
+[lint.per-file-ignores]
+# Odoo enregistre ses modèles, ses services et ses tests en les important :
+# « from . import mailcow_domain » n'est pas un import mort, c'est la
+# déclaration du module. Les retirer désactiverait le modèle — ou la suite de
+# tests, qui deviendrait verte en ne vérifiant plus rien.
+#
+# Et l'ordre de ces lignes n'est pas alphabétique : c'est un ordre de
+# déclaration. Trier « wazo_phone/models/__init__.py » fait charger un modèle
+# avant celui dont il dépend, et le registre échoue sur
+# « Model 'wazo.user' does not exist in registry ». On n'y touche pas.
+"**/__init__.py" = ["F401", "I001"]
+# Un manifeste Odoo est un dictionnaire au niveau du fichier : c'est sa forme,
+# pas une expression oubliée.
+"**/__manifest__.py" = ["B018", "E501"]
+# Les tests ont le droit d'écrire long, d'utiliser des assertions et de
+# construire des données à la volée.
+#
+# DTZ : un test de journal d'appels construit des dates naïves parce que c'est
+# la convention qu'il vérifie (Odoo stocke en UTC naïf, comme le dit la
+# docstring de la synchronisation). Lui imposer un fuseau testerait autre chose.
+#
+# B018 : « self.tenant.with_user(x).name » dans un « assertRaises » n'est pas
+# un attribut oublié, c'est l'opération qu'on vérifie.
+#
+# RUF015 : « appels[0] » se lit mieux qu'un « next(...) » dans un test.
+"**/tests/*.py" = ["S101", "E501", "SIM117", "DTZ", "B018", "RUF015"]
+# Les imports de ce fichier viennent après la définition du journal parce que
+# « wazo_server » et « wazo_phone » s'importent mutuellement : les remonter
+# provoque l'import circulaire qu'ils évitent.
+"wazo_server/models/wazo_server_tenant.py" = ["E402"]

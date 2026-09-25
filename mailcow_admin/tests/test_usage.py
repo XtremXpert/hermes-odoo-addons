@@ -1,7 +1,7 @@
 # Ce que Mailcow sait de chaque boîte et que le module ignorait :
 # le quota consommé, le nombre de messages, et les dernières connexions.
 # Les horodatages de l'API sont des entiers Unix, parfois 0 (= jamais).
-from datetime import timezone
+from datetime import UTC
 from unittest.mock import patch
 
 from odoo.tests.common import TransactionCase
@@ -60,7 +60,7 @@ class TestUsageDesBoites(TransactionCase):
         self.assertTrue(boite.last_imap_login)
         # On vérifie l'aller-retour plutôt qu'une date écrite à la main.
         self.assertEqual(
-            int(boite.last_imap_login.replace(tzinfo=timezone.utc).timestamp()),
+            int(boite.last_imap_login.replace(tzinfo=UTC).timestamp()),
             1758000000,
         )
 

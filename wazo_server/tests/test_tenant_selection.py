@@ -12,9 +12,8 @@ Sans choix explicite, on retombe sur les réglages : c'est ce qui permet à un
 
 from unittest.mock import patch
 
-from odoo.tests import TransactionCase, tagged
-
 from odoo.addons.wazo_phone.services.wazo_client import WazoClient
+from odoo.tests import TransactionCase
 
 #: Tenant des réglages : celui d'une instance mono-tenant.
 MAITRE = '1a34f9bb-ddb7-4218-895b-58d1c1e36cae'

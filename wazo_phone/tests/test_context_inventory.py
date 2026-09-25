@@ -13,13 +13,10 @@ Il est reconstruit depuis le PBX — qui fait autorité — et ses lignes sont j
 
 from unittest.mock import patch
 
-from odoo.tests import tagged
-
 from odoo.addons.wazo_phone.services.wazo_client import WazoClient
-from odoo.addons.wazo_phone.tests.test_extension_validation import (
-    CONTEXTE,
-    WazoValidationTestBase,
-)
+from odoo.addons.wazo_phone.tests.test_extension_validation import CONTEXTE
+from odoo.addons.wazo_phone.tests.test_extension_validation import WazoValidationTestBase
+from odoo.tests import tagged
 
 #: Un utilisateur Wazo propriétaire d'une ligne : c'est ce qui met un poste
 #: **en service**.

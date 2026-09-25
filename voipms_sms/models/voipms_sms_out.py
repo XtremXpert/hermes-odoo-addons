@@ -1,11 +1,15 @@
 # Part of the voipms_sms Odoo module. See LICENSE for details.
 """Boîte d'envoi SMS via VoIP.ms."""
 
-from odoo import fields, models
 from odoo.exceptions import UserError
 
-from ..services.voipms_client import VoIPMSAPIError, VoIPMSClient
-from ..services.sms_segmentation import normalize_nanp, split_sms
+from odoo import fields
+from odoo import models
+
+from ..services.sms_segmentation import normalize_nanp
+from ..services.sms_segmentation import split_sms
+from ..services.voipms_client import VoIPMSAPIError
+from ..services.voipms_client import VoIPMSClient
 
 
 class VoIPMSSmsOut(models.Model):
