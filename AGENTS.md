@@ -19,12 +19,21 @@ la série **19.5** : `'version': '19.5.x.y.z'`. Avant de choisir un identifiant 
 vérifier la série — les ruptures connues sont consignées dans la skill
 `odoo20-breaking-changes`.
 
-La forme de la version compte : `19.5`, `19.5.3` ou `19.5.2.0.0` — mais **pas plus de trois
-segments après la série** dès qu'un module porte un script de migration. La version d'un script
-est comparée à celle du manifeste, et un manifeste à cinq segments ne peut être égalé par aucun
-nom de dossier : le script ne s'exécute alors jamais, sans le dire. `mailcow_admin`
-(`19.5.2.0.0`) et `voipms_sms` (`19.5.1.0.0`) sont dans ce cas — à raccourcir le jour où l'un
-des deux reçoit une migration. `tools/verifier_les_restes.py` refuse toute version hors série.
+La version d'un module qui porte un script de migration doit tenir dans un **nom de dossier** :
+Odoo n'accepte, après un éventuel préfixe de série (`19.0.`), que **deux ou trois nombres** —
+`19.5.3`, `19.0.1.2.3`, `2.0`. Un manifeste à cinq segments (`19.5.2.0.0`) ne peut donc être
+nommé par aucun dossier valide. Les deux échecs ne se ressemblent pas, et le second est le pire :
+un dossier refusé laisse un `Invalid version for upgrade script` dans le journal ; un dossier
+accepté qui ne correspond pas à la version courante **ne dit rien et n'exécute rien**.
+
+Mesuré sur un module jetable : installé en `19.5.1.0.0`, mis à jour en `19.5.3.0.0` avec un
+script dans `migrations/19.5.3/` — aucun avertissement, aucune ligne, `migrate()` jamais appelé.
+Passé à la forme courte `19.5.4` avec `migrations/19.5.4/` : `post from 19.5.3.0.0 to 19.5.4`.
+
+`mailcow_admin` (`19.5.2.0.0`) et `voipms_sms` (`19.5.1.0.0`) devront donc passer à la forme
+courte le jour où l'un des deux recevra une migration ; `wazo_phone` (`19.5.3`) est déjà dans
+la bonne forme, et c'est le seul des cinq à porter un dossier `migrations/`.
+`tools/verifier_les_restes.py` refuse toute version hors série.
 
 ## Branche
 
