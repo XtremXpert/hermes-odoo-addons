@@ -90,10 +90,12 @@ def verifier() -> int:
         print("odoo.lock absent : lancer d'abord « python3 tools/odoo_lock.py write ».")
         return 1
     ecarts = 0
+    absents: list[str] = []
     for arbre, infos in attendu.items():
         if arbre not in actuel:
             # Normal hors du poste de travail : la CI ne clone que odoo/.
             print(f"  {arbre} : dans le verrou, absent ici (non cloné)")
+            absents.append(arbre)
             continue
         if actuel[arbre]["commit"] != infos.get("commit"):
             print(
@@ -104,7 +106,17 @@ def verifier() -> int:
     if ecarts:
         print(f"{ecarts} arbre(s) ont dérivé — vérifier que la suite passe toujours.")
         return 1
-    print(f"Les {len(attendu)} arbres sont sur la révision consignée.")
+    verifies = len(attendu) - len(absents)
+    if absents:
+        # Ne pas prétendre avoir vérifié ce qui n'était pas là : hors du poste
+        # de travail, les arbres manquants sont normaux, mais ils restent des
+        # arbres qu'on n'a pas regardés.
+        print(
+            f"{verifies} arbre(s) sur la révision consignée, "
+            f"{len(absents)} non cloné(s) ici — donc non vérifié(s)."
+        )
+    else:
+        print(f"Les {len(attendu)} arbres sont sur la révision consignée.")
     return 0
 
 

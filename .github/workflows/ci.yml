@@ -110,6 +110,15 @@ jobs:
             https://github.com/odoo/odoo.git odoo
           git -C odoo checkout --quiet $ODOO_COMMIT
 
+      - name: Restes du dépôt, verrou compris
+        # Ici l'arbre d'Odoo est là : les imports JavaScript sont réellement
+        # résolus et le verrou est comparé à la révision qui vient d'être
+        # clonée. Dans le travail « Qualité », les mêmes contrôles tournent
+        # sans l'arbre et le disent au lieu de crier au loup.
+        run: |
+          python3 tools/verifier_les_restes.py
+          python3 tools/odoo_lock.py check
+
       - name: Dépendances Python d'Odoo
         # websocket-client pilote Chrome pour les tests HttpCase : sans lui,
         # Odoo les saute sans echouer, et le test des tableaux de bord de

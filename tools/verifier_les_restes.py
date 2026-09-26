@@ -25,6 +25,10 @@ MODULES = ("asterisk_ari", "mailcow_admin", "voipms_sms", "wazo_phone", "wazo_se
 
 # Les racines d'addons, en relatif : portable d'un poste à l'autre.
 RACINES_ADDONS = ("odoo/addons", "odoo/odoo/addons", "design-themes", ".")
+# Les mêmes, moins le dépôt lui-même : ce sont elles qui doivent exister pour
+# qu'un import Odoo soit vérifiable. Le travail « Qualité » de la CI ne clone
+# pas Odoo ; là-bas, ce contrôle n'a rien à inspecter et doit le dire.
+ARBRES_ODOO = ("odoo/addons", "odoo/odoo/addons", "design-themes")
 
 # La série, en forme courte (« 19.5.3 ») ou longue (« 19.5.2.0.0 »). La forme courte
 # n'est pas une coquetterie : la version d'un script de migration est comparée à celle
@@ -89,6 +93,11 @@ def import_resolu(addon: str, chemin: str) -> bool:
 def main() -> int:
     verbeux = "-v" in sys.argv or "--verbeux" in sys.argv
     defauts: list[str] = []
+    # Un arbre Odoo est-il là ? Sans lui, un import « @web/… » n'est pas
+    # vérifiable — et le déclarer mort serait un faux positif.
+    arbres_odoo = any((RACINE / racine).is_dir() for racine in ARBRES_ODOO)
+    if not arbres_odoo:
+        print("Arbre Odoo absent : les imports JavaScript ne sont pas vérifiés.")
 
     for module in MODULES:
         manifeste = lire_manifeste(module)
@@ -115,7 +124,11 @@ def main() -> int:
                     f"d'accès dans security/"
                 )
 
-        # 3. les imports JavaScript
+        # 3. les imports JavaScript — seulement si un arbre Odoo est là pour les
+        #    résoudre. Le travail « Qualité » de la CI ne clone pas Odoo : sans
+        #    cette garde, tous les imports « @web/… » y passeraient pour morts.
+        if not arbres_odoo:
+            continue
         imports: set[tuple[str, str]] = set()
         for js in sorted((RACINE / module / "static").rglob("*.js")):
             imports |= set(IMPORT_JS.findall(js.read_text(encoding="utf-8")))
