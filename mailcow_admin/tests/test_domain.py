@@ -421,3 +421,80 @@ class TestMailcowDomain(TransactionCase):
             ['autre.com', 'dc.com'])
         self.assertTrue(self.env['mailcow.domain'].search(
             [('name', 'in', ['dc.com', 'autre.com'])]).mapped('synced'))
+
+    def test_le_tableau_de_bord_d_un_domaine_ne_montre_que_lui(self):
+        """Un domaine a la fois : ses fiches, ses mesures, ses alertes, rien d'autre.
+
+        Le tableau d'ensemble repond a « ou regarder » ; celui d'un domaine
+        repond a « qu'y a-t-il ici ». Les deux doivent appliquer les memes
+        regles, sinon le detail contredirait l'ensemble — et aucune alerte du
+        detail ne doit pouvoir designer la fiche d'un autre domaine, ce qu'un
+        filtre sans portee ferait.
+        """
+        domaine = self.env['mailcow.domain'].create({
+            'name': 'detail.test', 'mailboxes_max': 5, 'quota_mb': 1024,
+        })
+        ailleurs = self.env['mailcow.domain'].create({'name': 'ailleurs.test'})
+        self.env['mailcow.mailbox'].create({
+            'local_part': 'pres', 'domain_id': domaine.id,
+            'quota_mb': 100, 'quota_used_mb': 95, 'messages': 42,
+        })
+        self.env['mailcow.mailbox'].create({
+            'local_part': 'loin', 'domain_id': ailleurs.id,
+            'quota_mb': 100, 'quota_used_mb': 96, 'messages': 7,
+        })
+        self.env['mailcow.alias'].create({
+            'alias_name': 'contact', 'domain_id': domaine.id,
+        })
+        self.env['mailcow.alias'].create({
+            'alias_name': 'distant', 'domain_id': ailleurs.id,
+        })
+
+        donnees = domaine.donnees_tableau_de_bord_domaine()
+
+        self.assertEqual(donnees['nom'], 'detail.test')
+        self.assertEqual(donnees['identite']['boites_max'], 5)
+
+        # Le coeur de la demande : ses fiches, et seulement les siennes.
+        self.assertEqual(
+            [boite['nom'] for boite in donnees['boites']], ['pres@detail.test'])
+        self.assertEqual(
+            [un_alias['nom'] for un_alias in donnees['alias']],
+            ['contact@detail.test'])
+
+        # Ses mesures, prises chez elle.
+        self.assertEqual(donnees['chiffres']['boites'], 1)
+        self.assertEqual(donnees['chiffres']['alias'], 1)
+        self.assertEqual(donnees['chiffres']['messages'], 42)
+        self.assertEqual(donnees['chiffres']['espace_utilise_mb'], 95.0)
+
+        # La boite de l'autre domaine est a 96 %, plus serree que la sienne :
+        # en compter deux signifierait que la portee fuit.
+        mesures = {alerte['cle']: alerte['nombre'] for alerte in donnees['alertes']}
+        self.assertEqual(mesures['boites_serrees'], 1)
+
+        # Et chaque filtre nomme ses fiches par identifiant : un filtre
+        # « synced = faux » sans portee ouvrirait, depuis un domaine, les
+        # fiches de tous les autres.
+        for alerte in donnees['alertes']:
+            champs = [champ for champ, _, _ in alerte['filtre']]
+            self.assertIn(
+                'id', champs,
+                "L'alerte « %s » n'a pas de portee : %s" % (alerte['libelle'], alerte['filtre']))
+
+    def test_le_bouton_ouvre_le_tableau_de_son_domaine(self):
+        """Le bouton d'un domaine doit ouvrir SON tableau, et rien d'autre.
+
+        Rendue comme action client plutot qu'en redirection : la fiche visee
+        voyage avec l'action, ce qui rend le tableau atteignable depuis un
+        bouton de formulaire, une ligne de liste ou une URL.
+        """
+        domaine = self.env['mailcow.domain'].create({'name': 'bouton.test'})
+
+        action = domaine.action_ouvrir_tableau_de_bord_domaine()
+
+        self.assertEqual(action['type'], 'ir.actions.client')
+        self.assertEqual(action['tag'], 'mailcow_admin.dashboard_domaine')
+        # Sans la fiche, le composant ne saurait pas quel domaine afficher.
+        self.assertEqual(action['res_id'], domaine.id)
+        self.assertIn('bouton.test', action['name'])

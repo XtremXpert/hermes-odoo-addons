@@ -156,7 +156,7 @@
                     <tbody>
                         <tr t-foreach="this.lignes" t-as="domaine" t-key="domaine.id"
                             style="cursor: pointer"
-                            t-on-click="() => this.ouvrirFiche('mailcow.domain', domaine.id)">
+                            t-on-click="() => this.ouvrirTableauDomaine(domaine.id)">
                             <td><strong t-esc="domaine.nom"/></td>
                             <td>
                                 <span t-if="domaine.actif" class="badge text-bg-success">actif</span>

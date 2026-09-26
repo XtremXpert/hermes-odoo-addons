@@ -65,6 +65,12 @@
                             groups="mailcow_admin.group_mailcow_manager"/>
                 </header>
                 <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_ouvrir_tableau_de_bord_domaine"
+                                type="object" class="oe_stat_button" icon="fa-envelope-o">
+                            <span class="o_stat_text">Tableau de bord</span>
+                        </button>
+                    </div>
                     <widget name="web_ribbon" title="Non synchronisé" bgcolor="bg-danger" invisible="synced"/>
                     <div class="oe_title">
                         <h1><field name="name" placeholder="ex. diverse-cite.com"/></h1>

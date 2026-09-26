@@ -150,6 +150,20 @@ export class MailcowDashboard extends Component {
         return this.state.tri.sens === "asc" ? " \u25b2" : " \u25bc";
     }
 
+    /** Un domaine ne s'ouvre pas comme une fiche : il a son propre tableau.
+        Y aller par le domaine, c'est ce que « voir ce qu'il y a dedans » veut
+        dire. La fiche visee voyage dans l'action, comme au bouton du
+        formulaire : la meme porte, d'ou qu'on vienne. */
+    ouvrirTableauDomaine(id) {
+        this.action.doAction({
+            type: "ir.actions.client",
+            tag: "mailcow_admin.dashboard_domaine",
+            name: "Tableau de bord du domaine",
+            res_id: id,
+            params: { resId: id },
+        });
+    }
+
     /** Ouvrir la fiche : le seul geste utile devant une ligne. */
     ouvrirFiche(modele, id) {
         this.action.doAction({
