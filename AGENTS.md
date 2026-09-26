@@ -18,6 +18,10 @@ d'Odoo, jamais la racine du dépôt. Les clones externes (`odoo/`, `enterprise/`
 suivent cette disposition : leur `--addons-path` pointe sur `addons`, et leurs commandes
 de lint aussi.
 
+`AGENTS.md` dit comment travailler ici ; **`docs/` garde ce qui a été mesuré** — une
+expérience, son résultat, la règle qu'on en tire. Une note n'y entre que si elle porte
+une mesure.
+
 ## La série est 19.5, pas 20.0 — malgré le nom du dossier
 
 Le poste s'appelle `~/hermes-dev/odoo20`, mais l'arbre cloné est la branche `master`
