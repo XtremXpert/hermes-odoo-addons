@@ -20,8 +20,11 @@
 #   etat                    lecture : combien de mots de passe, et leur squelette
 #   liste [domaine]         lecture : les lignes, sans le secret
 #   verifier <id>           lecture : cette ligne existe-t-elle, est-elle active
-#   creer <boite> <nom>     ecriture (API, domaine jetable par defaut)
 #   effacer <id>            ecriture (SQL) : supprime CETTE ligne
+#
+# La CREATION n'est pas ici : elle appartient a Odoo, qui detient la cle de
+# l'API et sait appeler « POST /add/app-passwd » par son assistant. Ce script
+# reprend ensuite la main, sur la machine de courriel ou la cle n'a rien a faire.
 #
 # OPTIONS
 #   --ecrire                autorise les modes d'ecriture (sans lui, ils refusent)
@@ -97,22 +100,6 @@ SQL() {
     fi
 }
 
-# API <chemin> <corps> : la cle vient de l'environnement, jamais d'un argument
-# (un argument se lit dans « ps »). Elle passe par un fichier de configuration
-# curl transmis par l'entree standard, efface aussitot.
-API() {
-    local chemin="$1" corps="$2"
-    [ -n "${MAILCOW_API_KEY:-}" ] || refuser "MAILCOW_API_KEY absent de l'environnement"
-    if [ "$SIMULER" = "1" ]; then
-        echo "    [simule] POST /api/v1/$chemin avec le corps :"
-        echo "$corps" | sed 's/^/      /'
-        return 0
-    fi
-    printf 'header = "X-API-Key: %s"\n' "$MAILCOW_API_KEY" \
-      | curl -sS -K - -H 'Content-Type: application/json' --data "$corps" \
-            "https://mail.diverse-cite.com/api/v1/$chemin"
-}
-
 # --- lecture -----------------------------------------------------------------
 COLONNES='id, name, mailbox, domain, LENGTH(password), active,
           CONCAT(imap_access,smtp_access,dav_access,eas_access,pop3_access,sieve_access)'
@@ -162,20 +149,11 @@ case "$MODE" in
         ;;
 
     creer)
-        [ "$ECRIRE" = "1" ] || refuser "« creer » ecrit : ajouter « --ecrire »"
-        [ -n "$ARG1" ] && [ -n "$ARG2" ] || refuser "« creer » attend <boite> <nom>"
-        if ! est_jetable && [ "$ASSUME" != "1" ]; then
-            refuser "$DOMAINE n'est pas le domaine jetable ($JETABLE) : ajouter « --j-assume » pour forcer"
-        fi
-        est_jetable || echo "AVERTISSEMENT : ecriture hors domaine jetable, sur $DOMAINE" >&2
-        # Mailcow engendre le mot de passe et ne le rend jamais : la ligne creee
-        # doit donc etre effacee apres usage, personne ne connaissant le secret.
-        corps=$(printf '{"name":"%s","mailbox":"%s@%s","active":"1","imap_access":"1","smtp_access":"1","dav_access":"0","eas_access":"0","pop3_access":"0","sieve_access":"0","password":"","password2":""}' \
-            "$ARG2" "$ARG1" "$DOMAINE")
-        echo "creation sur $DOMAINE (le secret n'est jamais rendu par Mailcow) :"
-        API "add/app-passwd" "$corps"
-        echo
-        echo "puis : $0 verifier <id>   et   $0 effacer <id> --ecrire"
+        # Retire, et pas par paresse : la creation appartient a Odoo, qui detient
+        # deja la cle et sait appeler POST /add/app-passwd (l'assistant
+        # « mailcow.app.password.wizard », avec son test). La refaire ici
+        # dupliquerait la capacite et exigerait la cle sur l'hote de courriel.
+        refuser "« creer » a ete retire : creer depuis Odoo (assistant « Mot de passe applicatif »), puis verifier et effacer ici"
         ;;
 
     effacer)

@@ -33,8 +33,7 @@ attendre 0 "l'aide sort en succes"             --aide
 attendre 2 "aucun mode ne fait rien"           ""
 attendre 2 "un mode inconnu se refuse"         danse
 attendre 2 "une option inconnue se refuse"     etat --vite
-attendre 3 "creer sans --ecrire"               creer une-boite un-nom
-attendre 3 "creer sans nom"                    creer une-boite --ecrire
+attendre 3 "creer renvoie vers Odoo"            creer une-boite un-nom
 attendre 3 "effacer sans --ecrire"             effacer 12
 attendre 3 "effacer un identifiant textuel"    effacer abc --ecrire
 attendre 3 "effacer un identifiant vide"       effacer "" --ecrire
