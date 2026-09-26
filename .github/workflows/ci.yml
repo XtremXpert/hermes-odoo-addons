@@ -54,6 +54,12 @@ jobs:
       - name: Le crochet refuse ce qu'il doit refuser
         run: python3 tools/test_crochet.py
 
+      # Le script de courriel touche a des identifiants : ses refus locaux
+      # doivent tenir. Aucun reseau, aucun secret — les ecritures, elles, ne se
+      # verifient que sur le domaine jetable.
+      - name: Les garde-fous du cycle de mot de passe tiennent
+        run: bash tools/test_app_password.sh
+
       - name: Syntaxe Python des fichiers versionnés
         run: |
           # La liste vient de git : ce qui n'est pas versionné n'est pas

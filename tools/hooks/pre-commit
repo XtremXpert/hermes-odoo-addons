@@ -39,6 +39,7 @@ else
     echo "ruff absent : « python -m pip install ruff==0.16.9 » pour le même lint que la CI"
 fi
 
+etape "garde-fous courriel" bash tools/test_app_password.sh
 # La liste vient de git, exactement comme dans la CI : « poc » n'est pas
 # versionné (il porte des secrets) et un fichier local qui ne se compile pas
 # n'a pas à bloquer un commit.
