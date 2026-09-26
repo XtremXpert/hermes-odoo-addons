@@ -35,6 +35,16 @@ ARBRES_ODOO = ("odoo/addons", "odoo/odoo/addons", "design-themes")
 # du manifeste, et un manifeste à plus de trois segments ne peut être égalé par aucun
 # nom de dossier — le script ne s'exécute alors jamais, et sans le dire.
 VERSION_ATTENDUE = re.compile(rf"^{re.escape(SERIE)}(\.\d+){{1,3}}$")
+
+# Ce qu'Odoo accepte comme nom de dossier dans « migrations/ » : deux ou trois nombres,
+# éventuellement précédés d'un préfixe de série de la forme « 19.0. ». C'est le VERSION_RE
+# de odoo/modules/migration.py, recopié tel quel — l'ancrage compte, il compare le nom
+# entier. Une version comme « 19.5.2.0.0 » n'est nommable par aucun dossier, mais Odoo ne
+# s'en plaint que si le dossier existe et qu'il est refusé.
+NOM_DE_DOSSIER = re.compile(
+    r"^((6\.1|[6-9]\.0|[1-9]\d+\.0|(7|8|9|10)\.saas~[1-9]\d*|saas~(1[1-9]|[2-9]\d+)\.[1-9])\.)?"
+    r"\d+\.\d+(\.\d+)?$"
+)
 CLASSE_MODELE = re.compile(r"^class\s+\w+\(\s*models\.(\w+)\s*\)", re.M)
 NOM_MODELE = re.compile(r"^\s+_name\s*=\s*['\"]([\w.]+)['\"]", re.M)
 HERITAGE = re.compile(r"^\s+_inherit\s*=", re.M)
@@ -107,12 +117,19 @@ def main() -> int:
 
         # 1. la version
         version = re.search(r"['\"]version['\"]\s*:\s*['\"]([^'\"]+)['\"]", manifeste)
+        valeur = version.group(1) if version else ""
         if not version:
             defauts.append(f"{module} : aucune version dans le manifeste")
-        elif not VERSION_ATTENDUE.match(version.group(1)):
+        elif not VERSION_ATTENDUE.match(valeur):
             defauts.append(
-                f"{module} : version « {version.group(1)} » hors série "
-                f"(attendu {SERIE}.x.y.z)"
+                f"{module} : version « {valeur} » hors série (attendu {SERIE}.x.y.z)"
+            )
+
+        # 1 bis. un module qui porte des scripts de migration doit pouvoir les nommer.
+        if valeur and (RACINE / module / "migrations").is_dir() and not NOM_DE_DOSSIER.match(valeur):
+            defauts.append(
+                f"{module} : porte des scripts de migration, mais sa version "
+                f"« {valeur} » ne peut être nommée par aucun dossier"
             )
 
         # 2. les règles d'accès
