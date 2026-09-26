@@ -1,7 +1,8 @@
 # hermes-odoo-addons
 
 Cinq modules Odoo maison pour l'infrastructure de Diverse-Cité : courriel (Mailcow),
-téléphonie (Wazo, Asterisk ARI) et SMS (VoIP.ms). Dépôt **public** — rien de secret n'y entre.
+téléphonie (Wazo, Asterisk ARI) et SMS (VoIP.ms). Dépôt **privé** — et rien de
+secret n'y entre pour autant : un dépôt privé n'est pas un coffre.
 
 | module | rôle |
 |---|---|
@@ -208,6 +209,6 @@ jamais `--stat`, qui imprime **aussi le message** et fait croire à des fichiers
 
 ## Secrets
 
-Le dépôt est public. Ni jeton, ni mot de passe, ni chaîne de connexion dans un fichier suivi,
+Le dépôt est privé. Ni jeton, ni mot de passe, ni chaîne de connexion dans un fichier suivi,
 un commentaire, un message de commit ou une capture. Les filets de restauration
 (`/tmp/*.dump`, `/tmp/*.json`) ne sont **jamais** copiés ici.

@@ -2,7 +2,7 @@
 # Rejouer la base de developpement, puis reimporter la configuration Mailcow.
 #
 # Trois choses, dans cet ordre, et jamais dans un autre :
-#   1. sauvegarder la base courante, HORS du depot (le depot est public, et les
+#   1. sauvegarder la base courante, HORS du depot (le depot est privé — on n'y met rien de secret par principe, et les
 #      parametres systeme portent la cle de l'API Mailcow) ;
 #   2. batir une base neuve et y installer les cinq modules ;
 #   3. reimporter de Mailcow les domaines, boites et alias, pour que la base
@@ -47,7 +47,7 @@ if pgrep -f "odoo-bin.*-c conf/odoo.conf" > /dev/null; then
     fi
 fi
 
-# La sauvegarde doit sortir du depot : il est public, et les parametres portent
+# La sauvegarde doit sortir du depot : il est privé — on n'y met rien de secret par principe, et les parametres portent
 # la cle de l'API. Un chemin sous la racine du depot est refuse.
 case "$SAUVEGARDES" in
     "$RACINE"|"$RACINE"/*) refuser "« $SAUVEGARDES » est DANS le depot : choisir un dossier hors du depot" ;;
