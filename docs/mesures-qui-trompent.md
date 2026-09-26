@@ -78,3 +78,12 @@ Le serveur allait bien.
 
 **Le contrôle** : `curl -c pot.txt …` puis `curl -b pot.txt …` ; le second appel
 rend 200.
+
+## Note d'exploitation — un verdict « cancelled » n'est ni un échec ni une preuve
+
+Pousser un second commit annule l'exécution en cours du premier. Le verdict
+« cancelled » veut dire **remplacée**, pas cassée — et il ne faut pas s'en
+réjouir pour autant : il ne prouve rien. Ce qui compte est toujours le verdict de
+la **dernière** exécution, celle qui porte le code qu'on croit avoir livré. Un
+« Tests Odoo » annulé pendant que « Qualité » passe n'est pas une demi-réussite :
+c'est une exécution qui n'a pas eu lieu.
