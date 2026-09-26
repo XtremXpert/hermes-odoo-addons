@@ -88,6 +88,33 @@ donc à la racine en interrogeant chaque tenant avec **son propre** en-tête. Le
 tenant `master` de Wazo n'a, lui, **aucun contexte** : la fiche de remise
 affiche « inconnu » plutôt que d'inventer un nom.
 
+## Environnement de développement local
+
+Le dépôt est fait pour **`odoo-dev`** (CLI Bemade, `uv tool install odoo-dev`),
+en **venv Python natif** — Docker n'est qu'un repli.
+
+```sh
+git clone --recurse-submodules <url>    # .deploy est un sous-module : sans lui, il est vide
+cd <dépôt>
+cp .env.exemple .env                    # ODOO_VERSION=master, PYTHON_VERSION=3.12
+odoo-dev setup --no-docker --yes        # clone odoo/ + design-themes, bâtit .venv et conf/
+./start.sh                              # lancement — jamais odoo-bin à la main
+./tools/test mailcow_admin              # tests d'un module, sur une base jetable
+```
+
+Sans accès au dépôt privé `enterprise`, ajouter `--community` à `setup`.
+
+- **`.env` et `.venv/` sont ignorés par git** : ils ne se transmettent donc pas
+  par le clone. C'est à ça que sert `.env.exemple`.
+- **`ODOO_VERSION=master` est volontaire** : l'arbre suit la série 19.5, pas une
+  étiquette de version. Vide, `odoo-dev` retomberait sur son défaut — 18.0 — donc
+  sur une autre Odoo que celle des modules.
+- **`.deploy/`** est le sous-module `bemade/odoo-deploy` (branche `19.0`) :
+  gabarits k8s, `Dockerfile`, `compose.yaml`, et l'`odoo.conf` **du chemin
+  Docker**. Celui-ci n'est pas celui que lit `./start.sh` — qui prend
+  `conf/odoo.conf` (socket Unix, port 2069). La CI GitHub ne récupère pas le
+  sous-module, et n'en a pas besoin.
+
 ## Utilisation
 
 1. Cloner le dépôt.
