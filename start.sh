@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Lance Odoo 20 en local (base odoo20 par defaut).
+# Lance Odoo 20 en local (bases odoo20 et odoo20_neuve par defaut).
 #
-# PGGSSENCMODE=disable : sur macOS, libpq (psycopg2-binary) tente GSSAPI/Kerberos
-# a chaque connexion, ce qui passe par XPC. Dans un processus enfant issu d'un
-# fork() sans exec() (workers Odoo, multiprocessing), macOS tue alors le
-# processus (SIGSEGV dans _os_log_preferences_refresh).
+# conf/odoo.conf laisse db_host vide : connexion par socket Unix. Ne pas y
+# remettre localhost : en TCP, libpq (psycopg2-binary) tente GSSAPI/Kerberos,
+# ce qui passe par XPC sur macOS, et macOS tue alors chaque worker forke
+# (SIGSEGV dans _os_log_preferences_refresh).
 #
 # Usage : ./start.sh [options ou sous-commande odoo-bin]
 #   ex. ./start.sh -u wazo_phone --stop-after-init
@@ -14,7 +14,6 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-export PGGSSENCMODE=disable
 export PYTHONPATH=""
 
 has_db=false
@@ -26,7 +25,9 @@ done
 
 args=("$@")
 if ! $has_db; then
-    args+=(--database odoo20)
+    # Les deux bases du poste : celle de tous les jours, et la base neuve
+    # d'essai. Passer -d pour n'en servir qu'une seule.
+    args+=(--database odoo20,odoo20_neuve)
 fi
 
 # Les arguments passent AVANT les options fixes. Une sous-commande (« shell »,
