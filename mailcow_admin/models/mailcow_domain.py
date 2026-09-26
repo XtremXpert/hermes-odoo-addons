@@ -97,6 +97,12 @@ def _mesurer(domaines, boites, alias, jours_avant_dormance):
     au_plafond = domaines.filtered(
         lambda domaine: domaine.mailboxes_max
         and domaine.mailboxes_used >= domaine.mailboxes_max)
+    # Le meme seuil que la jauge et que les boites serrees : a 80 % la barre
+    # est deja rouge, l'alerte ne doit pas attendre le refus de Mailcow. Ceux
+    # qui sont au plafond ont leur propre alerte, plus grave.
+    presque_pleins = domaines.filtered(
+        lambda domaine: domaine.mailboxes_max
+        and domaine.occupation_boites >= 80.0) - au_plafond
     sans_dkim = domaines.filtered(lambda domaine: domaine.active and not domaine.dkim_record)
     sans_destination = alias.filtered('active').filtered(
         lambda a: not a.is_catch_all and not a.address_ids)
@@ -128,40 +134,44 @@ def _mesurer(domaines, boites, alias, jours_avant_dormance):
         'dormantes': dormantes,
         'desactivees': desactivees,
         'alertes': [
-            alerte('domaines_au_plafond', 'Domaines au plafond de boites', 'danger',
-                   'Mailcow refusera la prochaine boite creee.',
+            alerte('domaines_au_plafond', 'Domaines au plafond de boîtes', 'danger',
+                   'Mailcow refusera la prochaine boîte créée.',
                    'mailcow.domain', au_plafond),
-            alerte('boites_serrees', 'Boites au-dessus de 80 % de leur quota', 'attention',
-                   'La prochaine piece jointe volumineuse passera mal.',
+            alerte('domaines_presque_pleins', 'Domaines à 80 % de leur plafond de boîtes',
+                   'attention',
+                   'Encore quelques créations, puis Mailcow refusera.',
+                   'mailcow.domain', presque_pleins),
+            alerte('boites_serrees', 'Boîtes au-dessus de 80 % de leur quota', 'attention',
+                   'La prochaine pièce jointe volumineuse passera mal.',
                    'mailcow.mailbox', serrees),
-            alerte('boites_desactivees', 'Boites desactivees', 'attention',
-                   "Fermees sans etre supprimees : l'adresse existe toujours.",
+            alerte('boites_desactivees', 'Boîtes désactivées', 'attention',
+                   "Fermées sans être supprimées : l'adresse existe toujours.",
                    'mailcow.mailbox', desactivees),
             alerte('boites_dormantes',
-                   'Boites sans connexion depuis %d jours' % jours_avant_dormance,
+                   'Boîtes sans connexion depuis %d jours' % jours_avant_dormance,
                    'attention',
-                   'Comptes ouverts, jamais utilises : a fermer ou a assumer.',
+                   'Comptes ouverts, jamais utilisés : à fermer ou à assumer.',
                    'mailcow.mailbox', dormantes),
-            alerte('tls_non_impose', 'Boites sans TLS obligatoire', 'danger',
+            alerte('tls_non_impose', 'Boîtes sans TLS obligatoire', 'danger',
                    'Une connexion en clair reste possible sur ces comptes.',
                    'mailcow.mailbox', sans_tls),
             alerte('alias_sans_destination', 'Alias sans destination', 'attention',
-                   'Ces adresses recoivent et ne transmettent nulle part.',
+                   'Ces adresses reçoivent et ne transmettent nulle part.',
                    'mailcow.alias', sans_destination),
             alerte('catch_all', 'Alias attrape-tout', 'attention',
-                   'Tout ce qui est mal orthographie arrive quand meme.',
+                   'Tout ce qui est mal orthographié arrive quand même.',
                    'mailcow.alias', catch_all),
-            alerte('dkim_absent', 'Domaines sans cle DKIM enregistree', 'attention',
+            alerte('dkim_absent', 'Domaines sans clé DKIM enregistrée', 'attention',
                    'Sans DKIM, ces envois se font plus souvent refuser.',
                    'mailcow.domain', sans_dkim),
-            alerte('domaines_non_synchronises', 'Domaines non synchronises', 'information',
-                   'Fiches locales jamais confirmees par le serveur.',
+            alerte('domaines_non_synchronises', 'Domaines non synchronisés', 'information',
+                   'Fiches locales jamais confirmées par le serveur.',
                    'mailcow.domain', domaines_non_synchronises),
-            alerte('boites_non_synchronisees', 'Boites non synchronisees', 'information',
-                   'Fiches locales jamais confirmees par le serveur.',
+            alerte('boites_non_synchronisees', 'Boîtes non synchronisées', 'information',
+                   'Fiches locales jamais confirmées par le serveur.',
                    'mailcow.mailbox', boites_non_synchronisees),
-            alerte('alias_non_synchronises', 'Alias non synchronises', 'information',
-                   'Fiches locales jamais confirmees par le serveur.',
+            alerte('alias_non_synchronises', 'Alias non synchronisés', 'information',
+                   'Fiches locales jamais confirmées par le serveur.',
                    'mailcow.alias', alias_non_synchronises),
         ],
     }
@@ -355,8 +365,11 @@ class MailcowDomain(models.Model):
                 'alias_utilises': domaine.aliases_used,
                 'alias_max': domaine.aliases_max,
                 # L'occupation est un champ calculé du modèle : une seule
-                # définition de « 8 sur 10 », ici.
-                'occupation': round(domaine.occupation_boites, 1),
+                # définition de « 8 sur 10 », ici. Sans plafond connu, rien
+                # plutôt qu'un faux zéro qui se lirait « vide ».
+                'occupation': (
+                    round(domaine.occupation_boites, 1)
+                    if domaine.mailboxes_max else None),
                 'quota_mb': domaine.quota_mb,
                 'dkim': bool(domaine.dkim_record),
                 'derniere_synchro': (
@@ -467,7 +480,8 @@ class MailcowDomain(models.Model):
             'chiffres': {
                 'boites': len(boites),
                 'boites_max': self.mailboxes_max,
-                'occupation': round(self.occupation_boites, 1),
+                'occupation': (
+                    round(self.occupation_boites, 1) if self.mailboxes_max else None),
                 'alias': len(alias),
                 'alias_max': self.aliases_max,
                 'messages': sum(boites.mapped('messages')),

@@ -10,7 +10,17 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { basculerTri, filtrer, trier } from "../src/dashboard/mailcow_dashboard_utils.js";
+import {
+    basculerTri,
+    classeOccupation,
+    filtrer,
+    formaterNombre,
+    formaterTaille,
+    largeurBarre,
+    ordonnerAlertes,
+    texteTaux,
+    trier,
+} from "../src/dashboard/mailcow_dashboard_utils.js";
 
 const LIGNES = [
     { id: 1, nom: "zebre@exemple.com", boites_utilisees: 9 },
@@ -71,4 +81,59 @@ test("basculerTri monte, puis descend, puis oublie", () => {
 test("basculerTri repart a zero quand on change de colonne", () => {
     const tri = basculerTri({ cle: "nom", sens: "desc" }, "boites_utilisees");
     assert.deepEqual(tri, { cle: "boites_utilisees", sens: "asc" });
+});
+
+// Les separateurs de « fr-CA » sont des espaces insecables : on les ramene a
+// des espaces ordinaires pour que les attentes restent lisibles.
+const lisible = (texte) => texte.replace(/[\u00a0\u202f]/g, " ");
+
+test("formaterTaille choisit l'unite qui se lit", () => {
+    assert.equal(lisible(formaterTaille(59.3)), "59,3 Mo");
+    assert.equal(lisible(formaterTaille(0)), "0 Mo");
+    assert.equal(lisible(formaterTaille(10240)), "10 Go");
+    assert.equal(lisible(formaterTaille(3072)), "3 Go");
+    assert.equal(lisible(formaterTaille(1536)), "1,5 Go");
+});
+
+test("formaterTaille et formaterNombre ne fabriquent pas de zero", () => {
+    assert.equal(formaterTaille(null), "\u2014");
+    assert.equal(formaterTaille(undefined), "\u2014");
+    assert.equal(formaterNombre(null), "\u2014");
+});
+
+test("formaterNombre separe les milliers", () => {
+    assert.equal(lisible(formaterNombre(1234567)), "1 234 567");
+    assert.equal(lisible(formaterNombre(12.345, 1)), "12,3");
+});
+
+test("texteTaux distingue « sans quota » de « vide »", () => {
+    assert.equal(texteTaux(null), "sans quota");
+    assert.equal(lisible(texteTaux(0)), "0 %");
+    assert.equal(lisible(texteTaux(12.5)), "12,5 %");
+});
+
+test("classeOccupation suit les seuils des alertes", () => {
+    assert.equal(classeOccupation(null), "progress-bar bg-secondary");
+    assert.equal(classeOccupation(59.9), "progress-bar bg-success");
+    assert.equal(classeOccupation(60), "progress-bar bg-warning");
+    assert.equal(classeOccupation(80), "progress-bar bg-danger");
+});
+
+test("largeurBarre ne deborde jamais", () => {
+    assert.equal(largeurBarre(150), "width: 100%");
+    assert.equal(largeurBarre(-3), "width: 0%");
+    assert.equal(largeurBarre(null), "width: 0%");
+    assert.equal(largeurBarre(42.5), "width: 42.5%");
+});
+
+test("ordonnerAlertes ecarte les vides et met les plus graves d'abord", () => {
+    const alertes = [
+        { cle: "info", gravite: "information", nombre: 3 },
+        { cle: "a1", gravite: "attention", nombre: 1 },
+        { cle: "vide", gravite: "danger", nombre: 0 },
+        { cle: "d1", gravite: "danger", nombre: 2 },
+        { cle: "a2", gravite: "attention", nombre: 5 },
+    ];
+    assert.deepEqual(ordonnerAlertes(alertes).map((a) => a.cle), ["d1", "a1", "a2", "info"]);
+    assert.deepEqual(ordonnerAlertes(null), []);
 });

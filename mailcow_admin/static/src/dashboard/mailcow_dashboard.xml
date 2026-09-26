@@ -35,7 +35,7 @@
                     </label>
                 </div>
                 <span class="text-muted small">
-                    Dernière mise à jour : <span t-esc="this.heureMaj"/>
+                    Dernière mise à jour : <span t-out="this.heureMaj"/>
                 </span>
                 <button class="btn btn-sm btn-link p-0" t-on-click="() => this.charger()">
                     Rafraîchir maintenant
@@ -43,63 +43,64 @@
             </div>
 
             <p t-if="this.state.chargement &amp;&amp; !this.state.donnees">Chargement…</p>
-            <div t-elif="this.state.erreur" class="alert alert-danger" t-esc="this.state.erreur"/>
+            <div t-elif="this.state.erreur" class="alert alert-danger" t-out="this.state.erreur"/>
             <t t-else="">
                 <h4 class="mb-2" t-if="this.alertes.length">
                     À regarder
-                    <span class="badge text-bg-secondary" t-esc="this.alertes.length"/>
+                    <span class="badge text-bg-secondary" t-out="this.alertes.length"/>
                 </h4>
                 <p t-else="" class="text-success">
                     Rien à signaler : aucun plafond atteint, aucun compte dormant, aucun alias cassé.
                 </p>
-                <div class="row g-2 mb-4">
+                <div class="row g-2 mb-2">
                     <div class="col-md-6 col-xl-4" t-foreach="this.alertes" t-as="alerte"
                          t-key="alerte.cle">
                         <button class="card w-100 text-start p-2 h-100 border-0 shadow-sm"
                                 t-on-click="() => this.ouvrirAlerte(alerte)">
                             <div class="d-flex align-items-center gap-2">
                                 <span t-att-class="'badge fs-5 ' + this.classeGravite(alerte.gravite)"
-                                      t-esc="alerte.nombre"/>
-                                <span class="fw-semibold" t-esc="alerte.libelle"/>
+                                      t-out="alerte.nombre"/>
+                                <span class="fw-semibold" t-out="alerte.libelle"/>
                             </div>
-                            <div class="text-muted small mt-1" t-esc="alerte.detail"/>
+                            <div class="text-muted small mt-1" t-out="alerte.detail"/>
                         </button>
                     </div>
                 </div>
+                <!-- Les fiches non synchronisees ne demandent pas d'action
+                     urgente : une ligne discrete, pas des cartes. -->
+                <p t-if="this.informations.length" class="small text-muted mb-4">
+                    <i class="fa fa-info-circle me-1"/>
+                    <t t-foreach="this.informations" t-as="info" t-key="info.cle">
+                        <a href="#" class="me-3" t-on-click.prevent="() => this.ouvrirAlerte(info)">
+                            <t t-out="info.nombre"/> <t t-out="info.libelle.toLowerCase()"/>
+                        </a>
+                    </t>
+                </p>
+                <div t-else="" class="mb-4"/>
 
                 <div class="row g-3 mb-4">
-                    <div class="col">
-                        <div class="border rounded p-2 h-100">
-                            <div class="text-muted small">Domaines</div>
-                            <div class="fs-3" t-esc="this.totaux.domaines"/>
-                        </div>
-                    </div>
-                    <div class="col">
-                        <div class="border rounded p-2 h-100">
-                            <div class="text-muted small">Boîtes</div>
-                            <div class="fs-3" t-esc="this.totaux.boites"/>
-                        </div>
-                    </div>
-                    <div class="col">
-                        <div class="border rounded p-2 h-100">
-                            <div class="text-muted small">Alias</div>
-                            <div class="fs-3" t-esc="this.totaux.alias"/>
-                        </div>
+                    <div class="col" t-foreach="this.onglets" t-as="onglet" t-key="onglet.cle">
+                        <button class="o_mailcow_tuile border rounded p-2 h-100 w-100 text-start bg-transparent"
+                                t-att-class="{'border-primary': this.state.onglet === onglet.cle}"
+                                t-on-click="() => this.changerOnglet(onglet.cle)">
+                            <div class="text-muted small" t-out="onglet.libelle"/>
+                            <div class="fs-3" t-out="this.nombre(onglet.nombre)"/>
+                        </button>
                     </div>
                     <div class="col">
                         <div class="border rounded p-2 h-100">
                             <div class="text-muted small">Messages</div>
-                            <div class="fs-3" t-esc="this.totaux.messages"/>
+                            <div class="fs-3" t-out="this.nombre(this.totaux.messages)"/>
                         </div>
                     </div>
                     <div class="col">
                         <div class="border rounded p-2 h-100">
-                            <div class="text-muted small">Quota consommé (Mo)</div>
-                            <div class="fs-3" t-esc="this.totaux.quota_utilise_mb"/>
+                            <div class="text-muted small">Espace consommé</div>
+                            <div class="fs-3" t-out="this.taille(this.totaux.quota_utilise_mb)"/>
                             <div class="text-muted small">
-                                sur <span t-esc="this.totaux.quota_alloue_mb"/> alloués
+                                sur <t t-out="this.taille(this.totaux.quota_alloue_mb)"/> alloués
                                 <t t-if="this.totaux.boites_sans_quota">
-                                    — <span t-esc="this.totaux.boites_sans_quota"/> sans quota
+                                    — <t t-out="this.totaux.boites_sans_quota"/> boîtes sans quota
                                 </t>
                             </div>
                         </div>
@@ -110,9 +111,9 @@
                     <li class="nav-item" t-foreach="this.onglets" t-as="onglet" t-key="onglet.cle">
                         <a href="#"
                            t-att-class="'nav-link' + (this.state.onglet === onglet.cle ? ' active' : '')"
-                           t-on-click="() => this.changerOnglet(onglet.cle)">
-                            <t t-esc="onglet.libelle"/>
-                            <span class="badge text-bg-secondary" t-esc="onglet.nombre"/>
+                           t-on-click.prevent="() => this.changerOnglet(onglet.cle)">
+                            <t t-out="onglet.libelle"/>
+                            <span class="badge text-bg-secondary" t-out="onglet.nombre"/>
                         </a>
                     </li>
                 </ul>
@@ -121,33 +122,33 @@
                     <input type="search" class="form-control" style="max-width: 22rem"
                            placeholder="Rechercher…" t-att-value="this.state.recherche"
                            t-on-input="(ev) => (this.state.recherche = ev.target.value)"/>
-                    <span class="text-muted small" t-esc="this.nombreAffiche"/>
+                    <span class="text-muted small" t-out="this.nombreAffiche"/>
                     <button t-if="this.state.recherche" class="btn btn-sm btn-link p-0"
                             t-on-click="() => (this.state.recherche = '')">Effacer</button>
                 </div>
 
-                <table t-if="this.state.onglet === 'domaines'" class="table table-sm align-middle">
+                <table t-if="this.state.onglet === 'domaines'" class="table table-sm table-hover align-middle">
                     <thead>
                         <tr>
                             <th style="cursor: pointer" t-on-click="() => this.trierPar('nom')">
-                                Domaine<t t-esc="this.marqueTri('nom')"/>
+                                Domaine<t t-out="this.marqueTri('nom')"/>
                             </th>
                             <th>État</th>
                             <th class="text-end" style="cursor: pointer"
                                 t-on-click="() => this.trierPar('boites_utilisees')">
-                                Boîtes<t t-esc="this.marqueTri('boites_utilisees')"/>
+                                Boîtes<t t-out="this.marqueTri('boites_utilisees')"/>
                             </th>
                             <th style="width: 18%; cursor: pointer"
                                 t-on-click="() => this.trierPar('occupation')">
-                                Plafond<t t-esc="this.marqueTri('occupation')"/>
+                                Plafond<t t-out="this.marqueTri('occupation')"/>
                             </th>
                             <th class="text-end" style="cursor: pointer"
                                 t-on-click="() => this.trierPar('alias_utilises')">
-                                Alias<t t-esc="this.marqueTri('alias_utilises')"/>
+                                Alias<t t-out="this.marqueTri('alias_utilises')"/>
                             </th>
                             <th class="text-end" style="cursor: pointer"
                                 t-on-click="() => this.trierPar('quota_mb')">
-                                Quota (Mo)<t t-esc="this.marqueTri('quota_mb')"/>
+                                Quota<t t-out="this.marqueTri('quota_mb')"/>
                             </th>
                             <th>DKIM</th>
                             <th>Dernière synchro</th>
@@ -157,7 +158,7 @@
                         <tr t-foreach="this.lignes" t-as="domaine" t-key="domaine.id"
                             style="cursor: pointer"
                             t-on-click="() => this.ouvrirTableauDomaine(domaine.id)">
-                            <td><strong t-esc="domaine.nom"/></td>
+                            <td><strong t-out="domaine.nom"/></td>
                             <td>
                                 <span t-if="domaine.actif" class="badge text-bg-success">actif</span>
                                 <span t-else="" class="badge text-bg-secondary">inactif</span>
@@ -166,57 +167,64 @@
                                 </span>
                             </td>
                             <td class="text-end">
-                                <span t-esc="domaine.boites_utilisees"/>
-                                <span class="text-muted">/</span>
-                                <span t-esc="domaine.boites_max"/>
+                                <span t-out="domaine.boites_utilisees"/>
+                                <t t-if="domaine.boites_max">
+                                    <span class="text-muted">/</span>
+                                    <span t-out="domaine.boites_max"/>
+                                </t>
                             </td>
                             <td>
-                                <div class="progress" style="height: 1.1rem">
-                                    <div t-att-class="this.classeOccupation(domaine.occupation)"
-                                         t-att-style="'width: ' + domaine.occupation + '%'"
-                                         t-esc="domaine.occupation + ' %'"/>
-                                </div>
+                                <t t-if="domaine.occupation !== null">
+                                    <div class="progress" style="height: 0.6rem">
+                                        <div t-att-class="this.classeOccupation(domaine.occupation)"
+                                             t-att-style="this.largeur(domaine.occupation)"/>
+                                    </div>
+                                    <span class="text-muted small" t-out="this.texteTaux(domaine.occupation)"/>
+                                </t>
+                                <span t-else="" class="text-muted small">plafond du serveur</span>
                             </td>
                             <td class="text-end">
-                                <span t-esc="domaine.alias_utilises"/>
-                                <span class="text-muted">/</span>
-                                <span t-esc="domaine.alias_max"/>
+                                <span t-out="domaine.alias_utilises"/>
+                                <t t-if="domaine.alias_max">
+                                    <span class="text-muted">/</span>
+                                    <span t-out="domaine.alias_max"/>
+                                </t>
                             </td>
-                            <td class="text-end" t-esc="domaine.quota_mb"/>
+                            <td class="text-end" t-out="domaine.quota_mb ? this.taille(domaine.quota_mb) : 'illimité'"/>
                             <td>
                                 <span t-if="domaine.dkim" class="badge text-bg-success">publié</span>
                                 <span t-else="" class="badge text-bg-secondary">absent</span>
                             </td>
-                            <td class="text-muted small" t-esc="domaine.derniere_synchro or '—'"/>
+                            <td class="text-muted small" t-out="domaine.derniere_synchro or '—'"/>
                         </tr>
                     </tbody>
                 </table>
 
-                <table t-if="this.state.onglet === 'boites'" class="table table-sm align-middle">
+                <table t-if="this.state.onglet === 'boites'" class="table table-sm table-hover align-middle">
                     <thead>
                         <tr>
                             <th style="cursor: pointer" t-on-click="() => this.trierPar('nom')">
-                                Boîte<t t-esc="this.marqueTri('nom')"/>
+                                Boîte<t t-out="this.marqueTri('nom')"/>
                             </th>
                             <th style="cursor: pointer" t-on-click="() => this.trierPar('domaine')">
-                                Domaine<t t-esc="this.marqueTri('domaine')"/>
+                                Domaine<t t-out="this.marqueTri('domaine')"/>
                             </th>
                             <th>État</th>
                             <th class="text-end" style="cursor: pointer"
                                 t-on-click="() => this.trierPar('quota_utilise_mb')">
-                                Utilisé (Mo)<t t-esc="this.marqueTri('quota_utilise_mb')"/>
+                                Utilisé<t t-out="this.marqueTri('quota_utilise_mb')"/>
                             </th>
-                            <th class="text-end" style="cursor: pointer"
+                            <th style="width: 14%; cursor: pointer"
                                 t-on-click="() => this.trierPar('pourcentage')">
-                                Taux<t t-esc="this.marqueTri('pourcentage')"/>
+                                Quota<t t-out="this.marqueTri('pourcentage')"/>
                             </th>
                             <th class="text-end" style="cursor: pointer"
                                 t-on-click="() => this.trierPar('messages')">
-                                Messages<t t-esc="this.marqueTri('messages')"/>
+                                Messages<t t-out="this.marqueTri('messages')"/>
                             </th>
                             <th class="text-end" style="cursor: pointer"
                                 t-on-click="() => this.trierPar('derniere_connexion')">
-                                Dernière connexion<t t-esc="this.marqueTri('derniere_connexion')"/>
+                                Dernière connexion<t t-out="this.marqueTri('derniere_connexion')"/>
                             </th>
                         </tr>
                     </thead>
@@ -224,8 +232,8 @@
                         <tr t-foreach="this.lignes" t-as="boite" t-key="boite.id"
                             style="cursor: pointer"
                             t-on-click="() => this.ouvrirFiche('mailcow.mailbox', boite.id)">
-                            <td><strong t-esc="boite.nom"/></td>
-                            <td class="text-muted" t-esc="boite.domaine"/>
+                            <td><strong t-out="boite.nom"/></td>
+                            <td class="text-muted" t-out="boite.domaine"/>
                             <td>
                                 <span t-if="boite.active" class="badge text-bg-success">active</span>
                                 <span t-else="" class="badge text-bg-secondary">désactivée</span>
@@ -233,27 +241,36 @@
                                     non synchronisée
                                 </span>
                             </td>
-                            <td class="text-end" t-esc="boite.quota_utilise_mb"/>
-                            <td class="text-end" t-esc="this.texteTaux(boite.pourcentage)"/>
-                            <td class="text-end" t-esc="boite.messages"/>
+                            <td class="text-end" t-out="this.taille(boite.quota_utilise_mb)"/>
+                            <td>
+                                <div t-if="boite.pourcentage !== null" class="progress" style="height: 0.6rem">
+                                    <div t-att-class="this.classeOccupation(boite.pourcentage)"
+                                         t-att-style="this.largeur(boite.pourcentage)"/>
+                                </div>
+                                <span class="text-muted small" t-out="this.texteTaux(boite.pourcentage)"/>
+                                <span class="text-muted small" t-if="boite.quota_mb">
+                                    de <t t-out="this.taille(boite.quota_mb)"/>
+                                </span>
+                            </td>
+                            <td class="text-end" t-out="this.nombre(boite.messages)"/>
                             <td class="text-end text-muted small"
-                                t-esc="boite.derniere_connexion or 'jamais'"/>
+                                t-out="boite.derniere_connexion or 'jamais'"/>
                         </tr>
                     </tbody>
                 </table>
 
-                <table t-if="this.state.onglet === 'alias'" class="table table-sm align-middle">
+                <table t-if="this.state.onglet === 'alias'" class="table table-sm table-hover align-middle">
                     <thead>
                         <tr>
                             <th style="cursor: pointer" t-on-click="() => this.trierPar('nom')">
-                                Alias<t t-esc="this.marqueTri('nom')"/>
+                                Alias<t t-out="this.marqueTri('nom')"/>
                             </th>
                             <th style="cursor: pointer" t-on-click="() => this.trierPar('domaine')">
-                                Domaine<t t-esc="this.marqueTri('domaine')"/>
+                                Domaine<t t-out="this.marqueTri('domaine')"/>
                             </th>
                             <th class="text-end" style="cursor: pointer"
                                 t-on-click="() => this.trierPar('destinations')">
-                                Destinations<t t-esc="this.marqueTri('destinations')"/>
+                                Destinations<t t-out="this.marqueTri('destinations')"/>
                             </th>
                             <th>Type</th>
                             <th>État</th>
@@ -263,10 +280,10 @@
                         <tr t-foreach="this.lignes" t-as="un_alias" t-key="un_alias.id"
                             style="cursor: pointer"
                             t-on-click="() => this.ouvrirFiche('mailcow.alias', un_alias.id)">
-                            <td><strong t-esc="un_alias.nom"/></td>
-                            <td class="text-muted" t-esc="un_alias.domaine"/>
+                            <td><strong t-out="un_alias.nom"/></td>
+                            <td class="text-muted" t-out="un_alias.domaine"/>
                             <td class="text-end">
-                                <span t-if="un_alias.destinations" t-esc="un_alias.destinations"/>
+                                <span t-if="un_alias.destinations" t-out="un_alias.destinations"/>
                                 <span t-else="" class="badge text-bg-warning">aucune</span>
                             </td>
                             <td>

@@ -98,7 +98,10 @@ jobs:
           git -C odoo checkout --quiet $ODOO_COMMIT
 
       - name: Dépendances Python d'Odoo
-        run: python -m pip install --quiet -r odoo/requirements.txt
+        # websocket-client pilote Chrome pour les tests HttpCase : sans lui,
+        # Odoo les saute sans echouer, et le test des tableaux de bord de
+        # mailcow_admin passerait au vert sans avoir rien ouvert.
+        run: python -m pip install --quiet -r odoo/requirements.txt websocket-client
 
       - name: Tests des cinq modules, sur une base neuve
         run: |

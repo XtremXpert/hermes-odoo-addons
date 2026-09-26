@@ -407,6 +407,52 @@ class TestMailcowDomain(TransactionCase):
         self.assertIn('quota_alloue_mb', donnees['totaux'])
         self.assertIn('grosses_boites', donnees)
 
+    def test_un_domaine_presque_plein_se_signale_avant_le_plafond(self):
+        """A 8 boites sur 10, la barre est deja rouge : l'alerte doit suivre.
+
+        Attendre le plafond, c'est apprendre le probleme au moment ou Mailcow
+        refuse une creation. Un domaine deja au plafond reste dans sa propre
+        alerte, plus grave : le compter deux fois gonflerait le tableau.
+        """
+        avant = {
+            a['cle']: a['nombre']
+            for a in self.env['mailcow.domain'].donnees_tableau_de_bord()['alertes']
+        }
+        presque = self.env['mailcow.domain'].create({
+            'name': 'presque.test', 'mailboxes_used': 8, 'mailboxes_max': 10,
+        })
+        self.env['mailcow.domain'].create({
+            'name': 'plein.test', 'mailboxes_used': 10, 'mailboxes_max': 10,
+        })
+        self.env['mailcow.domain'].create({
+            'name': 'tranquille.test', 'mailboxes_used': 7, 'mailboxes_max': 10,
+        })
+
+        alertes = {
+            a['cle']: a for a in self.env['mailcow.domain'].donnees_tableau_de_bord()['alertes']
+        }
+        self.assertEqual(
+            alertes['domaines_presque_pleins']['nombre'],
+            avant['domaines_presque_pleins'] + 1)
+        self.assertIn(presque.id, alertes['domaines_presque_pleins']['filtre'][0][2])
+        self.assertEqual(
+            alertes['domaines_au_plafond']['nombre'], avant['domaines_au_plafond'] + 1)
+
+    def test_un_plafond_inconnu_n_affiche_pas_un_faux_zero(self):
+        """Un plafond a zero veut dire « valeur du serveur », pas « vide ».
+
+        Rendre 0 % dessinerait une barre verte et vide la ou l'on ne sait
+        rien : l'occupation doit etre absente, comme le taux d'une boite sans
+        quota.
+        """
+        domaine = self.env['mailcow.domain'].create({
+            'name': 'sans-plafond.test', 'mailboxes_used': 3, 'mailboxes_max': 0,
+        })
+        lignes = self.env['mailcow.domain'].donnees_tableau_de_bord()['domaines']
+        ligne = [ligne for ligne in lignes if ligne['id'] == domaine.id][0]
+        self.assertIsNone(ligne['occupation'])
+        self.assertIsNone(domaine.donnees_tableau_de_bord_domaine()['chiffres']['occupation'])
+
     def test_sync_all_works_without_any_local_record(self):
         """Amorcer une base vide : aucune fiche locale n'est nécessaire."""
         remote = {'data': [

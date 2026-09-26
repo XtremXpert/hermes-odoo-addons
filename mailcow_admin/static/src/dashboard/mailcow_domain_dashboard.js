@@ -21,7 +21,18 @@ import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { Component, onWillStart, onWillUnmount, proxy } from "@odoo/owl";
 
-import { basculerTri, filtrer, trier } from "./mailcow_dashboard_utils";
+import {
+    basculerTri,
+    classeGravite,
+    classeOccupation,
+    filtrer,
+    formaterNombre,
+    formaterTaille,
+    largeurBarre,
+    ordonnerAlertes,
+    texteTaux,
+    trier,
+} from "./mailcow_dashboard_utils";
 
 const INTERVALLE_MS = 30000;
 const CHAMPS_RECHERCHE = {
@@ -51,6 +62,10 @@ export class MailcowDomainDashboard extends Component {
         // Le minuteur meurt avec le composant : personne ne regarde, personne
         // ne paie.
         this.minuteur = setInterval(() => {
+            // Un onglet cache ne regarde rien : inutile de relire.
+            if (document.hidden) {
+                return;
+            }
             if (this.state.auto && !this.state.chargement && !this.state.synchro) {
                 this.charger();
             }
@@ -111,8 +126,19 @@ export class MailcowDomainDashboard extends Component {
         return this.donnees.alias || [];
     }
 
+    /** Les alertes a traiter, les plus graves d'abord. Les simples
+        informations (fiches non synchronisees) vont a part : elles ne
+        demandent pas d'action et noieraient le reste. */
     get alertes() {
-        return (this.donnees.alertes || []).filter((alerte) => alerte.nombre > 0);
+        return ordonnerAlertes(this.donnees.alertes).filter(
+            (alerte) => alerte.gravite !== "information"
+        );
+    }
+
+    get informations() {
+        return ordonnerAlertes(this.donnees.alertes).filter(
+            (alerte) => alerte.gravite === "information"
+        );
     }
 
     get lienMailcow() {
@@ -225,28 +251,30 @@ export class MailcowDomainDashboard extends Component {
         this.state.synchro = false;
     }
 
+    // La presentation vit dans mailcow_dashboard_utils.js, eprouvee par
+    // `node --test` ; le gabarit ne peut appeler que des membres du composant.
     classeOccupation(pourcentage) {
-        if (pourcentage === null || pourcentage === undefined) {
-            return "progress-bar bg-secondary";
-        }
-        if (pourcentage >= 80) {
-            return "progress-bar bg-danger";
-        }
-        return pourcentage >= 60 ? "progress-bar bg-warning" : "progress-bar bg-success";
+        return classeOccupation(pourcentage);
     }
 
     classeGravite(gravite) {
-        if (gravite === "danger") {
-            return "text-bg-danger";
-        }
-        return gravite === "attention" ? "text-bg-warning" : "text-bg-secondary";
+        return classeGravite(gravite);
     }
 
-    /** « 12.5 % » ou « sans quota » : un taux absent n'est pas un zero. */
     texteTaux(pourcentage) {
-        return pourcentage === null || pourcentage === undefined
-            ? "sans quota"
-            : pourcentage + " %";
+        return texteTaux(pourcentage);
+    }
+
+    taille(mo) {
+        return formaterTaille(mo);
+    }
+
+    nombre(valeur) {
+        return formaterNombre(valeur);
+    }
+
+    largeur(pourcentage) {
+        return largeurBarre(pourcentage);
     }
 }
 

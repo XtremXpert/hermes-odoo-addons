@@ -17,3 +17,4 @@ from . import test_alias_catchall
 from . import test_settings
 from . import test_access
 from . import test_notification
+from . import test_dashboard_ui
