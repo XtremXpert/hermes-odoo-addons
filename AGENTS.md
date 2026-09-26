@@ -1,0 +1,136 @@
+# hermes-odoo-addons
+
+Cinq modules Odoo maison pour l'infrastructure de Diverse-Cité : courriel (Mailcow),
+téléphonie (Wazo, Asterisk ARI) et SMS (VoIP.ms). Dépôt **public** — rien de secret n'y entre.
+
+| module | rôle |
+|---|---|
+| `mailcow_admin` | domaines, boîtes, alias, tableaux de bord |
+| `wazo_server` | serveur Wazo : lignes, postes, CDR |
+| `wazo_phone` | téléphone dans Odoo (WebRTC, click-to-call) |
+| `asterisk_ari` | Asterisk via ARI |
+| `voipms_sms` | SMS par l'API VoIP.ms |
+
+## La série est 19.5, pas 20.0 — malgré le nom du dossier
+
+Le poste s'appelle `~/hermes-dev/odoo20`, mais l'arbre cloné est la branche `master`
+d'Odoo, qui se déclare `19.5.0 alpha` dans `odoo/odoo/release.py`. Les modules suivent donc
+la série **19.5** : `'version': '19.5.x.y.z'`. Avant de choisir un identifiant d'API,
+vérifier la série — les ruptures connues sont consignées dans la skill
+`odoo20-breaking-changes`.
+
+Deux versions dérivent de la convention et devraient être alignées : `asterisk_ari`
+(`19.5.0`), `wazo_phone` (`19.5.3`) et `wazo_server` (`1.0`).
+
+## Branche
+
+`main` uniquement, poussée directement. **Aucun commit ne part sans une CI verte** :
+rejouer les commandes de la CI localement (plus bas) avant de pousser. Ne jamais amender un
+commit déjà poussé, même en étant le seul committeur.
+
+## Disposition
+
+- **les cinq modules, à la racine** — la racine est aussi, littéralement, un chemin
+  d'addons, ce qui permet de les atteindre sans les déplacer ;
+- `odoo/`, `enterprise/`, `design-themes/` — **clones simples, git-ignorés, pas des
+  sous-modules** :
+  - `odoo/` et `design-themes/` sont **publics** (`github.com/odoo/odoo`,
+    `github.com/odoo/design-themes`) : clonables sans identifiant ;
+  - `enterprise/` est **privé et sous licence** : il reste sur le disque, **délibérément
+    hors du chemin d'addons**. Odoo répond `None` à `get_module_path('web_studio')`. Ne pas
+    le supprimer, ne pas l'ajouter au chemin — et ne pas s'étonner de voir ses modules dans
+    la liste des applications : ils viennent du catalogue `base/data/ir_module_module.xml`
+    (`to_buy`, licence `OEEL-1`), présent sur toute base, y compris neuve ;
+- `conf/odoo.conf` — configuration locale, git-ignorée ;
+- `start.sh` — **le seul lanceur autorisé** ;
+- `.github/workflows/ci.yml` et `.github/scripts/verifier_les_xml.py` — la CI et son validateur ;
+- `ruff.toml` — chaque exception porte sa raison ;
+- `poc/` — jetons et mot de passe d'une VM de test : **exclu**, jamais committé.
+
+## Chemin d'addons complet
+
+Dans cet ordre, tel que `conf/odoo.conf` le déclare (en absolu sur ce poste) :
+
+```
+odoo/addons,odoo/odoo/addons,design-themes,.
+```
+
+`design-themes` y est parce que les thèmes de site en dépendent ; `enterprise` n'y est pas,
+par choix.
+
+## Lancer
+
+```bash
+./start.sh                                # le serveur : 2069 (et 2072 pour le bus)
+./start.sh -d odoo20                      # une seule base
+./start.sh --workers 2                    # prefork — nécessaire au bus /websocket
+./start.sh shell --no-http < sonde.py     # inspection ponctuelle
+```
+
+**Jamais `odoo-bin` à la main, même pour une ligne.** Le script pose `PYTHONPATH=""`,
+passe `-c conf/odoo.conf` **après** les arguments (sinon `shell` est lu comme un argument du
+serveur : `unrecognized parameters: shell`), et sans lui une exécution peut se figer à 0 %
+de CPU au lieu de planter. `db_host` est **vide** dans la conf : la connexion passe par le
+socket Unix. Y remettre `localhost` fait négocier GSSAPI à libpq, ce qui traverse XPC — et
+XPC n'est pas *fork-safe* : chaque worker forké meurt en silence.
+
+`dbfilter = ^odoo20` fait que le sélecteur ne propose que `odoo20` et `odoo20_neuve`, pas
+les cent trente autres bases du poste. Servir deux bases fait passer `/web/login` par le
+sélecteur : c'est normal.
+
+## Tester
+
+```bash
+./start.sh -d odoo20 --http-port 2071 --gevent-port 2074 \
+  --test-enable --stop-after-init \
+  --test-tags=mailcow_admin,wazo_phone,wazo_server,asterisk_ari,voipms_sms \
+  > /tmp/suite.log 2>&1
+grep 'odoo.tests.result' /tmp/suite.log
+```
+
+- **Toujours un `--http-port` explicite** : 2069 est tenu par le serveur de développement et
+  Odoo abandonne avant de rien lancer ;
+- **jamais `--no-http`** quand on veut les tests navigateur — ils sont alors **sautés en
+  silence** et le résultat reste vert. La CI refuse ce saut (voir plus bas) ;
+- juger la ligne `odoo.tests.result`, **jamais le code de sortie d'un tuyau** : un `grep`
+  qui ne trouve rien sort en 1, et un journal vide ressemble à un plantage quand ce n'est
+  qu'un tampon (préfixer `PYTHONUNBUFFERED=1`) ;
+- un test constate un **écart** — lire avant, comparer après. Tout compte absolu est un
+  piège : il passe sur la base de développement et casse sur une base neuve.
+
+## Vérifier avant de pousser
+
+Ce sont les commandes de la CI, et **rien d'autre** — le lint de l'éditeur n'est pas le sien
+(un fichier propre à l'écran peut porter `F841` ou `W292`) :
+
+```bash
+python -m pip install --quiet ruff==0.16.9
+ruff check asterisk_ari mailcow_admin voipms_sms wazo_phone wazo_server --exclude poc
+python -m compileall -q $(git ls-files '*.py')
+python .github/scripts/verifier_les_xml.py
+node --test '*/static/tests/*.test.js'
+```
+
+## Pièges du dépôt
+
+- **OWL 3** : l'état passe par `proxy`, les gabarits qualifient par `this.`, on utilise
+  `t-out` (et non `t-esc`), `useEffect`. Un module qui importe `@odoo/owl` doit déclarer
+  `web` **et** une directive d'ordre dans ses actifs.
+- `-u <module>` **ne régénère pas** les paquets d'actifs : purger `ir.attachment` quand un
+  composant change.
+- `<button name="x"/>` doit correspondre à une méthode du modèle. Pour obtenir un rouge
+  propre, retirer **le modèle et la vue**.
+- Dans un `_inherit`, **la première entrée l'emporte**. Étendre un `Selection` demande
+  `selection_add` **et** `ondelete`.
+- Les imports des `__init__.py` d'un module Odoo ne sont pas morts — un `--fix` mécanique
+  casse le registre.
+- **Mailcow : lecture seule sur la production.** Les écritures se testent sur un domaine
+  jetable, nettoyé aussitôt. Une clé d'API ne passe jamais par la conversation.
+- Seuls les tests voient la base de développement **et** la vraie : un `setUpClass` visible
+  de toute la classe casse toute garde qui compte globalement.
+
+## Secrets
+
+Le dépôt est public. Ni jeton, ni mot de passe, ni chaîne de connexion dans un fichier suivi,
+un commentaire, un message de commit ou une capture. Les filets de restauration
+(`/tmp/*.dump`, `/tmp/*.json`) ne sont **jamais** copiés ici.

@@ -2,8 +2,12 @@
 
 [![CI](https://github.com/XtremXpert/hermes-odoo-addons/actions/workflows/ci.yml/badge.svg)](https://github.com/XtremXpert/hermes-odoo-addons/actions/workflows/ci.yml)
 
-Des modules Odoo maison écrits contre le build local d'Odoo 20
-(`~/hermes-dev/odoo20/`, branche `main`).
+Des modules Odoo maison écrits contre l'arbre local d'Odoo : le dossier s'appelle
+`~/hermes-dev/odoo20/`, mais l'arbre se déclare **19.5** (branche `main`) — les modules
+suivent cette série, pas la 20.0.
+
+Les conventions du dépôt, les commandes de lancement, de test et de vérification, et les
+pièges connus sont dans [`AGENTS.md`](AGENTS.md).
 
 ## Architecture télécom
 
