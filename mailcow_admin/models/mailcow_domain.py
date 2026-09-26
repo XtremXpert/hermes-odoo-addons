@@ -371,7 +371,6 @@ class MailcowDomain(models.Model):
         alertes = mesures['alertes']
         serrees = mesures['serrees']
         dormantes = mesures['dormantes']
-        desactivees = mesures['desactivees']
 
         grosses = boites.sorted(lambda b: b.quota_used_mb, reverse=True)[:10]
         # Les comptes jamais utilisés d'abord : ce sont les cas les plus nets,
