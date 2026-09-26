@@ -103,8 +103,18 @@ jobs:
         # mailcow_admin passerait au vert sans avoir rien ouvert.
         run: python -m pip install --quiet -r odoo/requirements.txt websocket-client
 
+      - name: Réchauffer Chrome
+        # Odoo n'attend que 10 s le port devtools de Chrome, puis SAUTE le test
+        # sans echouer. Sur le runner, le tout premier lancement de Chrome
+        # depasse ce delai (constate le 2026-09-26) ; un lancement a vide
+        # avant les tests rend le suivant assez rapide.
+        run: google-chrome --headless=new --no-sandbox --disable-gpu --dump-dom about:blank > /dev/null
+
       - name: Tests des cinq modules, sur une base neuve
+        # Pas de --no-http : les tests HttpCase ouvrent les ecrans dans Chrome
+        # et ont besoin du serveur web.
         run: |
+          set -o pipefail
           python odoo/odoo-bin \
             --addons-path=odoo/addons,. \
             --db_host=127.0.0.1 --db_port=5432 \
@@ -113,4 +123,11 @@ jobs:
             --init=$MODULES \
             --test-enable \
             --test-tags=/asterisk_ari,/mailcow_admin,/voipms_sms,/wazo_phone,/wazo_server \
-            --stop-after-init --no-http --max-cron-threads=0 --log-level=test
+            --stop-after-init --max-cron-threads=0 --log-level=test \
+            2>&1 | tee odoo-tests.log
+          # Un test navigateur saute n'est pas un test reussi : Odoo le compte
+          # comme « skipped » et le resultat resterait vert sans rien avoir ouvert.
+          if grep -E "skipped .*: (Failed to detect chrome devtools|websocket-client module is not installed|Chrome executable not found)" odoo-tests.log; then
+            echo "::error::Un test navigateur a ete saute : voir ci-dessus."
+            exit 1
+          fi
