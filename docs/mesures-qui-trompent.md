@@ -96,3 +96,13 @@ La règle qui en découlait — rien de secret dans un fichier suivi — reste b
 mais sa raison était fausse, et elle masquait une conséquence de sens contraire :
 les minutes d'Actions d'un dépôt **privé** sont décomptées du forfait, celles d'un
 dépôt public ne le sont pas. Une croyance confortable peut cacher un coût réel.
+
+## Note d'exploitation — un motif d'exclusion peut avaler le gabarit qu'on écrit
+
+`.gitignore` portait `.env.*` ; le nouveau `.env.exemple` tombait donc dedans.
+Mesure : `git check-ignore -v .env.exemple` répondait `.gitignore:24:.env.*`.
+Pire, `git add` **refuse tout le lot** quand un seul des chemins est ignoré : le
+commit a donc réussi en ne prenant que ce qui était déjà indexé, et le README a
+documenté `cp .env.exemple .env` dans un dépôt où ce fichier n'existait pas. Un
+« commit réussi » ne prouve pas que ce qu'on voulait y mettre y est : regarder
+`git ls-files <fichier>`, pas le code de sortie.
