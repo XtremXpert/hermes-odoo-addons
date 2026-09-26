@@ -79,4 +79,8 @@ known-first-party = ["odoo"]
 # Les imports de ce fichier viennent après la définition du journal parce que
 # « wazo_server » et « wazo_phone » s'importent mutuellement : les remonter
 # provoque l'import circulaire qu'ils évitent.
-"wazo_server/models/wazo_server_tenant.py" = ["E402"]
+#
+# Motif en « **/ » et non ancré à la racine : un chemin écrit en dur ici cesse
+# de correspondre dès que la disposition bouge — au déplacement des modules sous
+# « addons/ », la faute est réapparue sans que personne n'ait touché ce fichier.
+"**/wazo_server/models/wazo_server_tenant.py" = ["E402"]

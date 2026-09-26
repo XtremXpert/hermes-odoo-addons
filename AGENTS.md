@@ -11,6 +11,13 @@ téléphonie (Wazo, Asterisk ARI) et SMS (VoIP.ms). Dépôt **public** — rien 
 | `asterisk_ari` | Asterisk via ARI |
 | `voipms_sms` | SMS par l'API VoIP.ms |
 
+Les modules vivent sous **`addons/`**, comme dans les autres dépôts de la maison
+(Diverse-Cité, mac-demo, Durpro19) : c'est ce dossier qu'on ajoute à l'`addons_path`
+d'Odoo, jamais la racine du dépôt. Les clones externes (`odoo/`, `enterprise/`,
+`design-themes/`, `industry/`) restent à la racine, git-ignorés. `tools/test` et la CI
+suivent cette disposition : leur `--addons-path` pointe sur `addons`, et leurs commandes
+de lint aussi.
+
 ## La série est 19.5, pas 20.0 — malgré le nom du dossier
 
 Le poste s'appelle `~/hermes-dev/odoo20`, mais l'arbre cloné est la branche `master`
@@ -146,7 +153,7 @@ Ce sont les commandes de la CI, et **rien d'autre** — le lint de l'éditeur n'
 
 ```bash
 python -m pip install --quiet ruff==0.16.9
-ruff check asterisk_ari mailcow_admin voipms_sms wazo_phone wazo_server --exclude poc
+ruff check addons tools --exclude poc
 python -m compileall -q $(git ls-files '*.py')
 python .github/scripts/verifier_les_xml.py
 node --test '*/static/tests/*.test.js'

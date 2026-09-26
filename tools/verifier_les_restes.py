@@ -22,9 +22,11 @@ from pathlib import Path
 RACINE = Path(__file__).resolve().parent.parent
 SERIE = "19.5"
 MODULES = ("asterisk_ari", "mailcow_admin", "voipms_sms", "wazo_phone", "wazo_server")
+# Nos modules vivent sous « addons/ », comme dans les autres dépôts de la maison.
+DOSSIER_MODULES = RACINE / "addons"
 
 # Les racines d'addons, en relatif : portable d'un poste à l'autre.
-RACINES_ADDONS = ("odoo/addons", "odoo/odoo/addons", "design-themes", ".")
+RACINES_ADDONS = ("addons", "odoo/addons", "odoo/odoo/addons", "design-themes", ".")
 # Les mêmes, moins le dépôt lui-même : ce sont elles qui doivent exister pour
 # qu'un import Odoo soit vérifiable. Le travail « Qualité » de la CI ne clone
 # pas Odoo ; là-bas, ce contrôle n'a rien à inspecter et doit le dire.
@@ -51,13 +53,13 @@ HERITAGE = re.compile(r"^\s+_inherit\s*=", re.M)
 IMPORT_JS = re.compile(r"""from\s+["']@([\w.]+)/([^"']+)["']""")
 
 def lire_manifeste(module: str) -> str | None:
-    chemin = RACINE / module / "__manifest__.py"
+    chemin = DOSSIER_MODULES / module / "__manifest__.py"
     return chemin.read_text(encoding="utf-8") if chemin.exists() else None
 
 def modeles_du_module(module: str, verbeux: bool) -> list[tuple[str, str]]:
     """Les modèles NOUVEAUX du module : `_name` sans `_inherit` à côté."""
     trouves: list[tuple[str, str]] = []
-    for fichier in sorted((RACINE / module / "models").glob("*.py")):
+    for fichier in sorted((DOSSIER_MODULES / module / "models").glob("*.py")):
         source = fichier.read_text(encoding="utf-8")
         for bloc in re.split(r"(?=^class\s)", source, flags=re.M):
             base = CLASSE_MODELE.search(bloc)
@@ -72,7 +74,7 @@ def modeles_du_module(module: str, verbeux: bool) -> list[tuple[str, str]]:
 def modeles_couverts(module: str) -> set[str]:
     """Ce que les CSV de sécurité du module déclarent, tous fichiers confondus."""
     couverts: set[str] = set()
-    for csv in sorted((RACINE / module / "security").glob("*.csv")):
+    for csv in sorted((DOSSIER_MODULES / module / "security").glob("*.csv")):
         for ligne in csv.read_text(encoding="utf-8").splitlines()[1:]:
             colonnes = [c.strip().strip('"') for c in ligne.split(",")]
             if len(colonnes) < 3 or not colonnes[2]:
@@ -126,7 +128,7 @@ def main() -> int:
             )
 
         # 1 bis. un module qui porte des scripts de migration doit pouvoir les nommer.
-        a_des_scripts = (RACINE / module / "migrations").is_dir()
+        a_des_scripts = (DOSSIER_MODULES / module / "migrations").is_dir()
         if valeur and a_des_scripts and not NOM_DE_DOSSIER.match(valeur):
             defauts.append(
                 f"{module} : porte des scripts de migration, mais sa version "
@@ -148,7 +150,7 @@ def main() -> int:
         if not arbres_odoo:
             continue
         imports: set[tuple[str, str]] = set()
-        for js in sorted((RACINE / module / "static").rglob("*.js")):
+        for js in sorted((DOSSIER_MODULES / module / "static").rglob("*.js")):
             imports |= set(IMPORT_JS.findall(js.read_text(encoding="utf-8")))
         for addon, chemin in sorted(imports):
             if not import_resolu(addon, chemin):

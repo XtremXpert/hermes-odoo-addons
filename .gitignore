@@ -1,5 +1,5 @@
 # Part of the hermes-odoo-addons project. See LICENSE for details.
-# Addon path: add this directory to odoo's addons_path
+# Addon path: add the « addons/ » subdirectory to odoo's addons_path
 
 # Checkout Odoo (source vendue, non versionnée ici)
 /odoo/
@@ -28,4 +28,7 @@ __pycache__/
 # Scripts d'exploration locaux du module wazo_phone : ils portent des
 # identifiants de la VM de test (mot de passe de poste) et des essais jetables.
 # Le savoir utile est dans wazo_phone/doc/, pas ici.
-/wazo_phone/poc/
+# Vérifier avec un fichier qui EXISTE : « git check-ignore » compare le motif au
+# texte du chemin, il ne dit pas si le fichier est là — et un motif qui ne
+# correspond plus laisse les identifiants visibles pour git.
+/addons/wazo_phone/poc/

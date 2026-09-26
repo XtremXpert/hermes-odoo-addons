@@ -47,7 +47,7 @@ jobs:
           # « poc » est exclu : il n'est pas versionné et porte des secrets.
           # $MODULES est joint par des virgules pour « --init » d'Odoo :
           # ruff, lui, attend des chemins séparés par des espaces.
-          ruff check ${MODULES//,/ } tools --exclude poc
+          ruff check addons tools --exclude poc
 
       - name: Syntaxe Python des fichiers versionnés
         run: |
@@ -138,7 +138,7 @@ jobs:
         run: |
           set -o pipefail
           python odoo/odoo-bin \
-            --addons-path=odoo/addons,. \
+            --addons-path=odoo/addons,addons \
             --db_host=127.0.0.1 --db_port=5432 \
             --db_user=odoo --db_password=odoo \
             --database=hermes_ci \

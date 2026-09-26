@@ -91,7 +91,8 @@ affiche « inconnu » plutôt que d'inventer un nom.
 ## Utilisation
 
 1. Cloner le dépôt.
-2. Ajouter le chemin à l'`addons_path` d'Odoo (ou copier chaque module).
+2. Ajouter **`<dépôt>/addons`** à l'`addons_path` d'Odoo (ou copier chaque module) :
+   les modules vivent sous `addons/`, pas à la racine du dépôt.
 3. Installer les modules :
    ```sh
    odoo-bin -d <db> -i mailcow_admin,voipms_sms,asterisk_ari,wazo_phone,wazo_server --stop-after-init
