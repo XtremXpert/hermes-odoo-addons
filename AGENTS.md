@@ -157,11 +157,33 @@ ruff check addons tools --exclude poc
 python -m compileall -q $(git ls-files '*.py')
 python .github/scripts/verifier_les_xml.py
 node --test '*/static/tests/*.test.js'
+python3 tools/test_crochet.py   # le crochet lui-même : il clone, pose une faute, exige le refus
 python3 tools/verifier_les_restes.py
 python3 tools/odoo_lock.py check
 ```
 
-## Pièges du dépôt
+## Pièges
+
+### Les motifs de chemin dans `ruff.toml` doivent être indépendants de la disposition
+
+Un `per-file-ignores` écrit en dur (`"wazo_server/models/…"`) cesse de correspondre
+dès que l'arbre bouge, et la faute qu'il écartait réapparaît **sans que le fichier
+ait été touché** — c'est arrivé au déplacement des modules sous `addons/`. Écrire les
+motifs en `"**/"`. Même règle pour tout ce qui nomme des chemins : `git ls-files`
+(donc le vérificateur XML et le crochet) et `tools/test` suivent, eux, les noms et
+sont insensibles au déplacement.
+
+### `.gitignore` : un motif ancré ne suit pas un déplacement
+
+`/wazo_phone/poc/` ne correspond plus après le passage sous `addons/` — et les 22
+fichiers qui portent un vrai mot de passe redeviennent visibles pour git au moment
+précis où l'on croit avoir tout vérifié. Contrôler avec
+`git check-ignore -v` **sur un fichier qui existe** : l'outil compare le motif au
+texte du chemin et répond « ignoré » même pour un chemin qui n'existe pas.
+Et pour compter ce qui entre dans un commit : `git show --name-only --format="" HEAD`,
+jamais `--stat`, qui imprime **aussi le message** et fait croire à des fichiers.
+
+### Ailleurs dans le dépôt
 
 - **OWL 3** : l'état passe par `proxy`, les gabarits qualifient par `this.`, on utilise
   `t-out` (et non `t-esc`), `useEffect`. Un module qui importe `@odoo/owl` doit déclarer

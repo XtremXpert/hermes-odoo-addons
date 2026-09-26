@@ -102,6 +102,33 @@ def import_resolu(addon: str, chemin: str) -> bool:
                 return True
     return False
 
+def defaut_de_forme(dossier_module: Path) -> str | None:
+    """Les fichiers de règles de « security/ » sont-ils lisibles sans surprise ?
+
+    Deux pièges concrets. Un fichier qui ne finit pas par un retour à la ligne
+    avale la règle qu'on ajoute par « >> » : elle se colle à la précédente et le
+    nombre de champs ne veut plus rien dire. Et une ligne dont le nombre de
+    champs diffère de l'en-tête est lue de travers à l'installation du module.
+    """
+    import csv
+
+    for fichier in sorted((dossier_module / "security").glob("*.csv")):
+        contenu = fichier.read_text()
+        if contenu and not contenu.endswith("\n"):
+            relatif = fichier.relative_to(RACINE)
+            return f"{relatif} : la dernière ligne n'est pas terminée"
+        lignes = [ligne for ligne in contenu.splitlines() if ligne.strip()]
+        if not lignes:
+            continue
+        largeur = len(next(csv.reader([lignes[0]])))
+        for numero, ligne in enumerate(lignes[1:], start=2):
+            nombre = len(next(csv.reader([ligne])))
+            if nombre != largeur:
+                relatif = fichier.relative_to(RACINE)
+                return f"{relatif} : ligne {numero}, {nombre} champs au lieu de {largeur}"
+    return None
+
+
 def main() -> int:
     verbeux = "-v" in sys.argv or "--verbeux" in sys.argv
     defauts: list[str] = []
@@ -134,6 +161,11 @@ def main() -> int:
                 f"{module} : porte des scripts de migration, mais sa version "
                 f"« {valeur} » ne peut être nommée par aucun dossier"
             )
+
+        # 1 ter. la forme des fichiers de règles, avant de lire ce qu'ils couvrent.
+        forme = defaut_de_forme(DOSSIER_MODULES / module)
+        if forme:
+            defauts.append(f"{module} : {forme}")
 
         # 2. les règles d'accès
         couverts = modeles_couverts(module)

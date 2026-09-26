@@ -45,9 +45,14 @@ jobs:
           # Sans ce fichier, le catalogue complet relèverait 373 trouvailles
           # dont l'immense majorité sont des faux positifs.
           # « poc » est exclu : il n'est pas versionné et porte des secrets.
-          # $MODULES est joint par des virgules pour « --init » d'Odoo :
-          # ruff, lui, attend des chemins séparés par des espaces.
           ruff check addons tools --exclude poc
+
+      # Le crochet qui garde les poussées doit être gardé : ce test clone le
+      # dépôt, y pose le crochet, pose une faute de chaque sorte et exige le
+      # refus. Sans lui, un crochet qui cesse de bloquer ne se voit nulle part
+      # avant que le coureur ne découvre le rouge.
+      - name: Le crochet refuse ce qu'il doit refuser
+        run: python3 tools/test_crochet.py
 
       - name: Syntaxe Python des fichiers versionnés
         run: |
