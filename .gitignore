@@ -22,6 +22,7 @@ __pycache__/
 # Secrets / éditeur
 .env
 .env.*
+!.env.exemple
 .vscode/
 .idea/
 
