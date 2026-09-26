@@ -1,0 +1,16 @@
+# Révisions contre lesquelles ce dépôt a été éprouvé.
+# Relever : python3 tools/odoo_lock.py write
+# Comparer : python3 tools/odoo_lock.py check
+
+odoo:
+  source: https://github.com/odoo/odoo.git
+  branche: master
+  commit: 9c2e8fb1b09c0fbdc01d773a33663a7eaf0522f1
+design-themes:
+  source: https://github.com/odoo/design-themes.git
+  branche: master
+  commit: c46083719aa2d305c2d36737d30778f419b8e6f3
+enterprise:
+  source: https://github.com/odoo/enterprise.git
+  branche: master
+  commit: b35e149e7c34d0df5ef436abf603a2d38f57ada7

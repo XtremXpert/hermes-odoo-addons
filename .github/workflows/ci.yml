@@ -47,7 +47,7 @@ jobs:
           # « poc » est exclu : il n'est pas versionné et porte des secrets.
           # $MODULES est joint par des virgules pour « --init » d'Odoo :
           # ruff, lui, attend des chemins séparés par des espaces.
-          ruff check ${MODULES//,/ } --exclude poc
+          ruff check ${MODULES//,/ } tools --exclude poc
 
       - name: Syntaxe Python des fichiers versionnés
         run: |
@@ -60,6 +60,19 @@ jobs:
 
       - name: Tests JS
         run: node --test '*/static/tests/*.test.js'
+
+      - name: Restes du dépôt
+        run: |
+          # Version hors série, modèle sans règle d'accès, import JavaScript
+          # mort : trois défauts qui passent la relecture et ne se voient
+          # qu'à l'exécution.
+          python3 tools/verifier_les_restes.py
+
+      - name: Verrou Odoo
+        run: |
+          # L'arbre cloné ici doit être celui que le verrou déclare validé —
+          # sinon la CI éprouve une révision que personne n'a éprouvée.
+          python3 tools/odoo_lock.py check
 
   odoo:
     name: Tests Odoo

@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# Le même passage que la CI, mais avant que le commit existe.
+#
+# Installation, une seule fois :
+#     git config core.hooksPath tools/hooks
+#
+# Ce qu'il rattrape, et pourquoi : le lint de l'éditeur n'est pas celui de la CI
+# (un F841 ou un W292 passent à l'écran et font rougir le coureur), un fichier
+# XML invalide ne casse pas une vue mais tout le registre, et une version hors
+# série ou un import JavaScript mort ne se voient qu'à l'exécution.
+
+set -uo pipefail
+
+cd "$(git rev-parse --show-toplevel)" || exit 1
+
+MODULES="asterisk_ari mailcow_admin voipms_sms wazo_phone wazo_server"
+JOURNAL="$(mktemp)"
+ECHEC=0
+
+etape() {
+    local titre="$1"
+    shift
+    printf '%-26s ' "$titre"
+    if "$@" > "$JOURNAL" 2>&1; then
+        echo "ok"
+    else
+        echo "ÉCHEC"
+        sed 's/^/    /' "$JOURNAL" | head -20
+        ECHEC=1
+    fi
+}
+
+if command -v ruff > /dev/null; then
+    etape "ruff" ruff check $MODULES --exclude poc
+else
+    echo "ruff absent : « python -m pip install ruff==0.16.9 » pour le même lint que la CI"
+fi
+
+# La liste vient de git, exactement comme dans la CI : « poc » n'est pas
+# versionné (il porte des secrets) et un fichier local qui ne se compile pas
+# n'a pas à bloquer un commit.
+etape "compilation" python3 -m compileall -q $(git ls-files '*.py')
+etape "XML" python3 .github/scripts/verifier_les_xml.py
+etape "restes" python3 tools/verifier_les_restes.py
+etape "verrou Odoo" python3 tools/odoo_lock.py check
+
+if command -v node > /dev/null; then
+    etape "tests JS" node --test '*/static/tests/*.test.js'
+fi
+
+rm -f "$JOURNAL"
+
+if [ "$ECHEC" -ne 0 ]; then
+    echo
+    echo "Commit refusé : rejouer « tools/hooks/pre-commit » après correction."
+    exit 1
+fi
+exit 0

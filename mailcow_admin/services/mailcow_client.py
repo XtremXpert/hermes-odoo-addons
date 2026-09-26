@@ -64,7 +64,12 @@ class MailcowClient:
 
     def __init__(self, env, base_url=None, api_key=None):
         self.env = env
-        icp = env['ir.config_parameter']
+        # Les réglages du module sont administrés par l'administrateur, mais ils
+        # sont lus POUR l'utilisateur qui agit : sans sudo, un gestionnaire se
+        # voit refuser l'aperçu comme la synchronisation (« You are not allowed
+        # to access 'System Parameter' »). La clé ne sort jamais d'ici : elle
+        # part dans l'en-tête de la requête, jamais dans une erreur.
+        icp = env['ir.config_parameter'].sudo()
         self.base_url = base_url or icp.get_str('mailcow.base_url', default='')
         self.api_key = api_key or icp.get_str('mailcow.api_key', default='')
 

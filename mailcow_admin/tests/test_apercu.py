@@ -76,3 +76,26 @@ class TestApercu(TransactionCase):
         self.assertEqual(action['res_model'], 'mailcow.sync.preview')
         apercu = self.env['mailcow.sync.preview'].browse(action['res_id'])
         self.assertTrue(apercu.plan)
+
+    def test_un_gestionnaire_peut_ouvrir_l_apercu(self):
+        """Le bouton est réservé au groupe Gestionnaire : il doit marcher pour lui.
+
+        Le test tourne avec un vrai utilisateur, et non avec l'administrateur de
+        la suite — celui-ci ignore les règles d'accès, ce qui masquait justement
+        l'absence de règle sur mailcow.sync.preview.
+        """
+        gestionnaire = self.env['res.users'].create({
+            'name': 'Gestionnaire Mailcow',
+            'login': 'mailcow_gestionnaire_apercu_test',
+            'group_ids': [(6, 0, [
+                self.env.ref('base.group_user').id,
+                self.env.ref('mailcow_admin.group_mailcow_manager').id,
+            ])],
+        })
+        boite = self.env['mailcow.mailbox'].create({
+            'local_part': 'apercu', 'domain_id': self.domain.id, 'synced': True,
+        })
+        with patch.object(MailcowClient, '_request',
+                          return_value=[self._entree('apercu')]):
+            action = boite.with_user(gestionnaire).action_preview_sync_from_mailcow()
+        self.assertEqual(action['res_model'], 'mailcow.sync.preview')

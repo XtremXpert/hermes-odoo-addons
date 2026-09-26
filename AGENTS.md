@@ -19,8 +19,12 @@ la série **19.5** : `'version': '19.5.x.y.z'`. Avant de choisir un identifiant 
 vérifier la série — les ruptures connues sont consignées dans la skill
 `odoo20-breaking-changes`.
 
-Deux versions dérivent de la convention et devraient être alignées : `asterisk_ari`
-(`19.5.0`), `wazo_phone` (`19.5.3`) et `wazo_server` (`1.0`).
+La forme de la version compte : `19.5`, `19.5.3` ou `19.5.2.0.0` — mais **pas plus de trois
+segments après la série** dès qu'un module porte un script de migration. La version d'un script
+est comparée à celle du manifeste, et un manifeste à cinq segments ne peut être égalé par aucun
+nom de dossier : le script ne s'exécute alors jamais, sans le dire. `mailcow_admin`
+(`19.5.2.0.0`) et `voipms_sms` (`19.5.1.0.0`) sont dans ce cas — à raccourcir le jour où l'un
+des deux reçoit une migration. `tools/verifier_les_restes.py` refuse toute version hors série.
 
 ## Branche
 
@@ -45,6 +49,11 @@ commit déjà poussé, même en étant le seul committeur.
 - `start.sh` — **le seul lanceur autorisé** ;
 - `.github/workflows/ci.yml` et `.github/scripts/verifier_les_xml.py` — la CI et son validateur ;
 - `ruff.toml` — chaque exception porte sa raison ;
+- `tools/` — les outils du dépôt : `test`, `verifier_les_restes.py`,
+  `modules_fantomes.py`, `odoo_lock.py`, et le crochet `hooks/pre-commit` ;
+- `odoo.lock` — la révision d'Odoo (et des thèmes, et d'entreprise) contre laquelle le dépôt
+  a été éprouvé : `tools/odoo_lock.py write|check` ;
+- `logs/` — journaux des exécutions locales, ignorés par git ;
 - `poc/` — jetons et mot de passe d'une VM de test : **exclu**, jamais committé.
 
 ## Chemin d'addons complet
@@ -92,11 +101,34 @@ grep 'odoo.tests.result' /tmp/suite.log
   Odoo abandonne avant de rien lancer ;
 - **jamais `--no-http`** quand on veut les tests navigateur — ils sont alors **sautés en
   silence** et le résultat reste vert. La CI refuse ce saut (voir plus bas) ;
+- **`--db-filter` ouvert** dès que la base de test ne commence pas par `odoo20` : le filtre de
+  `conf/odoo.conf` ne la couvre pas, le navigateur est renvoyé au sélecteur de bases, et le test
+  navigateur échoue sur un élément introuvable — un `303` qu'il faut lire dans le journal, aucun
+  message ne l'annonce. `tools/test` s'en charge ;
 - juger la ligne `odoo.tests.result`, **jamais le code de sortie d'un tuyau** : un `grep`
   qui ne trouve rien sort en 1, et un journal vide ressemble à un plantage quand ce n'est
   qu'un tampon (préfixer `PYTHONUNBUFFERED=1`) ;
 - un test constate un **écart** — lire avant, comparer après. Tout compte absolu est un
   piège : il passe sur la base de développement et casse sur une base neuve.
+
+## Les outils
+
+```bash
+tools/test mailcow_admin                # base neuve, ports libres, verdict sur la ligne de résultat
+tools/test wazo_phone wazo_server
+python3 tools/verifier_les_restes.py    # versions, règles d'accès manquantes, imports JS morts
+python3 tools/modules_fantomes.py -d odoo20
+python3 tools/odoo_lock.py check        # l'arbre Odoo a-t-il dérivé du verrou ?
+```
+
+Et le crochet, qui rejoue tout cela avant chaque commit — à installer une fois :
+
+```bash
+git config core.hooksPath tools/hooks
+```
+
+Il refuse le commit si une étape échoue : c'est la façon la moins coûteuse de ne plus jamais
+pousser un `F841`, un `W292`, une version hors série ou un import JavaScript mort.
 
 ## Vérifier avant de pousser
 
@@ -109,6 +141,8 @@ ruff check asterisk_ari mailcow_admin voipms_sms wazo_phone wazo_server --exclud
 python -m compileall -q $(git ls-files '*.py')
 python .github/scripts/verifier_les_xml.py
 node --test '*/static/tests/*.test.js'
+python3 tools/verifier_les_restes.py
+python3 tools/odoo_lock.py check
 ```
 
 ## Pièges du dépôt

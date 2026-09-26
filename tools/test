@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+# Joue les tests d'un ou plusieurs modules, sur une base neuve et jetable.
+#
+#     tools/test mailcow_admin
+#     tools/test wazo_phone wazo_server
+#
+# Deux pièges coûtent sinon un aller-retour à chaque fois :
+#   1. sans --http-port explicite, le serveur de développement tient 2069 et
+#      Odoo abandonne avant de rien lancer ;
+#   2. avec --no-http, les tests navigateur sont sautés EN SILENCE et le
+#      résultat reste vert ;
+#   3. le « dbfilter » de la configuration locale ne couvre pas la base de test :
+#      sans --db-filter explicite, le navigateur est renvoyé au sélecteur de
+#      bases et le test navigateur échoue sur un élément introuvable — un 303
+#      qu'il faut lire dans le journal, aucun message ne l'annonce.
+# Ce script choisit donc des ports libres, ne passe jamais --no-http, ouvre le
+# filtre, écrit le journal dans logs/, et juge sur la ligne « odoo.tests.result »
+# — jamais sur le code de sortie d'un tuyau.
+
+set -uo pipefail
+
+cd "$(dirname "$0")/.." || exit 2
+
+if [ "$#" -eq 0 ]; then
+    echo "usage: tools/test <module> [autre module...]" >&2
+    exit 2
+fi
+
+BASE="${BASE_TEST:-test_addons}"
+MODULES="$*"
+TAGS=""
+for module in $MODULES; do
+    TAGS="${TAGS:+$TAGS,}/$module"
+done
+
+port_libre() {
+    python3 -c 'import socket
+s = socket.socket()
+s.bind(("", 0))
+print(s.getsockname()[1])
+s.close()'
+}
+
+HTTP_PORT="$(port_libre)"
+GEVENT_PORT="$(port_libre)"
+JOURNAL="logs/tests-$(echo "$MODULES" | tr ' ' '-').log"
+mkdir -p logs
+
+echo "base    : $BASE (recréée)"
+echo "modules : $MODULES"
+echo "ports   : $HTTP_PORT (http), $GEVENT_PORT (gevent) — explicites, c'est le point"
+echo "journal : $JOURNAL"
+
+dropdb --if-exists --force -h 127.0.0.1 -U odoo "$BASE" || {
+    # --force coupe les connexions restantes ; si la suppression échoue quand
+    # même, le dire — une erreur cachée ici fait échouer createdb juste après,
+    # avec un message qui n'explique rien.
+    echo "suppression de « $BASE » impossible" >&2
+    exit 2
+}
+createdb -h 127.0.0.1 -U odoo -O odoo "$BASE" || exit 2
+
+PYTHONUNBUFFERED=1 ./start.sh -d "$BASE" \
+    -i "${MODULES// /,}" \
+    --http-port "$HTTP_PORT" --gevent-port "$GEVENT_PORT" \
+    --db-filter='.*' \
+    --test-enable --stop-after-init \
+    --test-tags="$TAGS" > "$JOURNAL" 2>&1
+
+RESULTAT="$(grep -E 'odoo.tests.result' "$JOURNAL" | tail -1)"
+if [ -z "$RESULTAT" ]; then
+    echo
+    echo "Aucune ligne de résultat : la suite n'est pas allée au bout."
+    echo "Douze dernières lignes du journal :"
+    tail -12 "$JOURNAL" | sed 's/^/    /'
+    exit 1
+fi
+
+echo
+echo "$RESULTAT"
+case "$RESULTAT" in
+    *"0 failed, 0 error"*)
+        echo "VERT"
+        exit 0
+        ;;
+    *)
+        echo "ROUGE"
+        exit 1
+        ;;
+esac

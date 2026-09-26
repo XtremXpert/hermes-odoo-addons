@@ -22,7 +22,7 @@ jeton de tenant peut lire les données d'un autre tenant en changeant l'en-tête
 ``Wazo-Tenant``. La frontière se place à l'URL (un point d'entrée par tenant),
 voir ``doc/P5_WAZO_SERVER_SPEC.md``.
 """,
-    'version': '1.0',
+    'version': '19.5.0',
     'depends': ['wazo_phone'],
     'data': [
         'security/ir.access.csv',
