@@ -126,7 +126,8 @@ def main() -> int:
             )
 
         # 1 bis. un module qui porte des scripts de migration doit pouvoir les nommer.
-        if valeur and (RACINE / module / "migrations").is_dir() and not NOM_DE_DOSSIER.match(valeur):
+        a_des_scripts = (RACINE / module / "migrations").is_dir()
+        if valeur and a_des_scripts and not NOM_DE_DOSSIER.match(valeur):
             defauts.append(
                 f"{module} : porte des scripts de migration, mais sa version "
                 f"« {valeur} » ne peut être nommée par aucun dossier"

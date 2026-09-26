@@ -31,7 +31,9 @@ etape() {
 }
 
 if command -v ruff > /dev/null; then
-    etape "ruff" ruff check $MODULES --exclude poc
+    # Le même périmètre que la CI, « tools » compris : sans lui, le crochet ne
+    # voit pas la faute qu'elle verra, et le commit part rouge.
+    etape "ruff" ruff check $MODULES tools --exclude poc
 else
     echo "ruff absent : « python -m pip install ruff==0.16.9 » pour le même lint que la CI"
 fi
