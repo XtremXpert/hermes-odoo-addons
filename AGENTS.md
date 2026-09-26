@@ -162,6 +162,7 @@ python -m compileall -q $(git ls-files '*.py')
 python .github/scripts/verifier_les_xml.py
 node --test '*/static/tests/*.test.js'
 python3 tools/test_crochet.py   # le crochet lui-même : il clone, pose une faute, exige le refus
+bash tools/test_app_password.sh  # les refus du script de courriel, sans réseau ni secret
 python3 tools/verifier_les_restes.py
 python3 tools/odoo_lock.py check
 ```
