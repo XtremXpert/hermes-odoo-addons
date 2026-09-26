@@ -87,3 +87,12 @@ réjouir pour autant : il ne prouve rien. Ce qui compte est toujours le verdict 
 la **dernière** exécution, celle qui porte le code qu'on croit avoir livré. Un
 « Tests Odoo » annulé pendant que « Qualité » passe n'est pas une demi-réussite :
 c'est une exécution qui n'a pas eu lieu.
+
+## Note d'exploitation — la visibilité d'un dépôt ne se déduit pas de son usage
+
+Trois affirmations de ce dépôt disaient « le dépôt est public ». Mesure :
+`gh api repos/XtremXpert/hermes-odoo-addons --jq .visibility` répond `private`.
+La règle qui en découlait — rien de secret dans un fichier suivi — reste bonne,
+mais sa raison était fausse, et elle masquait une conséquence de sens contraire :
+les minutes d'Actions d'un dépôt **privé** sont décomptées du forfait, celles d'un
+dépôt public ne le sont pas. Une croyance confortable peut cacher un coût réel.
