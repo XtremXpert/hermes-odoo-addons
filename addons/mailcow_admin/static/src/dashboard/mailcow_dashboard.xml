@@ -69,7 +69,7 @@
                 <!-- Les fiches non synchronisees ne demandent pas d'action
                      urgente : une ligne discrete, pas des cartes. -->
                 <p t-if="this.informations.length" class="small text-muted mb-4">
-                    <i class="fa fa-info-circle me-1"/>
+                    <i class="oi me-1" data-icon="info"/>
                     <t t-foreach="this.informations" t-as="info" t-key="info.cle">
                         <a href="#" class="me-3" t-on-click.prevent="() => this.ouvrirAlerte(info)">
                             <t t-out="info.nombre"/> <t t-out="info.libelle.toLowerCase()"/>

@@ -13,7 +13,7 @@ Administer un serveur Mailcow v1 depuis Odoo
 * Configuration de la connexion (URL + clé API) dans les réglages
 * Tableau de bord : occupation des domaines, plafonds atteints, pression des quotas
 """,
-    'version': '19.5.2.0.0',
+    'version': '20.0.2.0.0',
     'depends': ['base', 'mail'],
     'data': [
         'security/mailcow_admin_groups.xml',

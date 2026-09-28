@@ -10,7 +10,7 @@ Appel direct depuis la fiche partenaire via l'API ARI de FreePBX/Asterisk,
 historique des appels (état, ID ARI, erreurs). Le SMS reste géré par le
 module voipms_sms (API REST VoIP.ms) — seul le trafic voix passe par le PBX.
 """,
-    'version': '19.5.0',
+    'version': '20.0.1',
     'license': 'LGPL-3',
     'author': 'Diverse-Cité',
     'website': 'https://www.diverse-cite.com',

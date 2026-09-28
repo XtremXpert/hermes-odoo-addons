@@ -9,7 +9,7 @@
                 <button name="action_click_to_call" type="object"
                         string="Appeler"
                         class="oe_stat_button"
-                        icon="fa-phone"
+                        icon="phone"
                         groups="asterisk_ari.group_asterisk_user"
                         invisible="not phone"/>
             </xpath>

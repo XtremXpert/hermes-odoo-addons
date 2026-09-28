@@ -10,7 +10,7 @@
             <div class="d-flex justify-content-between align-items-start mb-3">
                 <div>
                     <button class="btn btn-link p-0 mb-1" t-on-click="() => this.retour()">
-                        <i class="fa fa-arrow-left me-1"/>Tous les domaines
+                        <i class="oi me-1" data-icon="arrow_back"/>Tous les domaines
                     </button>
                     <h2 class="mb-1">
                         <span t-out="this.donnees.nom"/>
@@ -123,7 +123,7 @@
                     </div>
                 </div>
                 <p t-if="this.informations.length" class="small text-muted mb-3">
-                    <i class="fa fa-info-circle me-1"/>
+                    <i class="oi me-1" data-icon="info"/>
                     <t t-foreach="this.informations" t-as="info" t-key="info.cle">
                         <a href="#" class="me-3" t-on-click.prevent="() => this.ouvrirAlerte(info)">
                             <t t-out="info.nombre"/> <t t-out="info.libelle.toLowerCase()"/>

@@ -11,7 +11,7 @@ Boîte d'envoi SMS via VoIP.ms
 * Synchronisation des DID depuis le serveur
 * Configuration de la connexion (utilisateur + token) dans les réglages
 """,
-    'version': '19.5.1.0.0',
+    'version': '20.0.1.0.0',
     'depends': ['base'],
     'data': [
         'security/voipms_sms_groups.xml',

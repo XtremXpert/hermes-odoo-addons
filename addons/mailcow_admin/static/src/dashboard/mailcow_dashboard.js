@@ -17,7 +17,8 @@
    production. Tirer l'etat du serveur reste un geste explicite. */
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
-import { Component, onWillStart, onWillUnmount, proxy } from "@odoo/owl";
+import { Component, onWillStart, onWillUnmount, proxy, useProps } from "@odoo/owl";
+import { standardActionServiceProps } from "@web/webclient/actions/action_plugin";
 
 import {
     basculerTri,
@@ -41,6 +42,8 @@ const CHAMPS_RECHERCHE = {
 
 export class MailcowDashboard extends Component {
     static template = "mailcow_admin.Dashboard";
+    // Owl 3 : les props d'une action client doivent être déclarées (action, actionId, resId…)
+    props = useProps({ ...standardActionServiceProps });
 
     setup() {
         this.orm = useService("orm");
