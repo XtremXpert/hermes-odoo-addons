@@ -4,14 +4,14 @@
  * Bouton téléphone dans la barre système (systray). Ouvre/ferme le softphone
  * (overlay) et affiche l'état (Prêt, En appel, Appel entrant…).
  */
-import { Component, onWillStart } from "@odoo/owl";
+import { Component, onWillStart, useProps } from "@odoo/owl";
 import { useCommand } from "@web/core/commands/command_hook";
 import { _t } from "@web/core/l10n/translation";
 import { useService } from "@web/core/utils/hooks";
 
 export class WazoSystrayItem extends Component {
-    static props = {};
     static template = "wazo_phone.SystrayItem";
+    props = useProps({});
 
     setup() {
         this.service = useService("wazo_softphone");
@@ -35,7 +35,7 @@ export class WazoSystrayItem extends Component {
         // Un appel entrant doit se voir : une enveloppe (``o_icon_email``,
         // hérité d'un copier-coller) affichait une icône de courriel pendant
         // que le téléphone sonnait.
-        return this.service.state === "ringing" ? "fa-phone-volume" : "fa-phone";
+        return this.service.state === "ringing" ? "phone_in_talk" : "phone";
     }
 
     /** @returns {boolean} */

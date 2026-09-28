@@ -11,26 +11,26 @@
  * n'a pas d'endpoint Wazo : on affiche un message clair à la place des contrôles.
  *
  * L'état réactif vient de deux sources — le **service**, qui est déjà réactif
- * (il rend ``proxy(this)``), et l'état **local** du composant (``useState``).
+ * (il rend ``proxy(this)``), et l'état **local** du composant (``proxy``).
  * Aucun rendu manuel n'est donc nécessaire : ``@web/owl2/utils.render`` est
  * déprécié et re-rendait le composant avec un contexte hérité, où les membres
  * posés dans ``setup()`` sont invisibles.
  */
-import { Component, onMounted, useState } from "@odoo/owl";
+import { Component, onMounted, proxy, t, useProps } from "@odoo/owl";
 import { _t } from "@web/core/l10n/translation";
 import { useService } from "@web/core/utils/hooks";
 
 const DTMF_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "*", "0", "#"];
 
 export class WazoSoftphone extends Component {
-    static props = {
-        target: { type: String, optional: true, default: () => "" },
-    };
     static template = "wazo_phone.Softphone";
+    props = useProps({
+        target: t.string().optional(""),
+    });
 
     setup() {
         this.service = useService("wazo_softphone");
-        this.state = useState({
+        this.state = proxy({
             target: this.props.target || "",
             dtmfTones: "",
             transferTarget: "",
@@ -54,17 +54,17 @@ export class WazoSoftphone extends Component {
     get statusIcon() {
         switch (this.service.state) {
             case "registered":
-                return "fa-check-circle";
+                return "check_circle";
             case "ringing":
-                return "fa-phone-volume";
+                return "phone_in_talk";
             case "in_call":
-                return "fa-phone";
+                return "phone";
             case "outbound":
-                return "fa-phone-square";
+                return "phone";
             case "error":
-                return "fa-exclamation-triangle";
+                return "warning";
             default:
-                return "fa-circle";
+                return "circle";
         }
     }
 

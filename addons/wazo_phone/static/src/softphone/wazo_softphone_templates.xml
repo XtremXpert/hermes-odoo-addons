@@ -14,7 +14,7 @@
             t-on-click="this.onClick"
             data-hotkey="Alt+Shift+S"
         >
-            <i t-attf-class="{{ this.icon }} fa-lg"/>
+            <i class="oi fs-5" t-att-data-icon="this.icon"/>
             <span t-if="this.service.state === 'ringing'" class="ms-1">
                 <t t-out="this.caller"/>
             </span>
@@ -26,11 +26,11 @@
         <div class="o_wazo_softphone p-3 shadow border rounded">
             <!-- Bandeau d'état + fermeture. -->
             <div class="d-flex align-items-center mb-2">
-                <i t-attf-class="{{ this.statusIcon }} me-2"
+                <i class="oi me-2" t-att-data-icon="this.statusIcon"
                     t-att-class="{ 'text-success': this.service.state === 'registered' or this.isInCall or this.isRinging }"/>
                 <span class="fw-bold me-auto"><t t-out="this.statusText"/></span>
-                <button class="btn btn-sm btn-ghost" t-on-click="this.onClose" title="Fermer">
-                    <i class="fa fa-times"/>
+                <button class="btn btn-sm btn-ghost" t-on-click="this.onClose" title.translate="Fermer">
+                    <i class="oi" data-icon="close"/>
                 </button>
             </div>
 
@@ -42,14 +42,14 @@
                             t-att-class="{ active: this.state.activeTab === 'call' }"
                             t-att-disabled="this.isInCall or this.isRinging"
                             t-on-click.prevent="this.onTabChange('call')">
-                            <t t-out="_t('Appel')"/>
+                            Appel
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="#"
                             t-att-class="{ active: this.state.activeTab === 'log' }"
                             t-on-click.prevent="this.onTabChange('log')">
-                            <t t-out="_t('Journal')"/>
+                            Journal
                         </a>
                     </li>
                 </ul>
@@ -61,32 +61,33 @@
                         <input
                             type="text"
                             class="form-control me-2"
-                            placeholder="Extension (ex. 1011)"
+                            placeholder.translate="Extension (ex. 1011)"
                             t-att-value="this.state.target"
                             t-on-input="this.onTargetInput"
                             autocomplete="off"
                         />
                         <button type="submit" class="btn btn-primary"
                             t-att-disabled="this.isInCall or this.isRinging">
-                            <i class="fa fa-phone me-1"/>
-                            <t t-out="_t('Appeler')"/>
+                            <i class="oi me-1" data-icon="phone"/>
+                            Appeler
                         </button>
                     </form>
 
                     <!-- Contrôles d'appel. -->
                     <div class="d-flex gap-2 flex-wrap">
                         <button class="btn btn-success" t-if="this.isRinging" t-on-click="this.onAnswer">
-                            <i class="fa fa-check me-1"/>
-                            <t t-out="_t('Répondre')"/>
+                            <i class="oi me-1" data-icon="check"/>
+                            Répondre
                         </button>
                         <button class="btn btn-danger"
                             t-if="this.isInCall or this.isOutbound or this.isRinging" t-on-click="this.onHangup">
-                            <i class="fa fa-phone-slash me-1"/>
-                            <t t-out="_t('Raccrocher')"/>
+                            <i class="oi me-1" data-icon="cancel"/>
+                            Raccrocher
                         </button>
                         <button class="btn btn-warning" t-if="this.isInCall" t-on-click="this.onHoldToggle">
-                            <i t-attf-class="fa {{ this.isHeld ? 'fa-phone-volume' : 'fa-pause' }} me-1"/>
-                            <t t-out="this.isHeld ? _t('Reprendre') : _t('Mettre en attente')"/>
+                            <i class="oi me-1" t-att-data-icon="this.isHeld ? 'phone_in_talk' : 'pause'"/>
+                            <t t-if="this.isHeld">Reprendre</t>
+                            <t t-else="">Mettre en attente</t>
                         </button>
                     </div>
 
@@ -96,15 +97,15 @@
                             <input
                                 type="text"
                                 class="form-control"
-                                placeholder="DTMF (ex. 1234*)"
+                                placeholder.translate="DTMF (ex. 1234*)"
                                 t-att-value="this.state.dtmfTones"
                                 t-on-input="this.onDtmfInput"
                                 autocomplete="off"
                             />
                             <button type="submit" class="btn btn-outline-secondary"
                                 t-att-disabled="!this.state.dtmfTones">
-                                <i class="fa fa-hashtag me-1"/>
-                                <t t-out="_t('Envoyer')"/>
+                                <i class="oi me-1" data-icon="dialpad"/>
+                                Envoyer
                             </button>
                         </form>
                         <div class="d-flex gap-1 mt-1 flex-wrap">
@@ -123,15 +124,15 @@
                             <input
                                 type="text"
                                 class="form-control"
-                                placeholder="Transférer vers (ex. 2000)"
+                                placeholder.translate="Transférer vers (ex. 2000)"
                                 t-att-value="this.state.transferTarget"
                                 t-on-input="this.onTransferInput"
                                 autocomplete="off"
                             />
                             <button type="submit" class="btn btn-outline-primary"
                                 t-att-disabled="!this.state.transferTarget">
-                                <i class="fa fa-exchange me-1"/>
-                                <t t-out="_t('Transférer')"/>
+                                <i class="oi me-1" data-icon="swap_horiz"/>
+                                Transférer
                             </button>
                         </form>
                     </div>
@@ -140,14 +141,14 @@
                 <!-- Onglet Journal : journal d'appels (CDR). -->
                 <div t-else="">
                     <div t-if="this.callLog.length === 0" class="text-muted small">
-                        <t t-out="_t('Aucun appel enregistré.')"/>
+                        Aucun appel enregistré.
                     </div>
                     <ul class="list-group" t-else="">
                         <li class="list-group-item py-2" t-foreach="this.callLog" t-as="entry"
                             t-key="entry.id">
                             <div class="d-flex align-items-center">
-                                <i t-attf-class="fa {{ entry.direction === 'inbound'
-                                    ? 'fa-arrow-down text-success' : 'fa-arrow-up text-primary' }} me-2"/>
+                                <i class="oi me-2" t-att-data-icon="entry.direction === 'inbound' ? 'arrow_downward' : 'arrow_upward'"
+                                    t-att-class="entry.direction === 'inbound' ? 'text-success' : 'text-primary'"/>
                                 <span class="fw-bold me-auto">
                                     <t t-out="entry.name or entry.num or '—'"/>
                                     <small class="text-muted"> (<t t-out="entry.num"/>)</small>
@@ -158,7 +159,7 @@
                             <div class="small text-muted">
                                 <t t-out="this.formatDateTime(entry.date)"/>
                                 <t t-if="entry.partner_name"> · <t t-out="entry.partner_name"/></t>
-                                <t t-if="!entry.answered"> · <t t-out="_t('non répondu')"/></t>
+                                <t t-if="!entry.answered"> · non répondu</t>
                             </div>
                         </li>
                     </ul>
@@ -168,7 +169,7 @@
                 <!-- Message de dégradation. -->
                 <div class="text-muted small" t-out="this.statusText"/>
                 <p class="text-muted small mb-0">
-                    <t t-out="_t('Synchronisez l’endpoint Wazo de cet utilisateur pour activer les appels.')"/>
+                    Synchronisez l’endpoint Wazo de cet utilisateur pour activer les appels.
                 </p>
             </t>
         </div>

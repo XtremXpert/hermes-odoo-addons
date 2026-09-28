@@ -16,7 +16,7 @@ Connecteur Wazo Platform
 * Journal d'appels synchronisé depuis wazo-call-logd (cron + bouton manuel)
 * Statistiques d'appels par contact
 """,
-    'version': '19.5.3',
+    'version': '20.0.3',
     'depends': ['base', 'web'],
     'data': [
         'security/wazo_groups.xml',

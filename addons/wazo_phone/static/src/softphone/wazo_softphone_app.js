@@ -17,6 +17,7 @@ import {
     onPatched,
     onWillDestroy,
     useListener,
+    useProps,
     xml,
     proxy,
 } from "@odoo/owl";
@@ -26,8 +27,8 @@ import { WazoSoftphone } from "./wazo_softphone";
 import { WazoSystrayItem } from "./wazo_systray_item";
 
 export class WazoSoftphoneApp extends Component {
-    static props = {};
     static template = xml`<t/>`;
+    props = useProps({});
 
     setup() {
         this.service = useService("wazo_softphone");

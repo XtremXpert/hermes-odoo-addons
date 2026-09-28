@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 
 RACINE = Path(__file__).resolve().parent.parent
-SERIE = "19.5"
+SERIE = "20.0"
 MODULES = ("asterisk_ari", "mailcow_admin", "voipms_sms", "wazo_phone", "wazo_server")
 # Nos modules vivent sous « addons/ », comme dans les autres dépôts de la maison.
 DOSSIER_MODULES = RACINE / "addons"
