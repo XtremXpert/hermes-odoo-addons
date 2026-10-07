@@ -19,6 +19,10 @@ crochet **committé**. Un outil modifié mais non committé n'est pas éprouvé 
 faut committer avant de se fier à un vert.
 """
 
+# Outil en ligne de commande, lancé hors d'Odoo : il parle à son terminal,
+# « print » est sa sortie, pas un journal.
+# pylint: disable=print-used
+
 from __future__ import annotations
 
 import shutil
@@ -46,9 +50,7 @@ def dire(texte: str = "") -> None:
 
 
 def git(dossier: Path, *args: str) -> subprocess.CompletedProcess:
-    return subprocess.run(
-        ["git", *args], cwd=dossier, capture_output=True, text=True, check=False
-    )
+    return subprocess.run(["git", *args], cwd=dossier, capture_output=True, text=True, check=False)
 
 
 def introduire(dossier: Path, genre: str) -> str:
@@ -57,16 +59,16 @@ def introduire(dossier: Path, genre: str) -> str:
         # Un fichier de modèle, surtout pas un manifeste : la config exempte
         # « **/__manifest__.py » et « **/tests/*.py » d'E501, à dessein. Une
         # faute posée là ne dirait rien du crochet.
-        cible = dossier / "addons" / "mailcow_admin" / "models" / "res_config_settings.py"
+        cible = dossier / "mailcow_admin" / "models" / "res_config_settings.py"
         cible.write_text(cible.read_text() + f"\n# {'x' * 140}\n")
     elif genre == "syntaxe":
-        cible = dossier / "addons" / "voipms_sms" / "models" / "syntaxe_cassee.py"
+        cible = dossier / "voipms_sms" / "models" / "syntaxe_cassee.py"
         cible.write_text("def oups(:\n")
     elif genre == "xml":
-        cible = dossier / "addons" / "asterisk_ari" / "security" / "casse.xml"
+        cible = dossier / "asterisk_ari" / "security" / "casse.xml"
         cible.write_text("<odoo><data>\n")
     elif genre == "csv":
-        cible = dossier / "addons" / "mailcow_admin" / "security" / "ir.access.csv"
+        cible = dossier / "mailcow_admin" / "security" / "ir.access.csv"
         regle = "regle_cassee,un modele,trop,peu,de,champs,ici"
         cible.write_text(cible.read_text().rstrip("\n") + "\n" + regle + "\n")
     else:
@@ -139,13 +141,9 @@ def main() -> int:
             else:
                 # L'étape fautive doit être nommée dans la sortie.
                 etape = genre if genre != "ligne-longue" else "ruff"
-                nom = {"syntaxe": "compilation", "csv": "restes", "ruff": "ruff"}.get(
-                    etape, etape
-                )
+                nom = {"syntaxe": "compilation", "csv": "restes", "ruff": "ruff"}.get(etape, etape)
                 nomme = nom in sortie
-                dire(
-                    f"   {'refusé' if nomme else 'refusé (étape non nommée)'} : {titre}"
-                )
+                dire(f"   {'refusé' if nomme else 'refusé (étape non nommée)'} : {titre}")
                 echecs += 0 if nomme else 1
             nettoyer(clone, chemin)
             git(clone, "reset", "--quiet")

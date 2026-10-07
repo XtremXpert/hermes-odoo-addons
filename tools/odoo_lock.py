@@ -10,6 +10,10 @@ fichier l'écrit, et `check` dit si l'arbre local a dérivé depuis.
     python3 tools/odoo_lock.py remettre   # remettre chaque arbre sur sa révision
 """
 
+# Outil en ligne de commande, lancé hors d'Odoo : il parle à son terminal,
+# « print » est sa sortie, pas un journal.
+# pylint: disable=print-used
+
 from __future__ import annotations
 
 import subprocess

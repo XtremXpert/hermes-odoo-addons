@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <menuitem
+        id="mailcow_root_menu"
+        name="Mailcow"
+        sequence="60"
+        web_icon="mailcow_admin,static/description/icon.png"
+        groups="mailcow_admin.group_mailcow_user"
+    />
+
+    <menuitem
+        id="mailcow_objects_menu"
+        name="Objets"
+        parent="mailcow_root_menu"
+        sequence="10"
+    />
+
+    <menuitem
+        id="mailcow_domain_menu"
+        name="Domaines"
+        parent="mailcow_objects_menu"
+        action="action_mailcow_domain"
+        sequence="10"
+    />
+
+    <menuitem
+        id="mailcow_mailbox_menu"
+        name="Boîtes mail"
+        parent="mailcow_objects_menu"
+        action="action_mailcow_mailbox"
+        sequence="20"
+    />
+
+    <menuitem
+        id="mailcow_alias_menu"
+        name="Alias"
+        parent="mailcow_objects_menu"
+        action="action_mailcow_alias"
+        sequence="30"
+    />
+
+    <menuitem
+        id="mailcow_email_address_menu"
+        name="Adresses courriel"
+        parent="mailcow_objects_menu"
+        action="action_mailcow_email_address"
+        sequence="40"
+    />
+
+    <record id="action_mailcow_domain_disparus" model="ir.actions.act_window">
+        <field name="name">Domaines disparus du serveur</field>
+        <field name="res_model">mailcow.domain</field>
+        <field name="view_mode">list,form</field>
+        <field
+            name="domain"
+        >[('synced', '=', False), ('last_synced_on', '!=', False), ('active', '=', True)]</field>
+    </record>
+
+    <record id="action_mailcow_mailbox_disparus" model="ir.actions.act_window">
+        <field name="name">Boîtes disparues du serveur</field>
+        <field name="res_model">mailcow.mailbox</field>
+        <field name="view_mode">list,form</field>
+        <field
+            name="domain"
+        >[('synced', '=', False), ('last_synced_on', '!=', False), ('active', '=', True)]</field>
+    </record>
+
+    <record id="action_mailcow_alias_disparus" model="ir.actions.act_window">
+        <field name="name">Alias disparus du serveur</field>
+        <field name="res_model">mailcow.alias</field>
+        <field name="view_mode">list,form</field>
+        <field
+            name="domain"
+        >[('synced', '=', False), ('last_synced_on', '!=', False), ('active', '=', True)]</field>
+    </record>
+
+    <menuitem
+        id="mailcow_disparus_menu"
+        name="Disparues du serveur"
+        parent="mailcow_root_menu"
+        sequence="20"
+    />
+
+    <menuitem
+        id="mailcow_domain_disparus_menu"
+        name="Domaines disparus"
+        parent="mailcow_disparus_menu"
+        action="action_mailcow_domain_disparus"
+        sequence="10"
+    />
+
+    <menuitem
+        id="mailcow_mailbox_disparus_menu"
+        name="Boîtes disparues"
+        parent="mailcow_disparus_menu"
+        action="action_mailcow_mailbox_disparus"
+        sequence="20"
+    />
+
+    <menuitem
+        id="mailcow_alias_disparus_menu"
+        name="Alias disparus"
+        parent="mailcow_disparus_menu"
+        action="action_mailcow_alias_disparus"
+        sequence="30"
+    />
+
+    <menuitem
+        id="mailcow_config_menu"
+        name="Configuration"
+        parent="mailcow_root_menu"
+        action="action_mailcow_settings"
+        groups="base.group_system"
+        sequence="90"
+    />
+</odoo>

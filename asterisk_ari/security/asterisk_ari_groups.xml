@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <record id="group_asterisk_user" model="res.groups">
+        <field name="name">Utilisateur téléphonie</field>
+    </record>
+
+    <record id="group_asterisk_manager" model="res.groups">
+        <field name="name">Gestionnaire téléphonie</field>
+        <field name="implied_ids" eval="[(4, ref('group_asterisk_user'))]" />
+    </record>
+</odoo>

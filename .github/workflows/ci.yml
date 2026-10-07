@@ -45,7 +45,7 @@ jobs:
           # Sans ce fichier, le catalogue complet relèverait 373 trouvailles
           # dont l'immense majorité sont des faux positifs.
           # « poc » est exclu : il n'est pas versionné et porte des secrets.
-          ruff check addons tools --exclude poc
+          ruff check . --exclude poc
 
       # Le crochet qui garde les poussées doit être gardé : ce test clone le
       # dépôt, y pose le crochet, pose une faute de chaque sorte et exige le
@@ -149,7 +149,7 @@ jobs:
         run: |
           set -o pipefail
           python odoo/odoo-bin \
-            --addons-path=odoo/addons,addons \
+            --addons-path=odoo/addons,. \
             --db_host=127.0.0.1 --db_port=5432 \
             --db_user=odoo --db_password=odoo \
             --database=hermes_ci \

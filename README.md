@@ -1,6 +1,23 @@
 # Addons custom Odoo (Diverse-Cité)
 
 [![CI](https://github.com/XtremXpert/hermes-odoo-addons/actions/workflows/ci.yml/badge.svg)](https://github.com/XtremXpert/hermes-odoo-addons/actions/workflows/ci.yml)
+[![Pre-commit Status](https://github.com/XtremXpert/hermes-odoo-addons/actions/workflows/pre-commit.yml/badge.svg?branch=20.0)](https://github.com/XtremXpert/hermes-odoo-addons/actions/workflows/pre-commit.yml?query=branch%3A20.0)
+[![Build Status](https://github.com/XtremXpert/hermes-odoo-addons/actions/workflows/test.yml/badge.svg?branch=20.0)](https://github.com/XtremXpert/hermes-odoo-addons/actions/workflows/test.yml?query=branch%3A20.0)
+
+Dépôt au format des dépôts de modules de l'OCA (gabarit `oca-addons-repo-template`,
+voir `.copier-answers.yml`) : chaque module est à la racine, avec son `pyproject.toml`,
+son `readme/` et le `README.rst` qui en est généré ; `pre-commit` applique les contrôles
+de l'OCA.
+
+<!-- prettier-ignore-start -->
+
+[//]: # (addons)
+
+This part will be replaced when running the oca-gen-addons-table script from OCA/maintainer-tools.
+
+[//]: # (end addons)
+
+<!-- prettier-ignore-end -->
 
 Des modules Odoo maison écrits contre l'arbre local d'Odoo : le dossier s'appelle
 `~/hermes-dev/odoo20/`, mais l'arbre se déclare **19.5** (branche `main`) — les modules
@@ -118,8 +135,9 @@ Sans accès au dépôt privé `enterprise`, ajouter `--community` à `setup`.
 ## Utilisation
 
 1. Cloner le dépôt.
-2. Ajouter **`<dépôt>/addons`** à l'`addons_path` d'Odoo (ou copier chaque module) :
-   les modules vivent sous `addons/`, pas à la racine du dépôt.
+2. Ajouter **la racine du dépôt** à l'`addons_path` d'Odoo (ou copier chaque module) :
+   comme dans un dépôt de l'OCA, les modules sont à la racine. Un projet peut aussi les
+   vendoriser (`odoo-dev vendor add <module> --source …`), comme le fait maison.
 3. Installer les modules :
    ```sh
    odoo-bin -d <db> -i mailcow_admin,voipms_sms,asterisk_ari,wazo_phone,wazo_server --stop-after-init
