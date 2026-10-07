@@ -10,6 +10,7 @@ dépendre de ``voip.provider``.
 from odoo.addons.wazo_phone.services.wazo_client import WazoAPIError
 from odoo.tests import tagged
 from odoo.tests.common import TransactionCase
+from odoo.tools import mute_logger
 
 
 def _tuples(options):
@@ -61,8 +62,10 @@ class TestVoipBridge(TransactionCase):
         self.assertTrue(self.wizo._propagate_voip_credentials())
 
     def test_revoke_noop_when_unavailable(self):
-        """La révocation est un no-op sans le module « voip »."""
-        self.assertTrue(self.wizo._revoke_voip_credentials())
+        """La révocation est un no-op sans le module « voip », sans rien
+        journaliser : l'identifiant softphone n'existe tout simplement pas."""
+        with self.assertNoLogs("odoo.addons.wazo_phone.models.voip_bridge", "ERROR"):
+            self.assertTrue(self.wizo._revoke_voip_credentials())
 
     # ------------------------------------------------------------------
     # Mapping des valeurs
@@ -193,6 +196,7 @@ class TestVoipBridge(TransactionCase):
             ],
         )
 
+    @mute_logger("odoo.addons.wazo_phone.models.voip_bridge")
     def test_propagate_swallows_apply_errors(self):
         """Une erreur d'écriture ne doit jamais casser la synchro."""
 

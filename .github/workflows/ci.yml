@@ -19,7 +19,7 @@ env:
   # Odoo avance vite et casse des choses : la CI épingle le commit sur lequel
   # les tests ont réellement été validés, plutôt que de suivre master.
   # Pour avancer : remplacer par le commit voulu, relancer, corriger, repousser.
-  ODOO_COMMIT: 9c2e8fb1b09c0fbdc01d773a33663a7eaf0522f1
+  ODOO_COMMIT: 7bab48ba5fdaa9e20744fda66a9627bfff88924a  # branche 20.0 d'Odoo
   MODULES: asterisk_ari,mailcow_admin,voipms_sms,wazo_phone,wazo_server
 
 jobs:
