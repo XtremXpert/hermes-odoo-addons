@@ -57,10 +57,13 @@ script dans `migrations/19.5.3/` — aucun avertissement, aucune ligne, `migrate
 appelé. Passé à la forme courte `19.5.4` avec `migrations/19.5.4/` :
 `post from 19.5.3.0.0 to 19.5.4`.
 
-`wazo_phone` est le seul des cinq à porter un dossier `migrations/` : `19.5.3/`, la
-reprise des membres de groupes d'appel (P4.5). Il ne s'exécute plus en 20.0 : sans
-préfixe de série, Odoo lit `19.5.3` comme une version **du module** (`20.0.19.5.3`),
-au-delà de la version courante `20.0.3.0.0` ; il reste pour mémoire. Une prochaine
+`wazo_phone` est le seul des cinq à porter un dossier `migrations/` : la reprise des
+membres de groupes d'appel (P4.5), d'abord nommée `19.5.3/`. En 20.0, ce nom ne
+s'exécutait plus : sans préfixe de série, Odoo lisait `19.5.3` comme une version **du
+module** (`20.0.19.5.3`), au-delà de la version courante. Le dossier est renommé
+`20.0.3.0.0/` : il s'exécute pour une base encore sous une version antérieure (série
+19.5), et pas pour une base déjà en `20.0.3` (Odoo juge `20.0.3` == `20.0.3.0.0`). Le
+script est protégé (rien si l'ancienne table manque) et idempotent. Une prochaine
 migration se nomme en forme longue, `migrations/20.0.x.y.z/`.
 `tools/verifier_les_restes.py` refuse toute version hors série.
 

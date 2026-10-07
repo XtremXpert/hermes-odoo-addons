@@ -117,12 +117,12 @@ statistiques réseau, et gestion conference/vidéo dans hold et transfert.
 **État** : bundle vendorisé (`tools/vendor_wazo_sdk.sh`, enveloppe incluse), bundle
 `wazo_phone.assets_sdk` **lazy-loadé** (1,7 Mo minifié, coût nul tant que le moteur
 n'est pas sélectionné), **moteur interchangeable** livré : le service ne parle plus à
-SIP.js en direct, il reçoit un moteur (`wazo_softphone_engine.js`) dont le choix vient
-de `wazo.softphone_engine` — donc d'un paramètre, pas d'un redéploiement — et chaque
-moteur est testé isolément hors navigateur (67 tests Node : traduction de configuration,
-tables d'événements, découpage DTMF, tolérance sans session, sélection). Reste la **QA
-navigateur** : elle seule dira si la conversation passe, et c'est elle qui tranchera sur
-pièce.
+SIP.js en direct, il reçoit un moteur (`wazo_softphone_engine.esm.js`) dont le choix
+vient de `wazo.softphone_engine` — donc d'un paramètre, pas d'un redéploiement — et
+chaque moteur est testé isolément hors navigateur (67 tests Node : traduction de
+configuration, tables d'événements, découpage DTMF, tolérance sans session, sélection).
+Reste la **QA navigateur** : elle seule dira si la conversation passe, et c'est elle qui
+tranchera sur pièce.
 
 ### Flows
 
@@ -176,8 +176,8 @@ exécute sur la session.
   quel que soit le nombre d'onglets.
 
 **Vérification** : la logique d'arbitrage est un module isolé
-(`wazo_softphone_arbiter.js`), avec les adaptateurs (verrou, canal) **injectés** pour
-être testable hors navigateur —
+(`wazo_softphone_arbiter.esm.js`), avec les adaptateurs (verrou, canal) **injectés**
+pour être testable hors navigateur —
 `node --test static/tests/wazo_softphone_arbiter.test.js` (16 tests : élection, reprise,
 course au décroché, télécommande, tolérance aux messages invalides).
 
@@ -921,15 +921,15 @@ Enterprise `voip`) pour un endpoint Wazo généré.
 
 - ✅ **Frontend (squelette OWL, validé syntaxe/XML)** — 5 fichiers dans
   `static/src/softphone/` :
-  - `wazo_softphone_service.js` — service OWL `wazo_softphone` (état réactif, cycle de
-    vie SIP.js : UserAgent + Registerer, appels sortants/entrants, dégradation propre si
-    `SIP` absent). `uri = sip:<aor>@<domain>` + `authorizationUsername = <auth_user>`
+  - `wazo_softphone_service.esm.js` — service OWL `wazo_softphone` (état réactif, cycle
+    de vie SIP.js : UserAgent + Registerer, appels sortants/entrants, dégradation propre
+    si `SIP` absent). `uri = sip:<aor>@<domain>` + `authorizationUsername = <auth_user>`
     (**le mapping critique**).
-  - `wazo_softphone_app.js` — main component : s'injecte dans le **systray**
+  - `wazo_softphone_app.esm.js` — main component : s'injecte dans le **systray**
     - gère l'**overlay** du softphone (`registry.category("systray")` +
       `main_components`).
-  - `wazo_systray_item.js` — bouton téléphone (hotkey `Alt+Shift+S`).
-  - `wazo_softphone.js` — UI (bandeau d'état + numéroteur + Répondre/Raccrocher).
+  - `wazo_systray_item.esm.js` — bouton téléphone (hotkey `Alt+Shift+S`).
+  - `wazo_softphone.esm.js` — UI (bandeau d'état + numéroteur + Répondre/Raccrocher).
   - `wazo_softphone_templates.xml` — templates QWeb.
   - Bundle `wazo_phone.assets_sip` = `static/lib/sip.js` (UMD, global `SIP`).
 
