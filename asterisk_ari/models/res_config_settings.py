@@ -19,9 +19,7 @@ class ResConfigSettings(models.TransientModel):
     asterisk_app_name = fields.Char(
         string="Application ARI", config_parameter="asterisk_ari.app_name"
     )
-    asterisk_api_token = fields.Char(
-        string="Jeton ARI", password=True, config_parameter="asterisk_ari.api_token"
-    )
+    asterisk_api_token = fields.Char(string="Jeton ARI", config_parameter="asterisk_ari.api_token")
     asterisk_connection_ok = fields.Boolean(default=False)
 
     def action_test_ari_connection(self):
