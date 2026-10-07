@@ -23,6 +23,7 @@ from odoo.addons.wazo_phone.services.wazo_client import WazoClient
 from odoo.exceptions import AccessError
 from odoo.exceptions import UserError
 from odoo.tests import tagged
+from odoo.tools import mute_logger
 
 from .test_tenant_provisioning import WazoServerTestBase
 
@@ -127,6 +128,7 @@ class TestTokenRotation(WazoServerTestBase):
     # Une révocation ratée ne doit pas faire perdre le jeton neuf
     # ------------------------------------------------------------------
 
+    @mute_logger("odoo.addons.wazo_server.models.wazo_server_tenant")
     def test_a_failed_revocation_keeps_the_new_token_and_says_so(self):
         tenant = self._tenant_cree()
         self._tourne(tenant, revocation_ratee=True)

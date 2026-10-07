@@ -104,7 +104,7 @@ class WazoRingGroup(models.Model):
     remote_extension_id = fields.Integer(string="ID poste Wazo")
     error_message = fields.Text(string="Dernier message d'erreur")
     active = fields.Boolean(default=True)
-    member_count = fields.Integer(string="Membres", compute="_compute_member_count")
+    member_count = fields.Integer(string="Nombre de membres", compute="_compute_member_count")
 
     @api.depends("member_ids")
     def _compute_member_count(self):

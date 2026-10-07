@@ -6,8 +6,8 @@ n'y entre pour autant : un dépôt privé n'est pas un coffre.
 
 Le local se monte avec `odoo-dev setup --no-docker --yes`, après `cp .env.exemple .env`
 ; le lancement passe par `./start.sh`, jamais `odoo-bin` à la main. `.deploy/` est un
-sous-module (`bemade/odoo-deploy`, branche 19.0) qui porte le déploiement — il n'est pas
-nécessaire au développement local.
+sous-module (`diverse-cite-com/odoo-deploy`, branche 19.0) qui porte le déploiement — il
+n'est pas nécessaire au développement local.
 
 | module          | rôle                                        |
 | --------------- | ------------------------------------------- |

@@ -33,7 +33,7 @@ class MailcowMailbox(models.Model):
     # En décimal : une boîte de 87 Ko ne doit pas s'afficher à 0.
     quota_used_mb = fields.Float(string="Utilisé (Mo)", readonly=True, digits=(12, 2))
     percent_in_use = fields.Float(string="Occupation (%)", readonly=True, digits=(5, 1))
-    messages = fields.Integer(readonly=True)
+    messages = fields.Integer(string="Nombre de messages", readonly=True)
     last_imap_login = fields.Datetime(string="Dernière connexion IMAP", readonly=True)
     last_smtp_login = fields.Datetime(string="Dernière connexion SMTP", readonly=True)
     last_pop3_login = fields.Datetime(string="Dernière connexion POP3", readonly=True)

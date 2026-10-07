@@ -263,8 +263,12 @@ class WazoUserVoipBridge(models.Model):
         """Lit l'identifiant softphone courant de l'utilisateur.
 
         Isolée pour les tests (le champ n'existe que si « voip » est
-        installé).
+        installé). Sans « voip », il n'y a pas d'identifiant softphone :
+        ``False``, pour que la révocation soit un vrai no-op au lieu de
+        journaliser une erreur à chaque appel.
         """
+        if "voip_username" not in user._fields:
+            return False
         return user.sudo().voip_username
 
     def _propagate_voip_credentials(self):

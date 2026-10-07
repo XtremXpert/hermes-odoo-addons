@@ -122,7 +122,7 @@ Sans accès au dépôt privé `enterprise`, ajouter `--community` à `setup`.
 - **`ODOO_VERSION=20.0`** : la branche `20.0` d'Odoo, celle des modules (`master` est
   passée à la série 20.1). Vide, `odoo-dev` retomberait sur son défaut — 18.0 — donc
   sur une autre Odoo que celle des modules.
-- **`.deploy/`** est le sous-module `bemade/odoo-deploy` (branche `19.0`) :
+- **`.deploy/`** est le sous-module `diverse-cite-com/odoo-deploy` (branche `19.0`) :
   gabarits k8s, `Dockerfile`, `compose.yaml`, et l'`odoo.conf` **du chemin
   Docker**. Celui-ci n'est pas celui que lit `./start.sh` — qui prend
   `conf/odoo.conf` (socket Unix, port 2069). La CI GitHub ne récupère pas le

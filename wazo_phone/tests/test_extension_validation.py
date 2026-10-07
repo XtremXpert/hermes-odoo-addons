@@ -29,6 +29,7 @@ from odoo.exceptions import UserError
 from odoo.exceptions import ValidationError
 from odoo.tests import TransactionCase
 from odoo.tests import tagged
+from odoo.tools import mute_logger
 
 CONTEXTE = "ctx-test-internal-dad46d8d-02df-4cf9-b92c-2f3bc736f039"
 
@@ -348,6 +349,7 @@ class TestExtensionRangeRules(WazoValidationTestBase):
         self.assertNotIn(("GET", "/users"), appels)
         self.assertEqual(self.env["wazo.user"].browse(wazo_user.id).remote_extension_id, 99)
 
+    @mute_logger("odoo.addons.wazo_phone.models.wazo_extension_mixin")
     def test_unreadable_ranges_do_not_block_the_sync(self):
         """PBX muet sur les plages : on n'invente ni refus ni autorisation."""
         wazo_user = self._create_user("1000")

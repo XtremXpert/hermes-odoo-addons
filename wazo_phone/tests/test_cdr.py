@@ -8,6 +8,7 @@ from unittest.mock import patch
 from odoo.addons.wazo_phone.models.wazo_cdr import _parse_wazo_datetime
 from odoo.tests import TransactionCase
 from odoo.tests import tagged
+from odoo.tools import mute_logger
 
 
 @tagged("wazo_phone", "post_install", "-at_install")
@@ -139,6 +140,7 @@ class TestWazoCdrSync(TransactionCase):
         self.assertEqual(seen["start"], "2026-09-19T00:00:00+00:00")
         self.assertEqual(seen["end"], "2026-09-20T00:00:00+00:00")
 
+    @mute_logger("odoo.addons.wazo_phone.models.wazo_cdr")
     def test_cron_sync_swallows_api_errors(self):
         from ..services.wazo_client import WazoAPIError
 
