@@ -1,5 +1,5 @@
 [submodule ".deploy"]
 	path = .deploy
-	url = git@git.bemade.org:bemade/odoo-deploy
+	url = https://github.com/diverse-cite-com/odoo-deploy
 	branch = 19.0
 	update = rebase
