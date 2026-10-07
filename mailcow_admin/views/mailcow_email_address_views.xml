@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <record id="mailcow_email_address_view_tree" model="ir.ui.view">
+        <field name="name">mailcow.email_address.view.tree</field>
+        <field name="model">mailcow.email_address</field>
+        <field name="arch" type="xml">
+            <list string="Adresses courriel" editable="bottom">
+                <field name="address" />
+                <field name="comment" />
+            </list>
+        </field>
+    </record>
+
+    <record id="mailcow_email_address_view_form" model="ir.ui.view">
+        <field name="name">mailcow.email_address.view.form</field>
+        <field name="model">mailcow.email_address</field>
+        <field name="arch" type="xml">
+            <form string="Adresse courriel">
+                <sheet>
+                    <group>
+                        <field name="address" />
+                        <field name="comment" />
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_mailcow_email_address" model="ir.actions.act_window">
+        <field name="name">Adresses courriel</field>
+        <field name="res_model">mailcow.email_address</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Créer une adresse courriel
+            </p>
+            <p>Les adresses servent de destinations pour les alias Mailcow.</p>
+        </field>
+    </record>
+</odoo>

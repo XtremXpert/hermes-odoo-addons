@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <record id="module_category_mailcow_admin" model="ir.module.category">
+        <field name="name">Mailcow</field>
+        <field name="description">Accès à l'administration du serveur Mailcow</field>
+        <field name="sequence" eval="40" />
+    </record>
+
+    <record id="group_mailcow_user" model="res.groups">
+        <field name="name">Utilisateur</field>
+
+        <field name="implied_ids" eval="[(4, ref('base.group_user'))]" />
+        <field
+            name="comment"
+        >Lecture des objets Mailcow, création et mise à jour sur le serveur.</field>
+    </record>
+
+    <record id="group_mailcow_manager" model="res.groups">
+        <field name="name">Gestionnaire</field>
+
+        <field name="implied_ids" eval="[(4, ref('group_mailcow_user'))]" />
+        <field
+            name="user_ids"
+            eval="[(4, ref('base.user_root')), (4, ref('base.user_admin'))]"
+        />
+        <field
+            name="comment"
+        >Suppression sur le serveur, synchronisation, réinitialisation des mots de passe.</field>
+    </record>
+</odoo>

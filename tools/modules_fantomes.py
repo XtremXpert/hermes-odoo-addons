@@ -9,6 +9,10 @@ L'inverse — un module du dépôt installé nulle part — signale un oubli.
     python3 tools/modules_fantomes.py -d odoo20_neuve --utilisateur bvezina
 """
 
+# Outil en ligne de commande, lancé hors d'Odoo : il parle à son terminal,
+# « print » est sa sortie, pas un journal.
+# pylint: disable=print-used
+
 from __future__ import annotations
 
 import argparse
@@ -21,7 +25,7 @@ NOS_MODULES = ("asterisk_ari", "mailcow_admin", "voipms_sms", "wazo_phone", "waz
 
 # Les racines RÉELLEMENT chargées. `enterprise/` n'y est pas : ses modules
 # n'existent donc pas pour Odoo, ce qu'il consigne justement en « uninstallable ».
-RACINES_ADDONS = ("addons", "odoo/addons", "odoo/odoo/addons", "design-themes", ".")
+RACINES_ADDONS = ("odoo/addons", "odoo/odoo/addons", "design-themes", ".")
 
 
 def modules_du_code() -> set[str]:

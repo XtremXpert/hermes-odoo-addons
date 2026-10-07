@@ -31,10 +31,11 @@ etape() {
 }
 
 if command -v ruff > /dev/null; then
-    # Le même périmètre que la CI : les modules, qui vivent sous « addons/ »,
-    # plus « tools ». Sans « tools », le crochet ne voit pas la faute que la CI
-    # verra, et le commit part rouge.
-    etape "ruff" ruff check addons tools --exclude poc
+    # Le même périmètre que la CI : tout le dépôt (les modules sont à la racine,
+    # disposition OCA, plus « tools »). Les clones d'Odoo sont git-ignorés, et
+    # ruff respecte .gitignore. Sans « tools », le crochet ne verrait pas la faute
+    # que la CI verra, et le commit partirait rouge.
+    etape "ruff" ruff check . --exclude poc
 else
     echo "ruff absent : « python -m pip install ruff==0.16.9 » pour le même lint que la CI"
 fi

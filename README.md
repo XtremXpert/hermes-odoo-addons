@@ -1,10 +1,26 @@
 # Addons custom Odoo (Diverse-Cité)
 
 [![CI](https://github.com/XtremXpert/hermes-odoo-addons/actions/workflows/ci.yml/badge.svg)](https://github.com/XtremXpert/hermes-odoo-addons/actions/workflows/ci.yml)
+[![Pre-commit Status](https://github.com/XtremXpert/hermes-odoo-addons/actions/workflows/pre-commit.yml/badge.svg?branch=20.0)](https://github.com/XtremXpert/hermes-odoo-addons/actions/workflows/pre-commit.yml?query=branch%3A20.0)
+[![Build Status](https://github.com/XtremXpert/hermes-odoo-addons/actions/workflows/test.yml/badge.svg?branch=20.0)](https://github.com/XtremXpert/hermes-odoo-addons/actions/workflows/test.yml?query=branch%3A20.0)
 
-Des modules Odoo maison écrits contre l'arbre local d'Odoo : le dossier s'appelle
-`~/hermes-dev/odoo20/`, mais l'arbre se déclare **19.5** (branche `main`) — les modules
-suivent cette série, pas la 20.0.
+Dépôt au format des dépôts de modules de l'OCA (gabarit `oca-addons-repo-template`,
+voir `.copier-answers.yml`) : chaque module est à la racine, avec son `pyproject.toml`,
+son `readme/` et le `README.rst` qui en est généré ; `pre-commit` applique les contrôles
+de l'OCA.
+
+<!-- prettier-ignore-start -->
+
+[//]: # (addons)
+
+This part will be replaced when running the oca-gen-addons-table script from OCA/maintainer-tools.
+
+[//]: # (end addons)
+
+<!-- prettier-ignore-end -->
+
+Des modules Odoo maison pour la série **20.0** (branche `20.0`) : les versions des modules
+suivent la forme de l'OCA, `20.0.x.y.z`.
 
 Les conventions du dépôt, les commandes de lancement, de test et de vérification, et les
 pièges connus sont dans [`AGENTS.md`](AGENTS.md).
@@ -27,17 +43,16 @@ FreePBX ── ARI ───────────► Odoo   ← asterisk_ari 
 
 ### `mailcow_admin`
 Administration d'un serveur **Mailcow** (boîtes mail, domaines, alias)
-via son API REST v1 (`X-API-Key`). 29 tests.
+via son API REST v1 (`X-API-Key`).
 
 ### `voipms_sms`
 Envoi de **SMS** via l'API **VoIP.ms** (REST v1, `api_username`/`api_token`) :
 DIDs, boîte d'envoi segmentée (150 car., format `n/N`), réglages, droits.
-31 tests.
 
 ### `asterisk_ari`
 **Click-to-call** et suivi d'appels via l'**API ARI** d'Asterisk/FreePBX :
 bouton « Appeler » sur la fiche partenaire, historique des appels
-(état, ID ARI, erreurs), réglages + test de connexion. 26 tests.
+(état, ID ARI, erreurs), réglages + test de connexion.
 
 ### `wazo_phone`
 Connecteur **Wazo Platform** : création d'utilisateurs Wazo (ligne SIP, poste,
@@ -48,7 +63,6 @@ Odoo), journal d'appels (`wazo-call-logd`) et **softphone WebRTC** dans Odoo
 (moteurs sip.js et SDK Wazo). Les **plages d'extensions** sont lues dans Wazo
 (`contextnumbers`) au lieu d'être recopiées : un poste hors plage, d'un autre
 type, ou déjà en service, est refusé **avant** toute écriture distante.
-175 tests.
 
 ### `wazo_server`
 Côté **exploitant du PBX** : création et encadrement des **tenants** Wazo.
@@ -72,7 +86,6 @@ avec son **contexte réel**, et les fiches déjà connues ne sont **jamais**
 touchées. Les secrets, eux, ne reviennent pas : le PBX ne rend ni jeton ni mot
 de passe d'administration — la fiche de remise les donne à ressaisir, et
 « Renouveler le jeton » les régénère.
-58 tests.
 
 **Limite connue, mesurée** : le jeton d'un tenant **ne le cloisonne pas**. Un
 jeton de tenant peut lire les données d'un autre tenant en changeant l'en-tête
@@ -96,7 +109,7 @@ en **venv Python natif** — Docker n'est qu'un repli.
 ```sh
 git clone --recurse-submodules <url>    # .deploy est un sous-module : sans lui, il est vide
 cd <dépôt>
-cp .env.exemple .env                    # ODOO_VERSION=master, PYTHON_VERSION=3.12
+cp .env.exemple .env                    # ODOO_VERSION=20.0, PYTHON_VERSION=3.12
 odoo-dev setup --no-docker --yes        # clone odoo/ + design-themes, bâtit .venv et conf/
 ./start.sh                              # lancement — jamais odoo-bin à la main
 ./tools/test mailcow_admin              # tests d'un module, sur une base jetable
@@ -106,8 +119,8 @@ Sans accès au dépôt privé `enterprise`, ajouter `--community` à `setup`.
 
 - **`.env` et `.venv/` sont ignorés par git** : ils ne se transmettent donc pas
   par le clone. C'est à ça que sert `.env.exemple`.
-- **`ODOO_VERSION=master` est volontaire** : l'arbre suit la série 19.5, pas une
-  étiquette de version. Vide, `odoo-dev` retomberait sur son défaut — 18.0 — donc
+- **`ODOO_VERSION=20.0`** : la branche `20.0` d'Odoo, celle des modules (`master` est
+  passée à la série 20.1). Vide, `odoo-dev` retomberait sur son défaut — 18.0 — donc
   sur une autre Odoo que celle des modules.
 - **`.deploy/`** est le sous-module `bemade/odoo-deploy` (branche `19.0`) :
   gabarits k8s, `Dockerfile`, `compose.yaml`, et l'`odoo.conf` **du chemin
@@ -118,8 +131,9 @@ Sans accès au dépôt privé `enterprise`, ajouter `--community` à `setup`.
 ## Utilisation
 
 1. Cloner le dépôt.
-2. Ajouter **`<dépôt>/addons`** à l'`addons_path` d'Odoo (ou copier chaque module) :
-   les modules vivent sous `addons/`, pas à la racine du dépôt.
+2. Ajouter **la racine du dépôt** à l'`addons_path` d'Odoo (ou copier chaque module) :
+   comme dans un dépôt de l'OCA, les modules sont à la racine. Un projet peut aussi les
+   vendoriser (`odoo-dev vendor add <module> --source …`), comme le fait maison.
 3. Installer les modules :
    ```sh
    odoo-bin -d <db> -i mailcow_admin,voipms_sms,asterisk_ari,wazo_phone,wazo_server --stop-after-init
@@ -155,15 +169,15 @@ odoo-bin -d t_test -i mailcow_admin,voipms_sms,asterisk_ari,wazo_phone,wazo_serv
   --stop-after-init --log-level=test
 ```
 
-Suite complète : **237 tests**, 0 échec.
+Suite complète des cinq modules : **387 tests**, 0 échec (2026-10-07, image Odoo 20.0).
 
 Les tests **JavaScript** du softphone (`wazo_phone/static/tests/`) sont des tests
-**Node**, sans navigateur, et se lancent à part. 67 tests : arbitrage
+**Node**, sans navigateur, et se lancent à part. 86 tests : arbitrage
 multi-onglets, choix du moteur SIP, bundle SDK. Les ignorer n'est pas neutre —
 aucun test Python ne voit le JS.
 
 ```sh
-node --test wazo_phone/static/tests/*.test.js
+node --test '*/static/tests/*.test.js'
 ```
 
 ## Notes

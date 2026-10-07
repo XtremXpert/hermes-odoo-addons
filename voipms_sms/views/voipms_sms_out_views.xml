@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <record id="voipms_sms_out_view_list" model="ir.ui.view">
+        <field name="name">voipms.sms.out.list</field>
+        <field name="model">voipms.sms.out</field>
+        <field name="arch" type="xml">
+            <list string="SMS envoyés">
+                <field name="date_sent" />
+                <field name="did_id" />
+                <field name="destination" />
+                <field name="body" />
+                <field name="state" />
+                <field name="provider_message_ids" optional="hide" />
+                <field name="error_message" optional="hide" />
+            </list>
+        </field>
+    </record>
+
+    <record id="voipms_sms_out_view_form" model="ir.ui.view">
+        <field name="name">voipms.sms.out.form</field>
+        <field name="model">voipms.sms.out</field>
+        <field name="arch" type="xml">
+            <form string="SMS à envoyer">
+                <header>
+                    <button
+                        name="action_send"
+                        type="object"
+                        string="Envoyer"
+                        class="oe_highlight"
+                        invisible="state != 'draft'"
+                    />
+                    <field name="state" widget="statusbar" />
+                </header>
+                <sheet>
+                    <group>
+                        <field name="did_id" />
+                        <field name="destination" />
+                        <field name="provider_message_ids" />
+                    </group>
+                    <group string="Message">
+                        <field name="body" nolabel="1" colspan="2" />
+                    </group>
+                    <group string="Erreurs" invisible="state != 'failed'">
+                        <field name="error_message" nolabel="1" colspan="2" />
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_voipms_sms_out" model="ir.actions.act_window">
+        <field name="name">Boîte d'envoi SMS</field>
+        <field name="res_model">voipms.sms.out</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

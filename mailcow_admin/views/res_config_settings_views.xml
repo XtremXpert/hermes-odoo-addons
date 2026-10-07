@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <record id="res_config_settings_view_form" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.mailcow</field>
+        <field name="model">res.config.settings</field>
+        <field name="priority" eval="80" />
+        <field name="inherit_id" ref="base.res_config_settings_view_form" />
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="inside">
+                <app
+                    string="Mailcow"
+                    name="mailcow_admin"
+                    logo="/mailcow_admin/static/description/icon.png"
+                    data-string="Mailcow"
+                >
+                    <block title="Serveur Mailcow" name="mailcow_config">
+                        <setting
+                            string="Connexion"
+                            help="URL du serveur Mailcow et clé API (interface d'administration → section API)."
+                        >
+                            <div class="content-group">
+                                <div class="row mt8">
+                                    <label
+                                        for="mailcow_base_url"
+                                        class="col-lg-4 o_light_label"
+                                    />
+                                    <field
+                                        name="mailcow_base_url"
+                                        placeholder="https://mail.exemple.com"
+                                    />
+                                </div>
+                                <div class="row">
+                                    <label
+                                        for="mailcow_api_key"
+                                        class="col-lg-4 o_light_label"
+                                    />
+                                    <field
+                                        name="mailcow_api_key"
+                                        password="True"
+                                        placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                                    />
+                                </div>
+                                <div class="mt8">
+                                    <button
+                                        name="action_test_mailcow_connection"
+                                        type="object"
+                                        string="Tester la connexion"
+                                        class="btn-link"
+                                    />
+                                </div>
+                            </div>
+                        </setting>
+                    </block>
+                </app>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="action_mailcow_settings" model="ir.actions.act_window">
+        <field name="name">Configuration</field>
+        <field name="res_model">res.config.settings</field>
+        <field name="view_mode">form</field>
+        <field name="target">current</field>
+        <field name="context">{'module' : 'mailcow_admin', 'bin_size' : False}</field>
+    </record>
+</odoo>

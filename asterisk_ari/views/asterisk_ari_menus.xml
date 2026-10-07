@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <menuitem
+        id="menu_asterisk_root"
+        name="Téléphonie"
+        web_icon="asterisk_ari,static/description/icon.png"
+        groups="asterisk_ari.group_asterisk_user"
+    />
+    <menuitem
+        id="menu_asterisk_calls"
+        name="Appels"
+        parent="menu_asterisk_root"
+        action="action_asterisk_call"
+    />
+</odoo>

@@ -1,5 +1,5 @@
 # Part of the hermes-odoo-addons project. See LICENSE for details.
-# Addon path: add the « addons/ » subdirectory to odoo's addons_path
+# Disposition OCA : les modules sont à la racine du dépôt, qui est le chemin d'addons.
 
 # Checkout Odoo (source vendue, non versionnée ici)
 /odoo/
@@ -32,4 +32,94 @@ __pycache__/
 # Vérifier avec un fichier qui EXISTE : « git check-ignore » compare le motif au
 # texte du chemin, il ne dit pas si le fichier est là — et un motif qui ne
 # correspond plus laisse les identifiants visibles pour git.
-/addons/wazo_phone/poc/
+/wazo_phone/poc/
+
+# --- Gabarit OCA (oca-addons-repo-template) ---
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+/.venv
+/.pytest_cache
+/.ruff_cache
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+env/
+bin/
+build/
+develop-eggs/
+dist/
+eggs/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+*.eggs
+
+# Windows installers
+*.msi
+
+# Debian packages
+*.deb
+
+# Redhat packages
+*.rpm
+
+# MacOS packages
+*.dmg
+*.pkg
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+
+# Translations
+*.mo
+
+# Pycharm
+.idea
+
+# Eclipse
+.settings
+
+# Visual Studio cache/options directory
+.vs/
+.vscode
+
+# OSX Files
+.DS_Store
+
+# Django stuff:
+*.log
+
+# Mr Developer
+.mr.developer.cfg
+.project
+.pydevproject
+
+# Rope
+.ropeproject
+
+# Sphinx documentation
+docs/_build/
+
+# Backup files
+*~
+*.swp
+
+# OCA rules
+!static/lib/
