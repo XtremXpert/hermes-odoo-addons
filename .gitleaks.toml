@@ -1,0 +1,24 @@
+# Analyse de secrets : règles par défaut de gitleaks, plus deux règles propres à Odoo.
+# Aucun identifiant ne doit être versionné : il vit dans Vaultwarden et est injecté au
+# déploiement (Secret Kubernetes) ou saisi après l'installation.
+[extend]
+useDefault = true
+
+[[rules]]
+id = "odoo-xml-credential"
+description = "Identifiant dans une donnée XML de module Odoo"
+regex = '''(?i)<field\s+name="(?:password|passwd|credential|smtp_pass|[a-z_]*(?:secret|token|api_?key|private_key)[a-z_]*)"\s*>\s*([^<\s][^<]{3,}?)\s*</field>'''
+secretGroup = 1
+keywords = ["<field"]
+
+[[rules]]
+id = "hardcoded-password-assignment"
+description = "Mot de passe ou clé écrit en dur dans du code"
+regex = '''(?i)\b(?:password|passwd|pwd|secret|api_?key|access_?token|auth_?token)\b\s*[:=]\s*["']([^"'\s]{6,})["']'''
+secretGroup = 1
+keywords = ["password", "passwd", "pwd", "secret", "api_key", "apikey", "token"]
+
+[allowlist]
+description = "Données de test et de démonstration de modules tiers"
+paths = ['''(^|/)tests?/''', '''(^|/)demo/''', '''^vendored/.*\.(po|pot)$''']
+regexes = ['''(?i)(changeme|example|exemple|placeholder|dummy|xxxx+|\*\*\*+)''']
