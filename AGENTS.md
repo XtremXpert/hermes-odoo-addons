@@ -2,8 +2,8 @@
 
 Six modules Odoo maison pour l'infrastructure de Diverse-Cité : courriel (Mailcow),
 téléphonie (Wazo, Asterisk ARI), SMS (VoIP.ms) et compte de l'agent Hermes N3. Dépôt
-**privé** — et rien de secret n'y entre pour autant : un dépôt privé n'est pas un
-coffre.
+**public** depuis le 2026-10-11 (diverse-odoo et mac-demo le vendorisent sans jeton) :
+rien de secret n'y entre, ni dans un fichier ni dans l'historique.
 
 Le local se monte avec `odoo-dev setup --no-docker --yes`, après `cp .env.exemple .env`
 ; le lancement passe par `./start.sh`, jamais `odoo-bin` à la main. `.deploy/` est un
@@ -235,6 +235,6 @@ message** et fait croire à des fichiers.
 
 ## Secrets
 
-Le dépôt est privé. Ni jeton, ni mot de passe, ni chaîne de connexion dans un fichier
+Le dépôt est public. Ni jeton, ni mot de passe, ni chaîne de connexion dans un fichier
 suivi, un commentaire, un message de commit ou une capture. Les filets de restauration
 (`/tmp/*.dump`, `/tmp/*.json`) ne sont **jamais** copiés ici.
