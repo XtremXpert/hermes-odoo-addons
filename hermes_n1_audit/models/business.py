@@ -125,8 +125,22 @@ class Business(models.Model):
                 )
             ):
                 continue
-            if writable and (name in CONTROL or not field.store or field.related or field.readonly):
-                continue
+            if writable:
+                # Odoo stores website page markup on the delegated ir.ui.view.
+                # Expose only the page-facing inverse field, never generic
+                # ir.ui.view records or their arch_db implementation field.
+                page_markup = (
+                    target._name == "website.page"
+                    and name == "arch"
+                    and field.related == "view_id.arch"
+                    and field.inverse
+                )
+                if (
+                    name in CONTROL
+                    or field.readonly
+                    or ((not field.store or field.related) and not page_markup)
+                ):
+                    continue
             result[name] = desc
         return result
 

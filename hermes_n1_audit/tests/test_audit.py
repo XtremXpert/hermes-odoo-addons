@@ -142,6 +142,15 @@ class TestAudit(TransactionCase):
         self.assertIn("active", info["editable"])
         self.assertIn("user_id", info["editable"])
 
+    def test_website_page_markup_is_editable_without_exposing_views(self):
+        if "website.page" not in self.env:
+            self.skipTest("website is not installed")
+        page_info = self.service.explorer(model="website.page", **self.business_source())
+        self.assertIn("arch", page_info["fields"])
+        self.assertIn("arch", page_info["editable"])
+        with self.assertRaises(AccessError):
+            self.service.explorer(model="ir.ui.view", **self.business_source())
+
     def test_business_create_is_audited_and_idempotent(self):
         args = dict(
             model="res.partner",
