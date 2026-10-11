@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <!--
+        Hermes N3 lit et corrige les données de ce site par l'API JSON-2 (outil objets_odoo
+        du broker N3, hermes-guardrails), avec une clé API créée par un humain. Chaque écriture
+        porte un motif et laisse une note dans le chatter de l'objet. Pas de mot de passe :
+        aucune connexion interactive. Jamais administrateur.
+    -->
+    <record id="user_hermes_n3" model="res.users" context="{'no_reset_password': True}">
+        <field name="name">Hermes N3 Infrastructure</field>
+        <field name="login">hermes_n3</field>
+        <field
+            name="group_ids"
+            eval="[(6, 0, [ref('base.group_user'), ref('base.group_partner_manager')])]"
+        />
+    </record>
+</odoo>
