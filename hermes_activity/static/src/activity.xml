@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<templates xml:space="preserve">
+    <t
+        t-name="hermes_activity.Thread"
+        t-inherit="mail.Thread"
+        t-inherit-mode="extension"
+    >
+        <xpath expr="//t[@t-call='mail.Thread.jumpPresent']" position="before">
+            <HermesActivity
+                t-if="this.props.thread.model === 'discuss.channel' and this.props.thread.id > 0"
+                channelId="this.props.thread.id"
+            />
+        </xpath>
+    </t>
+    <t t-name="hermes_activity.Status">
+        <div
+            t-if="this.activity"
+            class="o-hermes-Activity sticky-bottom rounded border p-2 mx-2 mt-2 bg-body"
+        >
+            <div
+                class="d-flex align-items-center gap-2"
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+            >
+                <span
+                    t-if="this.running and !this.stale"
+                    class="spinner-border spinner-border-sm text-primary"
+                    aria-hidden="true"
+                />
+                <span
+                    t-else=""
+                    class="oi"
+                    t-att-data-icon="this.stale or this.activity.state === 'error' ? 'warning' : (this.activity.state === 'cancelled' ? 'stop_circle' : 'check_circle')"
+                    aria-hidden="true"
+                />
+                <div class="flex-grow-1">
+                    <strong t-out="this.activity.agent" />
+                    <span class="mx-1">·</span>
+                    <span
+                        t-if="this.stale"
+                        class="text-warning"
+                    >Suivi interrompu — état à vérifier</span>
+                    <span t-else="" t-out="this.activity.label" />
+                </div>
+                <small class="text-muted text-nowrap" t-out="this.elapsed" />
+            </div>
+            <details t-if="this.steps.length" class="mt-2">
+                <summary class="small">Étapes du traitement (<t
+                    t-out="this.activity.step_count"
+                />)</summary>
+                <div class="overflow-auto mt-2" style="max-height: 220px">
+                    <p t-if="this.hiddenSteps" class="small text-muted mb-1">Les <t
+                        t-out="this.steps.length"
+                    /> dernières étapes sont affichées.</p>
+                    <ol class="small mb-0 ps-4" t-att-start="this.steps[0].number">
+                        <li
+                            t-foreach="this.steps"
+                            t-as="step"
+                            t-key="step.number"
+                            class="py-1"
+                        >
+                            <div class="d-flex justify-content-between gap-3">
+                                <span t-out="step.label" />
+                                <span
+                                    class="text-muted text-nowrap"
+                                    t-out="this.stepDuration(step)"
+                                />
+                            </div>
+                        </li>
+                    </ol>
+                </div>
+            </details>
+        </div>
+    </t>
+</templates>

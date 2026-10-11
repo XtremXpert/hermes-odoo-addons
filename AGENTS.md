@@ -1,7 +1,8 @@
 # hermes-odoo-addons
 
-Six modules Odoo maison pour l'infrastructure de Diverse-Cité : courriel (Mailcow),
-téléphonie (Wazo, Asterisk ARI), SMS (VoIP.ms) et compte de l'agent Hermes N3. Dépôt
+Dix modules Odoo maison pour l'infrastructure de Diverse-Cité : courriel (Mailcow),
+téléphonie (Wazo, Asterisk ARI), SMS (VoIP.ms), et le socle commun des agents Hermes
+(compte N3, journal N1, activité Discuss, pages web N1, SSO des tableaux de bord). Dépôt
 **public** depuis le 2026-10-11 (diverse-odoo et mac-demo le vendorisent sans jeton) :
 rien de secret n'y entre, ni dans un fichier ni dans l'historique.
 
@@ -10,14 +11,18 @@ Le local se monte avec `odoo-dev setup --no-docker --yes`, après `cp .env.exemp
 sous-module (`diverse-cite-com/odoo-deploy`, branche 19.0) qui porte le déploiement — il
 n'est pas nécessaire au développement local.
 
-| module             | rôle                                        |
-| ------------------ | ------------------------------------------- |
-| `mailcow_admin`    | domaines, boîtes, alias, tableaux de bord   |
-| `wazo_server`      | serveur Wazo : lignes, postes, CDR          |
-| `wazo_phone`       | téléphone dans Odoo (WebRTC, click-to-call) |
-| `asterisk_ari`     | Asterisk via ARI                            |
-| `voipms_sms`       | SMS par l'API VoIP.ms                       |
-| `hermes_n3_access` | compte API de l'agent Hermes N3             |
+| module                 | rôle                                         |
+| ---------------------- | -------------------------------------------- |
+| `mailcow_admin`        | domaines, boîtes, alias, tableaux de bord    |
+| `wazo_server`          | serveur Wazo : lignes, postes, CDR           |
+| `wazo_phone`           | téléphone dans Odoo (WebRTC, click-to-call)  |
+| `asterisk_ari`         | Asterisk via ARI                             |
+| `voipms_sms`           | SMS par l'API VoIP.ms                        |
+| `hermes_n3_access`     | compte API de l'agent Hermes N3              |
+| `hermes_n1_audit`      | façade d'écriture N1 et journal immuable     |
+| `hermes_activity`      | réponses et activité des agents dans Discuss |
+| `hermes_n1_website`    | pages web du site par N1 (zone #wrap)        |
+| `hermes_dashboard_sso` | SSO OAuth2 des tableaux de bord Hermes       |
 
 Le dépôt suit la **disposition des dépôts de modules de l'OCA** (gabarit
 `oca-addons-repo-template`, `.copier-answers.yml`) : chaque module est **à la racine**,
@@ -77,7 +82,7 @@ un commit déjà poussé, même en étant le seul committeur.
 
 ## Disposition
 
-- **les six modules, à la racine** — la racine est aussi, littéralement, un chemin
+- **les dix modules, à la racine** — la racine est aussi, littéralement, un chemin
   d'addons, ce qui permet de les atteindre sans les déplacer ;
 - `odoo/`, `enterprise/`, `design-themes/` — **clones simples, git-ignorés, pas des
   sous-modules** :
