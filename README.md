@@ -69,6 +69,15 @@ Compte Odoo de l'agent d'infrastructure **Hermes N3** (`hermes_n3`, API JSON-2
 seulement, jamais administrateur), désactivé avec ses clés API à la neutralisation
 d'une copie de la base. Utilisé par diverse-odoo et mac-demo, qui le vendorisent.
 
+### `hermes_n1_audit`, `hermes_activity`, `hermes_n1_website`, `hermes_dashboard_sso`
+Socle commun des agents **Hermes**, vendorisé par maison (et à terme mac-demo) :
+façade d'écriture de N1 avec journal immuable et provenance par message Discuss
+(`hermes_n1_audit`), réponses et activité des agents dans Discuss (`hermes_activity`),
+modification des pages du site dans la zone `#wrap` (`hermes_n1_website`), et
+authentification OAuth2 + PKCE des tableaux de bord, Odoo fournisseur d'identité
+(`hermes_dashboard_sso`). Les modules propres à une instance (`hermes_n2_support`,
+`hermes_n3_infra`, `hermes_coordination`) restent dans maison.
+
 ### `wazo_server`
 Côté **exploitant du PBX** : création et encadrement des **tenants** Wazo.
 Un tenant est créé de bout en bout — tenant (wazo-auth), **contexte interne et
