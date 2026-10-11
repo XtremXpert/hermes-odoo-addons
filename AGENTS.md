@@ -1,21 +1,23 @@
 # hermes-odoo-addons
 
-Cinq modules Odoo maison pour l'infrastructure de Diverse-Cité : courriel (Mailcow),
-téléphonie (Wazo, Asterisk ARI) et SMS (VoIP.ms). Dépôt **privé** — et rien de secret
-n'y entre pour autant : un dépôt privé n'est pas un coffre.
+Six modules Odoo maison pour l'infrastructure de Diverse-Cité : courriel (Mailcow),
+téléphonie (Wazo, Asterisk ARI), SMS (VoIP.ms) et compte de l'agent Hermes N3. Dépôt
+**privé** — et rien de secret n'y entre pour autant : un dépôt privé n'est pas un
+coffre.
 
 Le local se monte avec `odoo-dev setup --no-docker --yes`, après `cp .env.exemple .env`
 ; le lancement passe par `./start.sh`, jamais `odoo-bin` à la main. `.deploy/` est un
 sous-module (`diverse-cite-com/odoo-deploy`, branche 19.0) qui porte le déploiement — il
 n'est pas nécessaire au développement local.
 
-| module          | rôle                                        |
-| --------------- | ------------------------------------------- |
-| `mailcow_admin` | domaines, boîtes, alias, tableaux de bord   |
-| `wazo_server`   | serveur Wazo : lignes, postes, CDR          |
-| `wazo_phone`    | téléphone dans Odoo (WebRTC, click-to-call) |
-| `asterisk_ari`  | Asterisk via ARI                            |
-| `voipms_sms`    | SMS par l'API VoIP.ms                       |
+| module             | rôle                                        |
+| ------------------ | ------------------------------------------- |
+| `mailcow_admin`    | domaines, boîtes, alias, tableaux de bord   |
+| `wazo_server`      | serveur Wazo : lignes, postes, CDR          |
+| `wazo_phone`       | téléphone dans Odoo (WebRTC, click-to-call) |
+| `asterisk_ari`     | Asterisk via ARI                            |
+| `voipms_sms`       | SMS par l'API VoIP.ms                       |
+| `hermes_n3_access` | compte API de l'agent Hermes N3             |
 
 Le dépôt suit la **disposition des dépôts de modules de l'OCA** (gabarit
 `oca-addons-repo-template`, `.copier-answers.yml`) : chaque module est **à la racine**,
@@ -57,7 +59,7 @@ script dans `migrations/19.5.3/` — aucun avertissement, aucune ligne, `migrate
 appelé. Passé à la forme courte `19.5.4` avec `migrations/19.5.4/` :
 `post from 19.5.3.0.0 to 19.5.4`.
 
-`wazo_phone` est le seul des cinq à porter un dossier `migrations/` : la reprise des
+`wazo_phone` est le seul module à porter un dossier `migrations/` : la reprise des
 membres de groupes d'appel (P4.5), d'abord nommée `19.5.3/`. En 20.0, ce nom ne
 s'exécutait plus : sans préfixe de série, Odoo lisait `19.5.3` comme une version **du
 module** (`20.0.19.5.3`), au-delà de la version courante. Le dossier est renommé
@@ -75,7 +77,7 @@ un commit déjà poussé, même en étant le seul committeur.
 
 ## Disposition
 
-- **les cinq modules, à la racine** — la racine est aussi, littéralement, un chemin
+- **les six modules, à la racine** — la racine est aussi, littéralement, un chemin
   d'addons, ce qui permet de les atteindre sans les déplacer ;
 - `odoo/`, `enterprise/`, `design-themes/` — **clones simples, git-ignorés, pas des
   sous-modules** :

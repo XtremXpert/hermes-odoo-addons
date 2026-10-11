@@ -64,6 +64,11 @@ Odoo), journal d'appels (`wazo-call-logd`) et **softphone WebRTC** dans Odoo
 (`contextnumbers`) au lieu d'être recopiées : un poste hors plage, d'un autre
 type, ou déjà en service, est refusé **avant** toute écriture distante.
 
+### `hermes_n3_access`
+Compte Odoo de l'agent d'infrastructure **Hermes N3** (`hermes_n3`, API JSON-2
+seulement, jamais administrateur), désactivé avec ses clés API à la neutralisation
+d'une copie de la base. Utilisé par diverse-odoo et mac-demo, qui le vendorisent.
+
 ### `wazo_server`
 Côté **exploitant du PBX** : création et encadrement des **tenants** Wazo.
 Un tenant est créé de bout en bout — tenant (wazo-auth), **contexte interne et
