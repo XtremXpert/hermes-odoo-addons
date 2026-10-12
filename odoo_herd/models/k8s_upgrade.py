@@ -136,8 +136,12 @@ class K8sOdooUpgrade(models.Model):
         webhook_url = f"{base_url}/k8s/upgrade/webhook/{self.id}"
 
         # Parse modules
-        modules_list = [m.strip() for m in self.modules.split(",") if m.strip()]
-        modules_install_list = [m.strip() for m in self.modules_install.split(",") if m.strip()]
+        # Either field may be empty (False): an update without installation,
+        # as the CI's staging delivery creates it, or an installation alone.
+        modules_list = [m.strip() for m in (self.modules or "").split(",") if m.strip()]
+        modules_install_list = [
+            m.strip() for m in (self.modules_install or "").split(",") if m.strip()
+        ]
 
         # Get the OdooInstance UID for owner reference
         k8s_client = cluster._get_k8s_client()
