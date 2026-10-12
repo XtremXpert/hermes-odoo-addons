@@ -1,0 +1,2025 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* odoo_herd_portal
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 20.0-20260926\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-07 11:12+0000\n"
+"PO-Revision-Date: 2026-10-06 12:37+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. module: odoo_herd_portal
+#: model:ir.module.module,description:base.module_odoo_herd_portal
+msgid ""
+"# Odoo Herd Portal\n"
+"\n"
+"Portail client pour une production Odoo gérée par `odoo_herd` et ses stagings\n"
+"(`/my/odoo`). Un client sans base peut en demander une (voir « Nouvelle base »).\n"
+"Deux actions sur une base existante :\n"
+"\n"
+"- **Resynchroniser le staging depuis la production** : copie neutralisée de la base\n"
+"  et du filestore (`OdooStagingRefreshJob`, `neutralize` forcé, source = la production\n"
+"  du staging). Ouverte au client et aux agents, sans confirmation : le staging est\n"
+"  jetable et ne peut jamais viser une production.\n"
+"- **Passer la production au code du staging** : crée une demande de mise en\n"
+"  production (`k8s.odoo.promotion`) qui fige l'image du staging par son empreinte\n"
+"  (`…@sha256:`). Rien ne se passe tant qu'un **humain approbateur** ne l'a pas\n"
+"  confirmée.\n"
+"\n"
+"## Flux\n"
+"\n"
+"```\n"
+"agent / client ── demande ──► en attente ──► code par courriel ──► confirmée ──► planifiée?\n"
+"                                              (approbateur)                       │\n"
+"production ◄── mise à jour des modules ◄── image ◄── sauvegarde ◄──────────────────┘\n"
+"               (si demandée)            (spec.image seule)  (échec = production intacte)\n"
+"```\n"
+"\n"
+"## Barrière humaine\n"
+"\n"
+"- Seuls les **approbateurs** listés sur la production (onglet Portail) confirment,\n"
+"  depuis le portail ou depuis le backend (bouton « Confirmer » de la mise en\n"
+"  production, assistant `k8s.odoo.promotion.confirm` : mêmes contrôles privés, un\n"
+"  mauvais code reste compté). La méthode est choisie par le serveur :\n"
+"  - **double authentification activée** sur le compte (`/my/security`, `auth_totp_portal`)\n"
+"    → **code de l'application d'authentification**, vérifié par Odoo lui-même\n"
+"    (`_check_credentials` type `totp` : limite d'essais par utilisateur, code rejoué\n"
+"    refusé). Le code par courriel est alors refusé ;\n"
+"  - sinon, si la production a **« Exiger la double authentification »** → refus, avec\n"
+"    un lien pour l'activer ;\n"
+"  - sinon → **code à 6 chiffres envoyé par courriel** (10 min, 5 essais, une demande\n"
+"    par minute), qui fonctionne aussi pour les comptes OIDC sans mot de passe Odoo.\n"
+"  La méthode utilisée est enregistrée sur la mise en production (« Confirmée avec »). Seule une empreinte HMAC du code est stockée, illisible par l'ORM ;\n"
+"  le courriel est un `mail.mail` supprimé après envoi, sans message dans le chatter\n"
+"  (testé : un agent ne retrouve le code ni dans `mail.message` ni dans `mail.mail`).\n"
+"- **Hypothèse** : aucun agent ne peut lire la boîte courriel d'un approbateur. Vérifié\n"
+"  en production le 2026-10-06 côté Odoo (les comptes `hermes_n1`, `hermes_n2`,\n"
+"  `hermes_n3`, `hermes_n3_executor` n'écrivent pas dans Mailcow et ne lisent pas\n"
+"  `mail.mail`), pas en dehors d'Odoo (accès au serveur de courriel, connecteurs de\n"
+"  messagerie d'un agent). Si un agent peut lire ou détourner cette boîte, le code ne\n"
+"  prouve plus rien : donner à l'approbateur une adresse hors de portée des agents.\n"
+"  Cocher « Exiger la double authentification » sur une production supprime cette\n"
+"  hypothèse : le secret TOTP reste sur le téléphone de l'approbateur.\n"
+"- **Agents** = membres de « Opérateur de staging (agents) » ou d'un groupe d'un module\n"
+"  `hermes_*`. Ils ne confirment jamais, même ajoutés aux approbateurs, et ne peuvent\n"
+"  modifier ni l'image d'une production, ni l'environnement, les approbateurs, le\n"
+"  client ou l'ouverture aux agents d'une instance — même en `sudo` (contrôle sur le\n"
+"  groupe, jamais sur le contexte).\n"
+"- La confirmation et le démarrage sont des méthodes privées (`_herd_*`), injoignables\n"
+"  en RPC autrement que par les routes du portail et l'assistant du backend, qui\n"
+"  passent l'utilisateur réel aux contrôles ; personne n'a de droit d'écriture sur\n"
+"  `k8s.odoo.promotion`.\n"
+"- Une demande confirmée est figée (image, modules, horaire, instances). Une\n"
+"  modification avant confirmation annule le code envoyé.\n"
+"- Une seule mise en production à la fois par production ; au démarrage, une demande\n"
+"  dont la production a changé depuis (image différente) est refusée au lieu de la\n"
+"  ramener en arrière.\n"
+"- « Terminée » sans modules signifie que l'image a été demandée à l'opérateur ;\n"
+"  le déploiement lui-même se suit dans l'état de l'instance.\n"
+"- Le changement d'image n'envoie que `spec.image` (pas `_patch_to_cluster`, qui\n"
+"  enverrait tous les champs non synchronisés). L'image précédente est gardée pour un\n"
+"  retour arrière.\n"
+"\n"
+"## Nouvelle base (client sans base)\n"
+"\n"
+"Un client dont l'entité commerciale n'a encore aucune production voit la tuile\n"
+"« Instances Odoo » à 0, avec « Ajouter une base ». Le wizard `/my/odoo/new` lui fait\n"
+"choisir une **offre** et un **nom** ; il crée une demande `k8s.odoo.instance.request`\n"
+"(`BASE/0001`…). Rien n'est créé dans le cluster avant qu'**un humain gestionnaire**\n"
+"(`odoo_herd.group_k8s_manager`, jamais un agent) ne l'approuve dans Odoo Herd →\n"
+"Demandes de bases.\n"
+"\n"
+"```\n"
+"client ── demande ──► en attente ──► approuvée ──► production neuve, sans hôte public\n"
+"                       (gestionnaire)              │ phase Running\n"
+"                                                   ▼\n"
+"      admin/admin remplacé par le compte du client (XML-RPC par le proxy de l'API)\n"
+"                                                   ▼\n"
+"       hôte réel posé, accès envoyé par courriel ──► staging clone_prod ──► prête\n"
+"```\n"
+"\n"
+"- **Offres** : modèles d'instance cochés « Proposé au portail » (onglet Portail du\n"
+"  modèle), avec cluster, namespace et suffixe d'hôte. Hôtes : `<nom>.<suffixe>` et\n"
+"  `<nom>-staging.<suffixe>` ; base `<nom>` (tirets en soulignés) et `<nom>_staging`.\n"
+"- **Nom** : 3 à 30 caractères (minuscules, chiffres, tirets simples), noms réservés\n"
+"  refusés, et libre partout : instances connues de l'herd, hôtes déjà servis, autres\n"
+"  demandes. Une seule demande en cours par client ; aucune si le client a déjà une\n"
+"  production.\n"
+"- **Compte admin** : une base neuve (`odoo -i base`) a `admin/admin`. La production est\n"
+"  donc créée avec un hôte provisoire `<nom>.herd-pending.invalid`, injoignable. Dès\n"
+"  qu'elle est `Running`, l'herd remplace `admin/admin` par le courriel du client et un\n"
+"  mot de passe aléatoire, par XML-RPC à travers le proxy de Service de l'API\n"
+"  Kubernetes, puis seulement pose l'hôte réel. En cas d'échec, la production reste\n"
+"  injoignable et la demande passe en échec.\n"
+"- **Mot de passe** : il n'existe que dans un `mail.mail` supprimé après envoi, jamais\n"
+"  dans le chatter ; la transaction est validée dès ce courriel mis en file, avant de\n"
+"  poser l'hôte et de créer le staging (étapes reprises par la tâche planifiée si elles\n"
+"  échouent). Si l'envoi échoue, le courriel reste dans la file (Configuration →\n"
+"  Technique → Courriels) jusqu'à son envoi ; s'il est perdu, réinitialiser le mot de\n"
+"  passe du compte du client dans sa base (`odoo shell` sur l'instance). Le mot de passe\n"
+"  maître de l'opérateur est aléatoire et jamais montré (`list_db` est coupé par\n"
+"  l'opérateur). Le demandeur doit avoir un courriel : c'est son identifiant.\n"
+"- **Staging** : créé ensuite par clonage neutralisé de la production (`clone_prod`),\n"
+"  fermé aux agents. La production a pour client l'entité du demandeur, et le demandeur\n"
+"  pour approbateur des mises en production.\n"
+"- **Progression** : relancée à chaque changement de phase (webhook ou synchronisation),\n"
+"  plus une tâche planifiée toutes les 5 min ; échec après 3 h sans nouvelles.\n"
+"\n"
+"**Mise en place**, sur chaque cluster qui porte une offre : appliquer\n"
+"`deploy/odoo-herd-clients.yaml` (namespace `odoo-clients`, et `services/proxy` pour\n"
+"odoo-herd dans ce seul namespace), copier le secret de pull d'image dans ce namespace,\n"
+"et vérifier que le suffixe d'hôte a un enregistrement DNS générique vers l'ingress.\n"
+"\n"
+"**Copies neutralisées** : `data/neutralize.sql` désactive tous les clusters, pour\n"
+"qu'un staging de l'herd ne crée, ne promeuve ni ne resynchronise jamais rien sur un\n"
+"vrai cluster.\n"
+"\n"
+"## Flux de livraison de maison\n"
+"\n"
+"1. **Staging** : resynchroniser `maison-staging` depuis la production, y déployer l'image\n"
+"   de `main` par son digest, puis installer ou mettre à jour les modules sur\n"
+"   `maison_staging` et tester.\n"
+"2. **Demande** : sur `/my/odoo`, « Passer la production au code de ce staging », avec\n"
+"   les *modules à mettre à jour* (`-u`) et les *nouveaux modules à installer* (`-i`), tels\n"
+"   que testés sur le staging. Un agent peut préparer cette demande.\n"
+"3. **Confirmation humaine** : un approbateur la confirme avec son application\n"
+"   d'authentification. La promotion fait alors une sauvegarde, applique l'image\n"
+"   (`spec.image` seule), puis lance un seul `OdooUpgradeJob` (`-u` et `-i`).\n"
+"\n"
+"`tools/promote-production.py` ne sert plus qu'en secours.\n"
+"\n"
+"## Pour les agents (RPC, groupe « Opérateur de staging »)\n"
+"\n"
+"Sur un staging coché « Ouvert aux agents » :\n"
+"\n"
+"```python\n"
+"env[\"k8s.odoo.promotion\"].herd_deploy_staging(staging_id, \"ghcr.io/…@sha256:…\")\n"
+"env[\"k8s.odoo.promotion\"].herd_resync_staging(staging_id)\n"
+"env[\"k8s.odoo.promotion\"].herd_request_promotion(staging_id, modules=\"sale,stock\",\n"
+"                                                 scheduled_at=\"2026-10-07 02:00:00\")\n"
+"```\n"
+"\n"
+"## Mise en place\n"
+"\n"
+"1. Sur la production : client, approbateurs, et « Exiger la double authentification »\n"
+"   pour une vraie production de client (onglet Portail).\n"
+"2. Créer le staging (`environment = staging`, `production_instance_id` = la production),\n"
+"   cocher « Ouvert aux agents » si besoin.\n"
+"3. Donner le groupe « Opérateur de staging (agents) » au compte de l'agent, sans\n"
+"   aucun groupe `odoo_herd`.\n"
+"\n"
+"Tâches planifiées toutes les 5 min : démarrer les mises en production planifiées et\n"
+"abandonner celles sans nouvelles du cluster depuis 6 h ; faire avancer les demandes de\n"
+"bases approuvées.\n"
+"\n"
+"Tests : `ADDONS=addons tools/test-modules.sh IMAGE odoo_herd_portal`.\n"
+msgstr ""
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "%(staging)s is not the staging of %(prod)s."
+msgstr "%(staging)s n'est pas le staging de %(prod)s."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_request.py:0
+msgid ""
+"%(user)s (%(client)s) requests the database %(host)s, offer %(offer)s: "
+"awaiting the approval of a cluster manager."
+msgstr ""
+"%(user)s (%(client)s) demande la base %(host)s, offre %(offer)s : en attente"
+" de l'approbation d'un gestionnaire du cluster."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_request.py:0
+msgid "%s already has an Odoo database."
+msgstr "%s a déjà une base Odoo."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "%s is already running on this production."
+msgstr "%s est déjà en cours sur cette production."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_request.py:0
+msgid "%s is not awaiting approval."
+msgstr "%s n'est pas en attente d'approbation."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_request.py:0
+msgid "%s was created but is not synced yet."
+msgstr "%s a été créée mais n'est pas encore synchronisée."
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instance
+msgid "(same as production)"
+msgstr "(identique à la production)"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instance
+msgid "), not the staging's current one."
+msgstr "), pas celle du staging actuel."
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instance
+msgid ", then come back here."
+msgstr ", puis revenez ici."
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_new
+msgid "1. Offer"
+msgstr "1. Offre"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_new
+msgid "2. Name"
+msgstr "2. Nom"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_new
+msgid ""
+"3 to 30 characters: lowercase letters, digits and hyphens, starting with a "
+"letter."
+msgstr ""
+"3 à 30 caractères : lettres minuscules, chiffres et tirets, en commençant "
+"par une lettre."
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instances
+msgid "<i class=\"oi me-1\" data-icon=\"add\"/>Add a database"
+msgstr "<i class=\"oi me-1\" data-icon=\"add\"/>Ajouter une base"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instance
+msgid ""
+"<i class=\"oi me-1\" data-icon=\"arrow_upward\"/>Move production to this "
+"staging's code"
+msgstr ""
+"<i class=\"oi me-1\" data-icon=\"arrow_upward\"/>Passer la production au "
+"code de ce staging"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instance
+msgid "<i class=\"oi me-1\" data-icon=\"check\"/>Confirm the promotion"
+msgstr "<i class=\"oi me-1\" data-icon=\"check\"/>Confirmer la mise en production"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instance
+msgid "<i class=\"oi me-1\" data-icon=\"mail\"/>Send me a confirmation code"
+msgstr "<i class=\"oi me-1\" data-icon=\"mail\"/>M'envoyer un code de confirmation"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instance
+msgid "<i class=\"oi me-1\" data-icon=\"refresh\"/>Resync staging from production"
+msgstr ""
+"<i class=\"oi me-1\" data-icon=\"refresh\"/>Resynchroniser le staging depuis"
+" la production"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_new
+msgid "<i class=\"oi me-1\" data-icon=\"send\"/>Send the request"
+msgstr "<i class=\"oi me-1\" data-icon=\"send\"/>Envoyer la demande"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_new
+msgid ""
+"<span class=\"d-none o_herd_name_example\">your-name</span>\n"
+"                            <span>Production:</span>"
+msgstr ""
+"<span class=\"d-none o_herd_name_example\">votre-nom</span>\n"
+"                            <span>Production :</span>"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instance
+msgid "<strong>Production</strong>"
+msgstr "<strong>Production</strong>"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instance
+msgid "<strong>Staging</strong>"
+msgstr "<strong>Staging</strong>"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instance
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.view_k8s_odoo_promotion_confirm_form
+msgid ""
+"A backup of the production is taken first; if it fails, the production is "
+"not touched."
+msgstr ""
+"Une sauvegarde de la production est faite d'abord ; si elle échoue, la "
+"production n'est pas touchée."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "A code was just sent, please wait a minute."
+msgstr "Un code vient d'être envoyé, attendez une minute."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/controllers/portal.py:0
+#: code:addons/odoo_herd_portal/wizards/k8s_odoo_promotion_confirm.py:0
+msgid "A code was sent to %s."
+msgstr "Un code a été envoyé à %s."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "A confirmed promotion cannot be changed: %s"
+msgstr "Une mise en production confirmée ne peut plus être modifiée : %s"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "A promotion only starts once confirmed by a human."
+msgstr ""
+"Une mise en production ne démarre qu'une fois confirmée par un humain."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_request.py:0
+msgid "A request is already in progress for %s."
+msgstr "Une demande est déjà en cours pour %s."
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_request__message_needaction
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__message_needaction
+msgid "Action Needed"
+msgstr "Action requise"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_new
+msgid "Add an Odoo database"
+msgstr "Ajouter une base Odoo"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_request.py:0
+msgid "Add an e-mail address to your account first: it is your login."
+msgstr ""
+"Ajoutez d'abord une adresse courriel à votre compte : c'est votre "
+"identifiant."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_request.py:0
+msgid "Address:"
+msgstr "Adresse :"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance.py:0
+msgid "Agents cannot change %s on these instances."
+msgstr "Les agents ne peuvent pas modifier %s sur ces instances."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance.py:0
+msgid "Agents cannot change a production image."
+msgstr "Les agents ne peuvent pas changer l'image d'une production."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "An agent can never confirm a promotion."
+msgstr "Un agent ne peut jamais confirmer une mise en production."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_template.py:0
+msgid "An offer published in the portal needs a cluster."
+msgstr "Une offre proposée au portail doit avoir un cluster."
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.view_k8s_odoo_instance_request_form
+msgid "Approve and create"
+msgstr "Approuver et créer"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_request__approved_at
+msgid "Approved At"
+msgstr "Approuvée le"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_request__approved_by_id
+msgid "Approved By"
+msgstr "Approuvée par"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_request.py:0
+msgid "Approved by %s."
+msgstr "Approuvée par %s."
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.view_k8s_odoo_instance_request_form
+msgid ""
+"Approving creates a fresh production, unreachable until its admin account\n"
+"                        is given to the requester with a random password, then its staging."
+msgstr ""
+"L'approbation crée une production neuve, injoignable tant que son compte admin\n"
+"                        n'a pas été remis au demandeur avec un mot de passe aléatoire, puis son staging."
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.view_k8s_odoo_promotion_confirm_form
+msgid "Ask for a code by e-mail, then enter it (valid 10 minutes)."
+msgstr ""
+"Demandez un code par courriel, puis saisissez-le (valable 10 minutes)."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "Ask for a confirmation code first."
+msgstr "Demandez d'abord un code de confirmation."
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_request__message_attachment_count
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__message_attachment_count
+msgid "Attachment Count"
+msgstr "Nombre de pièces jointes"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields.selection,name:odoo_herd_portal.selection__k8s_odoo_promotion__confirm_method__totp
+#: model:ir.model.fields.selection,name:odoo_herd_portal.selection__k8s_odoo_promotion_confirm__method__totp
+msgid "Authenticator app"
+msgstr "Application d'authentification"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields.selection,name:odoo_herd_portal.selection__k8s_odoo_instance_request__state__requested
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.view_k8s_odoo_instance_request_search
+msgid "Awaiting approval"
+msgstr "En attente d'approbation"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields.selection,name:odoo_herd_portal.selection__k8s_odoo_promotion__state__requested
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instances
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.view_k8s_odoo_promotion_search
+msgid "Awaiting confirmation"
+msgstr "En attente de confirmation"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields.selection,name:odoo_herd_portal.selection__k8s_odoo_promotion__state__backing_up
+msgid "Backing up production"
+msgstr "Sauvegarde de la production"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__backup_id
+msgid "Backup"
+msgstr "Sauvegarde"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "Backup failed, production left untouched: %s"
+msgstr "Échec de la sauvegarde, production laissée intacte : %s"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instance
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instances
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_new
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.view_k8s_odoo_promotion_confirm_form
+msgid "Cancel"
+msgstr "Annuler"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields.selection,name:odoo_herd_portal.selection__k8s_odoo_instance_request__state__cancelled
+#: model:ir.model.fields.selection,name:odoo_herd_portal.selection__k8s_odoo_promotion__state__cancelled
+msgid "Cancelled"
+msgstr "Annulée"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_request.py:0
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "Cancelled by %s."
+msgstr "Annulée par %s."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance.py:0
+msgid "Cannot read the image of %s from the cluster, try again later."
+msgstr ""
+"Impossible de lire l'image de %s dans le cluster, réessayez plus tard."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_request.py:0
+msgid ""
+"Change this password at your first login (your name, top right, then "
+"Preferences / Security). A staging copy will follow at %s."
+msgstr ""
+"Changez ce mot de passe à votre première connexion (votre nom en haut à "
+"droite, puis Préférences / Sécurité). Une copie de staging suivra à %s."
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instances
+msgid ""
+"Choose an offer and a name: we create your production and a staging copy\n"
+"                            to test changes before they reach it."
+msgstr ""
+"Choisissez une offre et un nom : nous créons votre production et une copie de staging\n"
+"                            pour tester les changements avant qu'ils ne l'atteignent."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_request.py:0
+msgid "Choose one of the offers."
+msgstr "Choisissez une des offres."
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance__herd_partner_id
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_request__partner_id
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__partner_id
+msgid "Client"
+msgstr "Client"
+
+#. module: odoo_herd_portal
+#: model:ir.module.module,summary:base.module_odoo_herd_portal
+msgid ""
+"Client portal for an Odoo production and its staging: staging resync, human-"
+"confirmed promotion to production, new database requests"
+msgstr ""
+"Portail client d'une production Odoo et de son staging : resynchronisation "
+"du staging, mise en production confirmée par un humain, demandes de "
+"nouvelles bases"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,help:odoo_herd_portal.field_k8s_odoo_instance__herd_partner_id
+#: model:ir.model.fields,help:odoo_herd_portal.field_k8s_odoo_promotion__partner_id
+msgid "Client whose portal users see this production and its stagings."
+msgstr ""
+"Client dont les utilisateurs du portail voient cette production et ses "
+"stagings."
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,help:odoo_herd_portal.field_k8s_odoo_instance_template__herd_portal_published
+msgid ""
+"Clients without an Odoo database may request one from this offer, from the "
+"portal. A cluster manager approves each request."
+msgstr ""
+"Les clients sans base Odoo peuvent en demander une avec cette offre, depuis "
+"le portail. Un gestionnaire du cluster approuve chaque demande."
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_template__herd_cluster_id
+msgid "Cluster"
+msgstr "Cluster"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance.py:0
+msgid "Cluster %s is not active."
+msgstr "Le cluster %s n'est pas actif."
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,help:odoo_herd_portal.field_k8s_odoo_instance_template__herd_cluster_id
+msgid "Cluster where the databases requested from this offer are created."
+msgstr "Cluster où sont créées les bases demandées avec cette offre."
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion_confirm__code
+msgid "Code"
+msgstr "Code"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__code_attempts
+msgid "Code Attempts"
+msgstr "Tentatives de code"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__code_expires_at
+msgid "Code Expires At"
+msgstr "Expiration du code"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__code_hash
+msgid "Code Hash"
+msgstr "Empreinte du code"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__code_sent_at
+msgid "Code Sent At"
+msgstr "Code envoyé le"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__code_user_id
+msgid "Code User"
+msgstr "Destinataire du code"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields.selection,name:odoo_herd_portal.selection__k8s_odoo_promotion__confirm_method__email
+#: model:ir.model.fields.selection,name:odoo_herd_portal.selection__k8s_odoo_promotion_confirm__method__email
+msgid "Code by e-mail"
+msgstr "Code par courriel"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instance
+msgid "Code of your authenticator app"
+msgstr "Code de votre application d'authentification"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "Code to confirm %s"
+msgstr "Code pour confirmer %s"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,help:odoo_herd_portal.field_k8s_odoo_promotion__modules
+#: model:ir.model.fields,help:odoo_herd_portal.field_k8s_odoo_promotion_confirm__modules
+msgid ""
+"Comma-separated modules to update once the image is deployed. Empty: no "
+"module update."
+msgstr ""
+"Modules à mettre à jour une fois l'image déployée, séparés par des virgules."
+" Vide : aucune mise à jour de module."
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,help:odoo_herd_portal.field_k8s_odoo_promotion__modules_install
+#: model:ir.model.fields,help:odoo_herd_portal.field_k8s_odoo_promotion_confirm__modules_install
+msgid ""
+"Comma-separated new modules to install once the image is deployed, as "
+"already tested on the staging. Empty: nothing to install."
+msgstr ""
+"Nouveaux modules à installer une fois l'image déployée, séparés par des "
+"virgules, tels que testés sur le staging. Vide : rien à installer."
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,help:odoo_herd_portal.field_k8s_odoo_instance_request__partner_id
+msgid ""
+"Commercial entity of the requester: it becomes the client of the production."
+msgstr ""
+"Entité commerciale du demandeur : elle devient le client de la production."
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.view_k8s_odoo_promotion_form
+msgid "Confirm"
+msgstr "Confirmer"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/wizards/k8s_odoo_promotion_confirm.py:0
+msgid "Confirm %s"
+msgstr "Confirmer %s"
+
+#. module: odoo_herd_portal
+#: model:ir.model,name:odoo_herd_portal.model_k8s_odoo_promotion_confirm
+msgid "Confirm a promotion to production"
+msgstr "Confirmer une mise en production"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.view_k8s_odoo_promotion_confirm_form
+msgid "Confirm the promotion"
+msgstr "Confirmer la mise en production"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "Confirm with the code of your authenticator app."
+msgstr "Confirmez avec le code de votre application d'authentification."
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instance
+msgid "Confirmation code"
+msgstr "Code de confirmation"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "Confirmation code for promotion %s:"
+msgstr "Code de confirmation de la mise en production %s :"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "Confirmation code sent to %s."
+msgstr "Code de confirmation envoyé à %s."
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__confirmed_at
+msgid "Confirmed At"
+msgstr "Confirmée le"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__confirmed_by_id
+msgid "Confirmed By"
+msgstr "Confirmée par"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "Confirmed by %(user)s (%(method)s)."
+msgstr "Confirmée par %(user)s (%(method)s)."
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__confirm_method
+msgid "Confirmed with"
+msgstr "Confirmée avec"
+
+#. module: odoo_herd_portal
+#: model:ir.model,name:odoo_herd_portal.model_k8s_create_instance_wizard
+msgid "Create Kubernetes Odoo Instance Wizard"
+msgstr "Assistant de création d'instance Odoo Kubernetes"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.view_k8s_odoo_instance_request_form
+msgid "Create this production and its staging on the cluster?"
+msgstr "Créer cette production et son staging sur le cluster ?"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_request__create_uid
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__create_uid
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion_confirm__create_uid
+msgid "Created by"
+msgstr "Créé par"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_request__create_date
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__create_date
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion_confirm__create_date
+msgid "Created on"
+msgstr "Créé le"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instance
+msgid "Creates a request: an approver confirms it with a code sent by e-mail."
+msgstr ""
+"Crée une demande : un approbateur la confirme avec un code reçu par "
+"courriel."
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields.selection,name:odoo_herd_portal.selection__k8s_odoo_instance_request__state__creating
+msgid "Creating the production"
+msgstr "Création de la production"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields.selection,name:odoo_herd_portal.selection__k8s_odoo_instance_request__state__cloning
+msgid "Creating the staging"
+msgstr "Création du staging"
+
+#. module: odoo_herd_portal
+#: model:ir.ui.menu,name:odoo_herd_portal.menu_k8s_instance_requests
+msgid "Database requests"
+msgstr "Demandes de bases"
+
+#. module: odoo_herd_portal
+#: model:res.groups,comment:odoo_herd_portal.group_staging_operator
+msgid ""
+"Deploy code to stagings allowed for agents, resync them from production and "
+"request a promotion. Never confirms a promotion."
+msgstr ""
+"Déployer du code sur les stagings ouverts aux agents, les resynchroniser "
+"depuis la production et demander une mise en production. Ne confirme jamais "
+"une mise en production."
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields.selection,name:odoo_herd_portal.selection__k8s_odoo_promotion__state__deploying
+msgid "Deploying"
+msgstr "Déploiement"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_create_instance_wizard__display_name
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_backup__display_name
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance__display_name
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_request__display_name
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_template__display_name
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__display_name
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion_confirm__display_name
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_upgrade__display_name
+msgid "Display Name"
+msgstr "Nom affiché"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,help:odoo_herd_portal.field_k8s_odoo_instance_template__herd_host_suffix
+msgid ""
+"Domain under which the hosts are made: <name>.<suffix> for the production, "
+"<name>-staging.<suffix> for its staging. A wildcard DNS record must point it"
+" to the cluster ingress."
+msgstr ""
+"Domaine sous lequel les hôtes sont créés : <nom>.<suffixe> pour la "
+"production, <nom>-staging.<suffixe> pour son staging. Un enregistrement DNS "
+"générique doit le diriger vers l'ingress du cluster."
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields.selection,name:odoo_herd_portal.selection__k8s_odoo_promotion__state__done
+msgid "Done"
+msgstr "Terminée"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,help:odoo_herd_portal.field_k8s_odoo_promotion__scheduled_at
+#: model:ir.model.fields,help:odoo_herd_portal.field_k8s_odoo_promotion_confirm__scheduled_at
+msgid "Empty: right after confirmation."
+msgstr "Vide : dès la confirmation."
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instance
+msgid "Enable it in your security settings"
+msgstr "Activez-la dans vos paramètres de sécurité"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.view_k8s_odoo_promotion_confirm_form
+msgid "Enter the code of your authenticator app."
+msgstr "Saisissez le code de votre application d'authentification."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/wizards/k8s_odoo_promotion_confirm.py:0
+msgid "Enter the code."
+msgstr "Saisissez le code."
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion_confirm__error
+msgid "Error"
+msgstr "Erreur"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields.selection,name:odoo_herd_portal.selection__k8s_odoo_instance_request__state__failed
+#: model:ir.model.fields.selection,name:odoo_herd_portal.selection__k8s_odoo_promotion__state__failed
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.view_k8s_odoo_instance_request_search
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.view_k8s_odoo_promotion_search
+msgid "Failed"
+msgstr "Échouée"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_request.py:0
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "Failed: %s"
+msgstr "Échec : %s"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_request__message_follower_ids
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__message_follower_ids
+msgid "Followers"
+msgstr "Abonnés"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_request__message_partner_ids
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__message_partner_ids
+msgid "Followers (Partners)"
+msgstr "Abonnés (partenaires)"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instance
+msgid "From"
+msgstr "Depuis"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_request__has_message
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__has_message
+msgid "Has Message"
+msgstr "A un message"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_request.py:0
+msgid "Hello %s,"
+msgstr "Bonjour %s,"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_request__host
+msgid "Host"
+msgstr "Hôte"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_template__herd_host_suffix
+msgid "Host suffix"
+msgstr "Suffixe d'hôte"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,help:odoo_herd_portal.field_k8s_odoo_instance__herd_approver_ids
+msgid ""
+"Humans who may confirm a promotion to this production, from the portal, with"
+" a code sent by e-mail. Agents are always refused."
+msgstr ""
+"Humains pouvant confirmer une mise en production de cette instance, depuis "
+"le portail, avec un code reçu par courriel. Les agents sont toujours "
+"refusés."
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_create_instance_wizard__id
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_backup__id
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance__id
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_request__id
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_template__id
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__id
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion_confirm__id
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_upgrade__id
+msgid "ID"
+msgstr "ID"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,help:odoo_herd_portal.field_k8s_odoo_instance_request__message_needaction
+#: model:ir.model.fields,help:odoo_herd_portal.field_k8s_odoo_promotion__message_needaction
+msgid "If checked, new messages require your attention."
+msgstr "Si coché, de nouveaux messages demandent votre attention."
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,help:odoo_herd_portal.field_k8s_odoo_instance_request__message_has_error
+#: model:ir.model.fields,help:odoo_herd_portal.field_k8s_odoo_instance_request__message_has_sms_error
+#: model:ir.model.fields,help:odoo_herd_portal.field_k8s_odoo_promotion__message_has_error
+#: model:ir.model.fields,help:odoo_herd_portal.field_k8s_odoo_promotion__message_has_sms_error
+msgid "If checked, some messages have a delivery error."
+msgstr "Si coché, certains messages ont une erreur de livraison."
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__image
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion_confirm__image
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instances
+msgid "Image"
+msgstr "Image"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid ""
+"Image deployed, but the module update could not start (previous image: "
+"%(prev)s): %(err)s"
+msgstr ""
+"Image déployée, mais la mise à jour des modules n'a pas pu démarrer (image "
+"précédente : %(prev)s) : %(err)s"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "Image deployed, modules updated or installed."
+msgstr "Image déployée, modules mis à jour ou installés."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "Image deployed."
+msgstr "Image déployée."
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instance
+msgid "Image:"
+msgstr "Image :"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "Image: %s"
+msgstr "Image : %s"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.view_k8s_odoo_instance_request_search
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.view_k8s_odoo_promotion_search
+msgid "In progress"
+msgstr "En cours"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/controllers/portal.py:0
+msgid "Invalid date: %s"
+msgstr "Date invalide : %s"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_template.py:0
+msgid "Invalid host suffix: %s"
+msgstr "Suffixe d'hôte invalide : %s"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "Invalid module name: %s"
+msgstr "Nom de module invalide : %s"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_template.py:0
+msgid "Invalid namespace: %s"
+msgstr "Namespace invalide : %s"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_request__message_is_follower
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__message_is_follower
+msgid "Is Follower"
+msgstr "Est abonné"
+
+#. module: odoo_herd_portal
+#: model:ir.model,name:odoo_herd_portal.model_k8s_odoo_backup
+msgid "Kubernetes Odoo Backup"
+msgstr "Sauvegarde Odoo Kubernetes"
+
+#. module: odoo_herd_portal
+#: model:ir.model,name:odoo_herd_portal.model_k8s_odoo_instance
+msgid "Kubernetes Odoo Instance"
+msgstr "Instance Odoo Kubernetes"
+
+#. module: odoo_herd_portal
+#: model:ir.model,name:odoo_herd_portal.model_k8s_odoo_instance_template
+msgid "Kubernetes Odoo Instance Template"
+msgstr "Modèle d'instance Odoo Kubernetes"
+
+#. module: odoo_herd_portal
+#: model:ir.model,name:odoo_herd_portal.model_k8s_odoo_upgrade
+msgid "Kubernetes Odoo Upgrade"
+msgstr "Mise à jour Odoo Kubernetes"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_request__write_uid
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__write_uid
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion_confirm__write_uid
+msgid "Last Updated by"
+msgstr "Dernière modification par"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_request__write_date
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__write_date
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion_confirm__write_date
+msgid "Last Updated on"
+msgstr "Dernière modification le"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_request.py:0
+msgid "Login:"
+msgstr "Identifiant :"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_request__message
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__message
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion_confirm__message
+msgid "Message"
+msgstr "Message"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_request__message_has_error
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__message_has_error
+msgid "Message Delivery error"
+msgstr "Erreur de livraison du message"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_request__message_ids
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__message_ids
+msgid "Messages"
+msgstr "Messages"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion_confirm__method
+msgid "Method"
+msgstr "Méthode"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "Module update failed (previous image: %(prev)s): %(err)s"
+msgstr ""
+"Échec de la mise à jour des modules (image précédente : %(prev)s) : %(err)s"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__modules
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion_confirm__modules
+msgid "Modules"
+msgstr "Modules"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__modules_install
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion_confirm__modules_install
+msgid "Modules to install"
+msgstr "Modules à installer"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "Modules to install: %s"
+msgstr "Modules à installer : %s"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instance
+msgid "Modules to update (optional, comma-separated)"
+msgstr "Modules à mettre à jour (facultatif, séparés par des virgules)"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "Modules to update: %s"
+msgstr "Modules à mettre à jour : %s"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_request__instance_name
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_request__name
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__name
+msgid "Name"
+msgstr "Nom"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_new
+msgid "Name of your database"
+msgstr "Nom de votre base"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_template__herd_namespace
+msgid "Namespace"
+msgstr "Namespace"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,help:odoo_herd_portal.field_k8s_odoo_instance_template__herd_namespace
+msgid ""
+"Namespace for the databases of this offer. It must already exist, with the "
+"image pull secret and the Role letting odoo-herd reach its services "
+"(deploy/odoo-herd-clients.yaml)."
+msgstr ""
+"Namespace des bases de cette offre. Il doit déjà exister, avec le secret de "
+"pull d'image et le Role qui permet à odoo-herd de joindre ses services "
+"(deploy/odoo-herd-clients.yaml)."
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instance
+msgid "Neutralized copy: no e-mails, crons or payments."
+msgstr "Copie neutralisée : ni courriels, ni tâches planifiées, ni paiements."
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_breadcrumbs_herd
+msgid "New database"
+msgstr "Nouvelle base"
+
+#. module: odoo_herd_portal
+#: model:ir.actions.act_window,name:odoo_herd_portal.action_k8s_odoo_instance_request
+msgid "New database requests"
+msgstr "Demandes de nouvelles bases"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instance
+msgid ""
+"New modules to install (optional, comma-separated, already installed on the "
+"staging)"
+msgstr ""
+"Nouveaux modules à installer (facultatif, séparés par des virgules, déjà "
+"installés sur le staging)"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instances
+msgid "No Odoo instance is linked to your account."
+msgstr "Aucune instance Odoo n'est liée à votre compte."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_request.py:0
+msgid "No news from the cluster for 3 hours."
+msgstr "Aucune nouvelle du cluster depuis 3 heures."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "No news from the cluster for 6 hours."
+msgstr "Aucune nouvelle du cluster depuis 6 heures."
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instance
+msgid "No promotion yet."
+msgstr "Aucune mise en production pour l'instant."
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_request__message_needaction_counter
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__message_needaction_counter
+msgid "Number of Actions"
+msgstr "Nombre d'actions"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_request__message_has_error_counter
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__message_has_error_counter
+msgid "Number of errors"
+msgstr "Nombre d'erreurs"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,help:odoo_herd_portal.field_k8s_odoo_instance_request__message_needaction_counter
+#: model:ir.model.fields,help:odoo_herd_portal.field_k8s_odoo_promotion__message_needaction_counter
+msgid "Number of messages requiring action"
+msgstr "Nombre de messages demandant une action"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,help:odoo_herd_portal.field_k8s_odoo_instance_request__message_has_error_counter
+#: model:ir.model.fields,help:odoo_herd_portal.field_k8s_odoo_promotion__message_has_error_counter
+msgid "Number of messages with delivery error"
+msgstr "Nombre de messages avec une erreur de livraison"
+
+#. module: odoo_herd_portal
+#: model:ir.module.module,shortdesc:base.module_odoo_herd_portal
+msgid "Odoo Herd Portal"
+msgstr "Portail Odoo Herd"
+
+#. module: odoo_herd_portal
+#: model:ir.actions.server,name:odoo_herd_portal.cron_herd_requests_ir_actions_server
+msgid "Odoo Herd: move approved database requests on"
+msgstr "Odoo Herd : faire avancer les demandes de bases approuvées"
+
+#. module: odoo_herd_portal
+#: model:ir.actions.server,name:odoo_herd_portal.cron_herd_promotions_ir_actions_server
+msgid "Odoo Herd: start scheduled promotions, time out stuck ones"
+msgstr ""
+"Odoo Herd : démarrer les mises en production planifiées, abandonner celles "
+"bloquées"
+
+#. module: odoo_herd_portal
+#: model:portal.entry,name:odoo_herd_portal.portal_odoo_instances
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_breadcrumbs_herd
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instances
+msgid "Odoo instances"
+msgstr "Instances Odoo"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_request__template_id
+msgid "Offer"
+msgstr "Offre"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_template__herd_portal_published
+msgid "Offered in the portal"
+msgstr "Proposé au portail"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_request.py:0
+msgid "Only a client's human user can request a database."
+msgstr "Seul un utilisateur humain d'un client peut demander une base."
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.view_k8s_odoo_promotion_form
+msgid ""
+"Only a human approver of the production confirms, here or from the portal\n"
+"                        (/my/odoo), with the code of their authenticator app or a code sent by e-mail."
+msgstr ""
+"Seul un approbateur humain de la production confirme, ici ou depuis le portail\n"
+"                        (/my/odoo), avec le code de son application d'authentification ou un code reçu par courriel."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_request.py:0
+msgid "Only a human cluster manager can approve or refuse."
+msgstr "Seul un gestionnaire humain du cluster peut approuver ou refuser."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "Only a promotion that has not started can be cancelled."
+msgstr "Seule une mise en production non démarrée peut être annulée."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_request.py:0
+msgid "Only a request awaiting approval can be cancelled."
+msgstr "Seule une demande en attente d'approbation peut être annulée."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "Only a staging can be deployed this way."
+msgstr "Seul un staging peut être déployé de cette façon."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "Only a staging linked to a production can be resynced."
+msgstr "Seul un staging lié à une production peut être resynchronisé."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "Only unconfirmed promotions can be deleted."
+msgstr ""
+"Seules les mises en production non confirmées peuvent être supprimées."
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance__herd_agent_allowed
+msgid "Open to agents"
+msgstr "Ouvert aux agents"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.view_k8s_odoo_instance_form_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.view_k8s_odoo_instance_template_form_herd_portal
+msgid "Portal"
+msgstr "Portail"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_template__herd_portal_description
+msgid "Portal description"
+msgstr "Description au portail"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__previous_image
+msgid "Previous Image"
+msgstr "Image précédente"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_request__production_id
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__production_id
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion_confirm__production_id
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instances
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.view_k8s_odoo_instance_form_herd_portal
+msgid "Production"
+msgstr "Production"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__production_image
+msgid "Production Image"
+msgstr "Image de la production"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_request.py:0
+msgid "Production and staging are ready."
+msgstr "La production et le staging sont prêts."
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance__herd_approver_ids
+msgid "Production approvers"
+msgstr "Approbateurs de la production"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid ""
+"Production changed since the request (%(then)s, now %(now)s): ask for a new "
+"promotion."
+msgstr ""
+"La production a changé depuis la demande (%(then)s, maintenant %(now)s) : "
+"demandez une nouvelle mise en production."
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,help:odoo_herd_portal.field_k8s_odoo_promotion__previous_image
+msgid "Production image before the promotion, for a rollback."
+msgstr ""
+"Image de la production avant la mise en production, pour un retour arrière."
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,help:odoo_herd_portal.field_k8s_odoo_promotion__production_image
+msgid ""
+"Production image when the promotion was requested: if production has changed"
+" since, the promotion is refused instead of rolling it back."
+msgstr ""
+"Image de la production au moment de la demande : si la production a changé "
+"depuis, la mise en production est refusée au lieu de la ramener en arrière."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "Production now runs %s."
+msgstr "La production exécute maintenant %s."
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,help:odoo_herd_portal.field_k8s_odoo_instance__herd_require_2fa
+msgid ""
+"Production only: approvers must confirm with their authenticator app (two-"
+"factor authentication on their account); the e-mailed code is refused."
+msgstr ""
+"Production seulement : les approbateurs doivent confirmer avec leur "
+"application d'authentification (double authentification activée sur leur "
+"compte) ; le code par courriel est refusé."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_request.py:0
+msgid "Production secured; access sent to %(email)s for %(host)s."
+msgstr "Production sécurisée ; accès envoyé à %(email)s pour %(host)s."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "Production: %s"
+msgstr "Production : %s"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion_confirm__promotion_id
+msgid "Promotion"
+msgstr "Mise en production"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/controllers/portal.py:0
+msgid "Promotion %s cancelled."
+msgstr "Mise en production %s annulée."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/controllers/portal.py:0
+#: code:addons/odoo_herd_portal/wizards/k8s_odoo_promotion_confirm.py:0
+msgid "Promotion %s confirmed."
+msgstr "Mise en production %s confirmée."
+
+#. module: odoo_herd_portal
+#: model:ir.model,name:odoo_herd_portal.model_k8s_odoo_promotion
+msgid "Promotion of a staging image to production"
+msgstr "Mise en production de l'image d'un staging"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "Promotion requested by %s, awaiting a human approver."
+msgstr ""
+"Mise en production demandée par %s, en attente d'un approbateur humain."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/controllers/portal.py:0
+msgid "Promotion requested. An approver must now confirm it."
+msgstr ""
+"Mise en production demandée. Un approbateur doit maintenant la confirmer."
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance__herd_promotion_ids
+#: model:ir.ui.menu,name:odoo_herd_portal.menu_k8s_promotions
+msgid "Promotions"
+msgstr "Mises en production"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid ""
+"The production already runs this staging's code: name the modules to update "
+"or to install."
+msgstr "La production exécute déjà le code de ce staging : indiquez les modules à mettre à jour ou à installer."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "Image %(image)s deployed by %(user)s. Modules to update: %(modules)s."
+msgstr "Image %(image)s déployée par %(user)s. Modules à mettre à jour : %(modules)s."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "Only a staging linked to a production has a delivery status."
+msgstr "Seul un staging lié à une production a un état de livraison."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "Replaced by %s."
+msgstr "Remplacée par %s."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance.py:0
+msgid "Module update %(upgrade)s started: %(modules)s."
+msgstr "Mise à jour des modules %(upgrade)s lancée : %(modules)s."
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance__herd_deploy_image
+msgid "Delivered image"
+msgstr "Image livrée"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance__herd_deploy_modules
+msgid "Delivered modules"
+msgstr "Modules livrés"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance__herd_deploy_upgrade_id
+msgid "Delivery module update"
+msgstr "Mise à jour des modules de la livraison"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "Promotions start from a staging linked to a production."
+msgstr "Une mise en production part d'un staging lié à une production."
+
+#. module: odoo_herd_portal
+#: model:ir.actions.act_window,name:odoo_herd_portal.action_k8s_odoo_promotion
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instance
+msgid "Promotions to production"
+msgstr "Mises en production"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields.selection,name:odoo_herd_portal.selection__k8s_odoo_instance_request__state__done
+msgid "Ready"
+msgstr "Prête"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_request.py:0
+msgid "Ready:"
+msgstr "Prête :"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.view_k8s_odoo_instance_request_form
+msgid "Refuse"
+msgstr "Refuser"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields.selection,name:odoo_herd_portal.selection__k8s_odoo_instance_request__state__refused
+msgid "Refused"
+msgstr "Refusée"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_request.py:0
+msgid "Refused by %s."
+msgstr "Refusée par %s."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/controllers/portal.py:0
+msgid "Request cancelled."
+msgstr "Demande annulée."
+
+#. module: odoo_herd_portal
+#: model:ir.model,name:odoo_herd_portal.model_k8s_odoo_instance_request
+msgid "Request for a new Odoo database"
+msgstr "Demande de nouvelle base Odoo"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/controllers/portal.py:0
+msgid "Request sent: we create your database once it is approved."
+msgstr "Demande envoyée : nous créons votre base dès qu'elle est approuvée."
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_request__requested_by_id
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__requested_by_id
+msgid "Requested By"
+msgstr "Demandée par"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__requested_by_agent
+msgid "Requested By Agent"
+msgstr "Demandée par un agent"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instance
+msgid "Requested by"
+msgstr "Demandée par"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance__herd_require_2fa
+msgid "Require two-factor authentication"
+msgstr "Exiger la double authentification"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "Resync from %(prod)s requested by %(user)s (%(refresh)s)."
+msgstr ""
+"Resynchronisation depuis %(prod)s demandée par %(user)s (%(refresh)s)."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/controllers/portal.py:0
+msgid "Resync of %s started: it takes a few minutes."
+msgstr "Resynchronisation de %s lancée : elle prend quelques minutes."
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_request__message_has_sms_error
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__message_has_sms_error
+msgid "SMS Delivery error"
+msgstr "Erreur de livraison du SMS"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields.selection,name:odoo_herd_portal.selection__k8s_odoo_promotion__state__scheduled
+msgid "Scheduled"
+msgstr "Planifiée"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__scheduled_at
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion_confirm__scheduled_at
+msgid "Scheduled for"
+msgstr "Planifiée pour"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.view_k8s_odoo_promotion_confirm_form
+msgid "Send me a code"
+msgstr "M'envoyer un code"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_request__staging_id
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__staging_id
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion_confirm__staging_id
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.view_k8s_odoo_instance_form_herd_portal
+msgid "Staging"
+msgstr "Staging"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_request__staging_host
+msgid "Staging Host"
+msgstr "Hôte du staging"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,help:odoo_herd_portal.field_k8s_odoo_promotion__image
+#: model:ir.model.fields,help:odoo_herd_portal.field_k8s_odoo_promotion_confirm__image
+msgid ""
+"Staging image, pinned by digest when the promotion was requested. Production"
+" receives exactly this image."
+msgstr ""
+"Image du staging, figée par son empreinte (digest) au moment de la demande. "
+"La production reçoit exactement cette image."
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,help:odoo_herd_portal.field_k8s_odoo_instance__herd_agent_allowed
+msgid ""
+"Staging only: agents (staging operators) may deploy code on it, resync it "
+"and request a promotion of its image."
+msgstr ""
+"Staging seulement : les agents (opérateurs de staging) peuvent y déployer du"
+" code, le resynchroniser et demander la mise en production de son image."
+
+#. module: odoo_herd_portal
+#: model:res.groups,name:odoo_herd_portal.group_staging_operator
+msgid "Staging operator (agents)"
+msgstr "Opérateur de staging (agents)"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance__herd_staging_ids
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instances
+msgid "Stagings"
+msgstr "Stagings"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_request__state
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__state
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instances
+msgid "State"
+msgstr "État"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_request__step_started_at
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__step_started_at
+msgid "Step Started At"
+msgstr "Étape commencée le"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_request.py:0
+msgid "Temporary password:"
+msgstr "Mot de passe temporaire :"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "The backup could not start: %s"
+msgstr "La sauvegarde n'a pas pu démarrer : %s"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "The code has expired, ask for a new one."
+msgstr "Le code a expiré, demandez-en un nouveau."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_request.py:0
+msgid "The fresh database refused admin/admin: it was changed outside herd."
+msgstr ""
+"La base neuve a refusé admin/admin : elle a été modifiée en dehors de "
+"l'herd."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "The image could not be applied: %s"
+msgstr "L'image n'a pas pu être appliquée : %s"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "The image must be pinned by digest (…@sha256:<64 hex>), not by tag: %s"
+msgstr ""
+"L'image doit être désignée par son empreinte (…@sha256:<64 hex>), pas par un"
+" tag : %s"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance.py:0
+msgid ""
+"The image of %s only changes through a confirmed promotion (Odoo Herd → "
+"Promotions). Use \"Reset to Current\" to drop this change."
+msgstr ""
+"L'image de %s ne change que par une mise en production confirmée (Odoo Herd "
+"→ Mises en production). Utilisez « Reset to Current » pour annuler cette "
+"modification."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_request.py:0
+msgid "The name %s is already taken."
+msgstr "Le nom %s est déjà pris."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_request.py:0
+msgid "The name %s is reserved, choose another one."
+msgstr "Le nom %s est réservé, choisissez-en un autre."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_request.py:0
+msgid ""
+"The name must be 3 to 30 characters: lowercase letters, digits and single "
+"hyphens, starting with a letter."
+msgstr ""
+"Le nom doit compter 3 à 30 caractères : lettres minuscules, chiffres et "
+"tirets simples, en commençant par une lettre."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_request.py:0
+msgid "The production could not be created: %s"
+msgstr "La production n'a pas pu être créée : %s"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_request.py:0
+msgid "The production disappeared from the cluster."
+msgstr "La production a disparu du cluster."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_request.py:0
+msgid "The production failed to start (%s)."
+msgstr "La production n'a pas pu démarrer (%s)."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_request.py:0
+msgid ""
+"The production is created but could not be secured; it stays unreachable "
+"from outside: %s"
+msgstr ""
+"La production est créée mais n'a pas pu être sécurisée ; elle reste "
+"injoignable de l'extérieur : %s"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_request.py:0
+msgid "The production is ready, but the staging failed (%s)."
+msgstr "La production est prête, mais le staging a échoué (%s)."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_request.py:0
+msgid "The production is ready, but the staging failed: %s"
+msgstr "La production est prête, mais le staging a échoué : %s"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "The scheduled time must be in the future."
+msgstr "L'heure planifiée doit être dans le futur."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "The source must be a staging instance."
+msgstr "La source doit être une instance de staging."
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instance
+msgid ""
+"The staging has received new code since this request: confirming deploys the\n"
+"                            image requested ("
+msgstr ""
+"Le staging a reçu du nouveau code depuis cette demande : la confirmation déploie\n"
+"                            l'image demandée ("
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "The target must be a production instance."
+msgstr "La cible doit être une instance de production."
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instance
+msgid "This production has no staging yet."
+msgstr "Cette production n'a pas encore de staging."
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instance
+msgid "This production requires two-factor authentication to approve."
+msgstr "Cette production exige la double authentification pour approuver."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid ""
+"This production requires two-factor authentication: enable it to approve."
+msgstr ""
+"Cette production exige la double authentification : activez-la pour "
+"approuver."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "This promotion is no longer awaiting confirmation."
+msgstr "Cette mise en production n'attend plus de confirmation."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "This staging is not opened to agents."
+msgstr "Ce staging n'est pas ouvert aux agents."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "Too many attempts, ask for a new code."
+msgstr "Trop de tentatives, demandez un nouveau code."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "Unknown instance."
+msgstr "Instance inconnue."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_request.py:0
+msgid "Unknown request."
+msgstr "Demande inconnue."
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields.selection,name:odoo_herd_portal.selection__k8s_odoo_promotion__state__upgrading
+msgid "Updating modules"
+msgstr "Mise à jour des modules"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_promotion__upgrade_id
+msgid "Upgrade"
+msgstr "Mise à jour"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "Valid 10 minutes. If you did not ask for it, ignore this e-mail."
+msgstr ""
+"Valable 10 minutes. Si vous ne l'avez pas demandé, ignorez ce courriel."
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instance
+msgid "Waiting for an approver of this production."
+msgstr "En attente d'un approbateur de cette production."
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_new
+msgid ""
+"We create a production and a staging copy. A member of our team approves each\n"
+"                request; you then receive the address and the access by e-mail."
+msgstr ""
+"Nous créons une production et une copie de staging. Un membre de notre équipe approuve chaque\n"
+"                demande ; vous recevez ensuite l'adresse et l'accès par courriel."
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.view_k8s_odoo_instance_template_form_herd_portal
+msgid "What the client reads about this offer"
+msgstr "Ce que le client lit sur cette offre"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,help:odoo_herd_portal.field_k8s_odoo_instance_template__herd_portal_description
+msgid "What the client reads about this offer in the portal."
+msgstr "Ce que le client lit sur cette offre dans le portail."
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instance
+msgid "When (optional)"
+msgstr "Quand (facultatif)"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "When: %s"
+msgstr "Quand : %s"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/controllers/portal.py:0
+#: code:addons/odoo_herd_portal/wizards/k8s_odoo_promotion_confirm.py:0
+msgid "Wrong code."
+msgstr "Code erroné."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "You are not an approver of %s."
+msgstr "Vous n'êtes pas approbateur de %s."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "You cannot deploy on this staging."
+msgstr "Vous ne pouvez pas déployer sur ce staging."
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "You cannot operate this instance."
+msgstr "Vous ne pouvez pas agir sur cette instance."
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instances
+msgid "You have no Odoo database yet"
+msgstr "Vous n'avez pas encore de base Odoo"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_request.py:0
+msgid "Your Odoo database %s is ready"
+msgstr "Votre base Odoo %s est prête"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_instance_request.py:0
+msgid "Your Odoo database %s is ready."
+msgstr "Votre base Odoo %s est prête."
+
+#. module: odoo_herd_portal
+#: model:portal.entry,description:odoo_herd_portal.portal_odoo_instances
+msgid ""
+"Your Odoo databases: ask for one, resync the staging, move to production"
+msgstr ""
+"Vos bases Odoo : en demander une, resynchroniser le staging, mettre en "
+"production"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "Your account has no e-mail address."
+msgstr "Votre compte n'a pas d'adresse courriel."
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instances
+msgid ""
+"Your database is being created: you receive its access by e-mail as soon as "
+"it is ready."
+msgstr ""
+"Votre base est en cours de création : vous recevrez son accès par courriel "
+"dès qu'elle sera prête."
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instance
+msgid "agent"
+msgstr "agent"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.view_k8s_odoo_instance_template_form_herd_portal
+msgid "e.g. 636.vezina.biz"
+msgstr "p. ex. 636.vezina.biz"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_new
+msgid "e.g. mycompany"
+msgstr "p. ex. monentreprise"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instance
+msgid "e.g. project_task_pull_request"
+msgstr "p. ex. project_task_pull_request"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instance
+msgid "e.g. sale,project_task_code"
+msgstr "p. ex. sale,project_task_code"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "none"
+msgstr "aucun"
+
+#. module: odoo_herd_portal
+#. odoo-python
+#: code:addons/odoo_herd_portal/models/k8s_odoo_promotion.py:0
+msgid "right after confirmation"
+msgstr "dès la confirmation"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_new
+msgid "· <span>Staging:</span>"
+msgstr "· <span>Staging :</span>"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instance
+msgid "· confirmed by"
+msgstr "· confirmée par"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instance
+msgid "· image"
+msgstr "· image"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instance
+msgid "· install"
+msgstr "· installer"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instance
+msgid "· modules"
+msgstr "· modules"
+
+#. module: odoo_herd_portal
+#: model_terms:ir.ui.view,arch_db:odoo_herd_portal.portal_my_odoo_instance
+msgid "· scheduled for"
+msgstr "· planifiée pour"

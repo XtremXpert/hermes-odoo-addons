@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <!-- Agents (Hermes N2…) deploying and resyncing stagings. Members can
+         request a promotion but can never confirm one nor touch a production
+         instance: see k8s_odoo_promotion._herd_is_agent(). -->
+    <record id="group_staging_operator" model="res.groups">
+        <field name="name">Staging operator (agents)</field>
+        <field
+            name="comment"
+        >Deploy code to stagings allowed for agents, resync them from production and request a promotion. Never confirms a promotion.</field>
+    </record>
+</odoo>

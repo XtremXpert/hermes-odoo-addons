@@ -9,6 +9,11 @@
 target-version = "py312"
 line-length = 100
 
+# Dette de lint : odoo_herd et odoo_herd_portal, déplacés tels quels depuis Bemade
+# (voir .pre-commit-config.yaml). Le formatage s'y applique ; les règles ci-dessous
+# (96 trouvailles, dont 43 « except Exception ») le seront avec leur nettoyage.
+extend-exclude = ["odoo_herd", "odoo_herd_portal"]
+
 [lint]
 select = [
     "E",   # pycodestyle : mise en forme

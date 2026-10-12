@@ -96,6 +96,13 @@ repos:
       - id: eslint
         name: eslint
         entry: eslint
+        # Dette de lint : odoo_herd et odoo_herd_portal viennent de Bemade
+        # (bemade/bemade-addons, via diverse-addons et maison) et ont été
+        # déplacés ici tels quels le 2026-10-12. Leur nettoyage (~380 avertissements
+        # pylint-odoo, 96 ruff, JS à passer en .esm.js) se fait dans une PR à part,
+        # testée seule : ne pas mêler un déménagement et une réécriture du module
+        # qui pilote les mises en production. Retirer cet exclude à ce moment-là.
+        exclude: ^(odoo_herd|odoo_herd_portal)/
         args:
           - --color
           - --fix
@@ -137,10 +144,13 @@ repos:
     hooks:
       - id: pylint_odoo
         name: pylint with optional checks
+        exclude: ^(odoo_herd|odoo_herd_portal)/
         args:
           - --rcfile=.pylintrc
           - --exit-zero
         verbose: true
       - id: pylint_odoo
+        # voir la dette de lint sous eslint
+        exclude: ^(odoo_herd|odoo_herd_portal)/
         args:
           - --rcfile=.pylintrc-mandatory

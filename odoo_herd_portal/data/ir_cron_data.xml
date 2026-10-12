@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo noupdate="1">
+    <record id="cron_herd_promotions" model="ir.cron">
+        <field
+            name="name"
+        >Odoo Herd: start scheduled promotions, time out stuck ones</field>
+        <field name="model_id" ref="model_k8s_odoo_promotion" />
+        <field name="state">code</field>
+        <field name="code">model._cron_herd_promotions()</field>
+        <field name="interval_number" eval="5" />
+        <field name="interval_type">minutes</field>
+        <field name="active" eval="True" />
+    </record>
+    <record id="cron_herd_requests" model="ir.cron">
+        <field name="name">Odoo Herd: move approved database requests on</field>
+        <field name="model_id" ref="model_k8s_odoo_instance_request" />
+        <field name="state">code</field>
+        <field name="code">model._cron_herd_requests()</field>
+        <field name="interval_number" eval="5" />
+        <field name="interval_type">minutes</field>
+        <field name="active" eval="True" />
+    </record>
+</odoo>

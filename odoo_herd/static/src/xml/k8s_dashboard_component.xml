@@ -1,0 +1,332 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<templates xml:space="preserve">
+    <t t-name="odoo_herd.Dashboard">
+        <div class="o_k8s_dashboard h-100 overflow-auto bg-view">
+            <!-- Header -->
+            <div
+                class="d-flex align-items-center justify-content-between p-3 border-bottom bg-white"
+            >
+                <h2 class="mb-0">
+                    <i class="oi me-2" data-icon="deployed_code" />Kubernetes Dashboard
+                </h2>
+                <div class="d-flex align-items-center gap-3">
+                    <div class="form-check form-switch">
+                        <input
+                            id="autoRefreshToggle"
+                            class="form-check-input"
+                            type="checkbox"
+                            t-att-checked="this.state.autoRefresh"
+                            t-on-change="this.toggleAutoRefresh"
+                        />
+                        <label
+                            class="form-check-label small text-muted"
+                            for="autoRefreshToggle"
+                        >
+                            Auto-refresh (10s)
+                        </label>
+                    </div>
+                    <span t-if="this.state.lastRefresh" class="small text-muted">
+                        Last: <t t-out="this.state.lastRefresh" />
+                    </span>
+                    <button
+                        class="btn btn-outline-primary"
+                        t-on-click="this.refresh"
+                        t-att-disabled="this.state.loading"
+                    >
+                        <i
+                        class="oi me-1"
+                        t-att-class="{'oi-spin': this.state.loading}"
+                        data-icon="refresh"
+                    />
+                        Sync &amp; Refresh
+                    </button>
+                </div>
+            </div>
+
+            <div class="p-3">
+                <!-- Loading -->
+                <div t-if="this.state.loading" class="text-center py-5">
+                    <i class="oi oi-lg text-primary" data-icon="progress_activity" />
+                    <p class="mt-3 text-muted">Loading dashboard...</p>
+                </div>
+
+                <t t-else="">
+                    <!-- Alerts Section -->
+                    <div t-if="this.state.alerts.length" class="mb-4">
+                        <h5 class="mb-3"><i
+                            class="oi me-2"
+                            data-icon="notifications"
+                        />Alerts</h5>
+                        <div class="row g-2">
+                            <div
+                                t-foreach="this.state.alerts"
+                                t-as="alert"
+                                t-key="alert_index"
+                                class="col-12 col-md-6 col-lg-4"
+                            >
+                                <div
+                                    class="alert mb-0 d-flex align-items-center"
+                                    t-att-class="this.getAlertClass(alert.type)"
+                                >
+                                    <i class="oi me-2" t-att-data-icon="alert.icon" />
+                                    <span t-out="alert.message" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cluster Cards -->
+                    <h5 class="mb-3"><i class="oi me-2" data-icon="dns" />Clusters</h5>
+                    <div class="row g-3 mb-4">
+                        <div
+                            t-foreach="this.state.clusters"
+                            t-as="cluster"
+                            t-key="cluster.id"
+                            class="col-12 col-md-6 col-xl-4"
+                        >
+                            <div class="card h-100 shadow-sm">
+                                <div
+                                    class="card-header d-flex align-items-center justify-content-between bg-white"
+                                >
+                                    <h5 class="mb-0 d-flex align-items-center">
+                                        <i
+                                            t-att-class="'oi me-2 ' + this.getStatusClass(cluster.connected)"
+                                            t-att-data-icon="this.getStatusIcon(cluster.connected)"
+                                        />
+                                        <t t-out="cluster.name" />
+                                    </h5>
+                                    <span
+                                        class="badge"
+                                        t-att-class="cluster.connected ? 'text-bg-success' : 'text-bg-danger'"
+                                    >
+                                        <t
+                                            t-out="this.getConnectionLabel(cluster.connected)"
+                                        />
+                                    </span>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row text-center mb-3">
+                                        <div class="col-4">
+                                            <div
+                                                class="fs-4 fw-bold text-primary"
+                                                t-out="cluster.instance_count"
+                                            />
+                                            <small class="text-muted">Instances</small>
+                                        </div>
+                                        <div class="col-4">
+                                            <div
+                                                class="fs-4 fw-bold text-success"
+                                                t-out="cluster.phase_counts.Running"
+                                            />
+                                            <small class="text-muted">Running</small>
+                                        </div>
+                                        <div class="col-4">
+                                            <div
+                                                class="fs-4 fw-bold text-info"
+                                                t-out="cluster.backups_24h"
+                                            />
+                                            <small
+                                                class="text-muted"
+                                            >Backups (24h)</small>
+                                        </div>
+                                    </div>
+                                    <div
+                                        class="d-flex justify-content-between align-items-center text-muted small mb-2"
+                                    >
+                                        <span><i
+                                            class="oi me-1"
+                                            data-icon="schedule"
+                                        />Last backup:</span>
+                                        <span
+                                            t-out="this.formatLastBackup(cluster.last_backup)"
+                                        />
+                                    </div>
+                                    <t
+                                        t-if="cluster.phase_counts.Upgrading > 0 or cluster.phase_counts.Restoring > 0 or cluster.phase_counts.Failed > 0"
+                                    >
+                                        <div class="d-flex gap-2 flex-wrap">
+                                            <span
+                                                t-if="cluster.phase_counts.Upgrading > 0"
+                                                class="badge bg-warning"
+                                            >
+                                                <t
+                                                t-out="cluster.phase_counts.Upgrading"
+                                            /> upgrading
+                                            </span>
+                                            <span
+                                                t-if="cluster.phase_counts.Restoring > 0"
+                                                class="badge bg-info"
+                                            >
+                                                <t
+                                                t-out="cluster.phase_counts.Restoring"
+                                            /> restoring
+                                            </span>
+                                            <span
+                                                t-if="cluster.phase_counts.Failed > 0"
+                                                class="badge bg-danger"
+                                            >
+                                                <t
+                                                t-out="cluster.phase_counts.Failed"
+                                            /> failed
+                                            </span>
+                                        </div>
+                                    </t>
+                                </div>
+                                <div class="card-footer bg-white border-top">
+                                    <div class="btn-group w-100" role="group">
+                                        <button
+                                            class="btn btn-sm btn-outline-primary"
+                                            t-on-click="() => this.viewClusterInstances(cluster.id)"
+                                        >
+                                            <i
+                                            class="oi me-1"
+                                            data-icon="list"
+                                        />Instances
+                                        </button>
+                                        <button
+                                            class="btn btn-sm btn-outline-success"
+                                            t-on-click="() => this.createInstance(cluster.id)"
+                                        >
+                                            <i class="oi me-1" data-icon="add" />New
+                                        </button>
+                                        <button
+                                            class="btn btn-sm btn-outline-info"
+                                            t-on-click="() => this.viewClusterBackups(cluster.id)"
+                                        >
+                                            <i
+                                            class="oi me-1"
+                                            data-icon="archive"
+                                        />Backups
+                                        </button>
+                                        <button
+                                            class="btn btn-sm btn-outline-secondary"
+                                            t-on-click="() => this.syncCluster(cluster.id)"
+                                        >
+                                            <i class="oi" data-icon="refresh" />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Empty state -->
+                        <div t-if="!this.state.clusters.length" class="col-12">
+                            <div class="alert alert-info">
+                                <i class="oi me-2" data-icon="info" />
+                                No clusters configured. <a
+                                href="#"
+                                class="alert-link"
+                            >Add a cluster</a> to get started.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- All Instances List -->
+                    <h5 class="mb-3"><i
+                        class="oi me-2"
+                        data-icon="view_in_ar"
+                    />Instances</h5>
+                    <div class="card shadow-sm">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Instance</th>
+                                        <th>Cluster</th>
+                                        <th>Namespace</th>
+                                        <th>Phase</th>
+                                        <th>Deployment</th>
+                                        <th>Image</th>
+                                        <th class="text-end">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr
+                                        t-foreach="this.state.instances"
+                                        t-as="instance"
+                                        t-key="instance.id"
+                                    >
+                                        <td>
+                                            <a
+                                                href="#"
+                                                t-on-click.prevent="() => this.openInstance(instance.id)"
+                                                class="fw-bold text-primary"
+                                            >
+                                                <t t-out="instance.name" />
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <t t-out="instance.cluster_name" />
+                                        </td>
+                                        <td>
+                                            <code t-out="instance.namespace" />
+                                        </td>
+                                        <td>
+                                            <span
+                                                class="badge"
+                                                t-att-class="this.getPhaseClass(instance.phase)"
+                                            >
+                                                <t
+                                                    t-out="this.getPhaseLabel(instance.phase)"
+                                                />
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span
+                                                class="badge"
+                                                t-att-class="this.getDeploymentStateClass(instance.deployment_state)"
+                                            >
+                                                <t
+                                                    t-out="this.getDeploymentStateLabel(instance.deployment_state)"
+                                                />
+                                            </span>
+                                            <small class="text-muted ms-1">
+                                                <t t-out="instance.ready_replicas" />/<t
+                                                t-out="instance.replicas"
+                                            />
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <code
+                                                class="small"
+                                                t-out="instance.image"
+                                            />
+                                        </td>
+                                        <td class="text-end">
+                                            <button
+                                                t-if="instance.url"
+                                                class="btn btn-sm btn-outline-primary"
+                                                t-on-click="() => this.openInstanceUrl(instance.url)"
+                                                title="Open in browser"
+                                            >
+                                                <i class="oi" data-icon="open_in_new" />
+                                            </button>
+                                            <button
+                                                class="btn btn-sm btn-outline-secondary"
+                                                t-on-click="() => this.openInstance(instance.id)"
+                                                title="View details"
+                                            >
+                                                <i class="oi" data-icon="settings" />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr t-if="!this.state.instances.length">
+                                        <td
+                                            colspan="8"
+                                            class="text-center text-muted py-4"
+                                        >
+                                            <i
+                                            class="oi oi-lg mb-2 d-block"
+                                            data-icon="inbox"
+                                        />
+                                            No running instances
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </t>
+            </div>
+        </div>
+    </t>
+</templates>

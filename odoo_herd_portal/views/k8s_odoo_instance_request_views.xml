@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <record id="view_k8s_odoo_instance_request_list" model="ir.ui.view">
+        <field name="name">k8s.odoo.instance.request.list</field>
+        <field name="model">k8s.odoo.instance.request</field>
+        <field name="arch" type="xml">
+            <list
+                create="0"
+                edit="0"
+                delete="0"
+                decoration-info="state == 'requested'"
+                decoration-warning="state in ('creating', 'cloning')"
+                decoration-success="state == 'done'"
+                decoration-danger="state == 'failed'"
+                decoration-muted="state in ('refused', 'cancelled')"
+            >
+                <field name="name" />
+                <field name="partner_id" />
+                <field name="requested_by_id" />
+                <field name="template_id" />
+                <field name="host" />
+                <field name="approved_by_id" optional="show" />
+                <field name="create_date" optional="show" />
+                <field name="state" widget="badge" />
+            </list>
+        </field>
+    </record>
+
+    <record id="view_k8s_odoo_instance_request_form" model="ir.ui.view">
+        <field name="name">k8s.odoo.instance.request.form</field>
+        <field name="model">k8s.odoo.instance.request</field>
+        <field name="arch" type="xml">
+            <form create="0" edit="0" delete="0">
+                <header>
+                    <button
+                        name="action_herd_approve"
+                        type="object"
+                        string="Approve and create"
+                        class="btn-primary"
+                        invisible="state != 'requested'"
+                        groups="odoo_herd.group_k8s_manager"
+                        confirm="Create this production and its staging on the cluster?"
+                    />
+                    <button
+                        name="action_herd_refuse"
+                        type="object"
+                        string="Refuse"
+                        invisible="state != 'requested'"
+                        groups="odoo_herd.group_k8s_manager"
+                    />
+                    <field
+                        name="state"
+                        widget="statusbar"
+                        statusbar_visible="requested,creating,cloning,done"
+                    />
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" />
+                        </h1>
+                    </div>
+                    <div
+                        class="alert alert-info"
+                        role="alert"
+                        invisible="state != 'requested'"
+                    >
+                        Approving creates a fresh production, unreachable until its admin account
+                        is given to the requester with a random password, then its staging.
+                    </div>
+                    <group>
+                        <group>
+                            <field name="partner_id" />
+                            <field name="requested_by_id" />
+                            <field name="template_id" />
+                            <field name="instance_name" />
+                            <field name="host" />
+                            <field name="staging_host" />
+                        </group>
+                        <group>
+                            <field name="approved_by_id" />
+                            <field name="approved_at" />
+                            <field name="production_id" />
+                            <field name="staging_id" />
+                            <field name="step_started_at" />
+                        </group>
+                    </group>
+                    <field name="message" invisible="not message" />
+                </sheet>
+                <chatter />
+            </form>
+        </field>
+    </record>
+
+    <record id="view_k8s_odoo_instance_request_search" model="ir.ui.view">
+        <field name="name">k8s.odoo.instance.request.search</field>
+        <field name="model">k8s.odoo.instance.request</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="partner_id" />
+                <field name="instance_name" />
+                <filter
+                    name="pending"
+                    string="Awaiting approval"
+                    domain="[('state', '=', 'requested')]"
+                />
+                <filter
+                    name="running"
+                    string="In progress"
+                    domain="[('state', 'in', ('creating', 'cloning'))]"
+                />
+                <filter
+                    name="failed"
+                    string="Failed"
+                    domain="[('state', '=', 'failed')]"
+                />
+            </search>
+        </field>
+    </record>
+
+    <record id="action_k8s_odoo_instance_request" model="ir.actions.act_window">
+        <field name="name">New database requests</field>
+        <field name="res_model">k8s.odoo.instance.request</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_pending': 1}</field>
+    </record>
+
+    <menuitem
+        id="menu_k8s_instance_requests"
+        name="Database requests"
+        parent="odoo_herd.menu_k8s_main"
+        action="action_k8s_odoo_instance_request"
+        sequence="28"
+    />
+
+    <record id="view_k8s_odoo_instance_template_form_herd_portal" model="ir.ui.view">
+        <field name="name">k8s.odoo.instance.template.form.herd.portal</field>
+        <field name="model">k8s.odoo.instance.template</field>
+        <field name="inherit_id" ref="odoo_herd.view_k8s_odoo_instance_template_form" />
+        <field name="arch" type="xml">
+            <xpath expr="//notebook/page[@name='container']" position="before">
+                <page string="Portal" name="herd_portal">
+                    <group>
+                        <group>
+                            <field name="herd_portal_published" />
+                            <field
+                                name="herd_cluster_id"
+                                required="herd_portal_published"
+                            />
+                            <field
+                                name="herd_namespace"
+                                required="herd_portal_published"
+                            />
+                            <field
+                                name="herd_host_suffix"
+                                required="herd_portal_published"
+                                placeholder="e.g. 636.vezina.biz"
+                            />
+                        </group>
+                        <group>
+                            <field
+                                name="herd_portal_description"
+                                nolabel="1"
+                                colspan="2"
+                                placeholder="What the client reads about this offer"
+                            />
+                        </group>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

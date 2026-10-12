@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <record id="view_k8s_odoo_instance_form_herd_portal" model="ir.ui.view">
+        <field name="name">k8s.odoo.instance.form.herd.portal</field>
+        <field name="model">k8s.odoo.instance</field>
+        <field name="inherit_id" ref="odoo_herd.view_k8s_odoo_instance_form" />
+        <field name="arch" type="xml">
+            <xpath expr="//notebook/page[@name='container']" position="before">
+                <page string="Portal" name="herd_portal">
+                    <group>
+                        <group
+                            string="Production"
+                            invisible="environment != 'production'"
+                        >
+                            <field name="herd_partner_id" />
+                            <field name="herd_approver_ids" widget="many2many_tags" />
+                            <field name="herd_require_2fa" />
+                        </group>
+                        <group string="Staging" invisible="environment != 'staging'">
+                            <field name="herd_agent_allowed" />
+                        </group>
+                    </group>
+                    <field
+                        name="herd_staging_ids"
+                        invisible="environment != 'production'"
+                        readonly="1"
+                    >
+                        <list>
+                            <field name="name" />
+                            <field name="namespace" />
+                            <field name="image" />
+                            <field name="herd_agent_allowed" />
+                        </list>
+                    </field>
+                    <field
+                        name="herd_promotion_ids"
+                        invisible="environment != 'production'"
+                        readonly="1"
+                    />
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

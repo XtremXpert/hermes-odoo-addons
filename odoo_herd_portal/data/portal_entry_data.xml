@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <record id="portal_odoo_instances" model="portal.entry">
+        <field name="name">Odoo instances</field>
+        <field
+            name="description"
+        >Your Odoo databases: ask for one, resync the staging, move to production</field>
+        <field name="url">/my/odoo</field>
+        <field name="image" type="bytes" file="odoo_herd/static/description/icon.svg" />
+        <field name="placeholder_count">herd_instance_count</field>
+        <field name="category">service_category</field>
+        <field name="sequence" eval="95" />
+    </record>
+</odoo>

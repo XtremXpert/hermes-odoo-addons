@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo noupdate="1">
+    <record id="seq_k8s_odoo_promotion" model="ir.sequence">
+        <field name="name">Production promotion</field>
+        <field name="code">k8s.odoo.promotion</field>
+        <field name="prefix">PROMO/</field>
+        <field name="padding">4</field>
+        <field name="company_id" eval="False" />
+    </record>
+    <record id="seq_k8s_odoo_instance_request" model="ir.sequence">
+        <field name="name">New database request</field>
+        <field name="code">k8s.odoo.instance.request</field>
+        <field name="prefix">BASE/</field>
+        <field name="padding">4</field>
+        <field name="company_id" eval="False" />
+    </record>
+</odoo>

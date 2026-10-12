@@ -1,0 +1,6 @@
+id,name,model_id,group_id/id,operation,domain
+access_k8s_odoo_promotion_user,k8s.odoo.promotion user,k8s.odoo.promotion,odoo_herd.group_k8s_user,r,
+access_k8s_odoo_promotion_operator,k8s.odoo.promotion operator,k8s.odoo.promotion,group_staging_operator,r,
+access_k8s_odoo_instance_request_user,k8s.odoo.instance.request user,k8s.odoo.instance.request,odoo_herd.group_k8s_user,r,
+access_k8s_odoo_instance_request_manager,k8s.odoo.instance.request manager,k8s.odoo.instance.request,odoo_herd.group_k8s_manager,ru,
+access_k8s_odoo_promotion_confirm_user,k8s.odoo.promotion.confirm user,k8s.odoo.promotion.confirm,base.group_user,crud,"[('create_uid', '=', user.id)]"

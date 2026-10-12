@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <record id="view_k8s_odoo_promotion_confirm_form" model="ir.ui.view">
+        <field name="name">k8s.odoo.promotion.confirm.form</field>
+        <field name="model">k8s.odoo.promotion.confirm</field>
+        <field name="arch" type="xml">
+            <form>
+                <div class="alert alert-danger" role="alert" invisible="not error">
+                    <field name="error" nolabel="1" />
+                </div>
+                <div class="alert alert-info" role="status" invisible="not message">
+                    <field name="message" nolabel="1" />
+                </div>
+                <group>
+                    <field name="promotion_id" />
+                    <field name="production_id" />
+                    <field name="staging_id" />
+                    <field name="image" />
+                    <field name="modules" invisible="not modules" />
+                    <field name="modules_install" invisible="not modules_install" />
+                    <field name="scheduled_at" invisible="not scheduled_at" />
+                    <field name="method" invisible="1" />
+                </group>
+                <p class="text-muted" invisible="method != 'totp'">
+                    Enter the code of your authenticator app.
+                </p>
+                <p class="text-muted" invisible="method != 'email'">
+                    Ask for a code by e-mail, then enter it (valid 10 minutes).
+                </p>
+                <group>
+                    <field name="code" placeholder="000000" />
+                </group>
+                <p class="text-muted small">
+                    A backup of the production is taken first; if it fails, the production is not touched.
+                </p>
+                <footer>
+                    <button
+                        name="action_confirm"
+                        type="object"
+                        string="Confirm the promotion"
+                        class="btn-primary"
+                    />
+                    <button
+                        name="action_send_code"
+                        type="object"
+                        string="Send me a code"
+                        invisible="method != 'email'"
+                    />
+                    <button string="Cancel" special="cancel" />
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>
