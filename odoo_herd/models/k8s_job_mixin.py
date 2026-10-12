@@ -70,7 +70,11 @@ class K8sJobMixin(models.AbstractModel):
                     getattr(record, record._k8s_job_create_method)()
             except Exception as e:
                 _logger.exception("Kubernetes job of %s could not be created", record.display_name)
-                record.mark_failed(message=_("The Kubernetes job could not be created: %s", e))
+                # record.env._ : this runs after commit, when the request's
+                # environment (which _() would read the language from) is closed.
+                record.mark_failed(
+                    message=record.env._("The Kubernetes job could not be created: %s", e)
+                )
 
     # ------------------------------------------------------------------
     # Read back from the cluster

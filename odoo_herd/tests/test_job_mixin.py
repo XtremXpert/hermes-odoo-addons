@@ -88,9 +88,36 @@ class TestJobMixin(TransactionCase):
         self.assertEqual(upgrade.state, "pending")
 
     @mute_logger("odoo.addons.odoo_herd.models.k8s_job_mixin")
+    def test_upgrade_without_modules_to_install_builds_its_job(self):
+        """The CI's staging delivery creates an upgrade with modules only:
+        modules_install is False there, not an empty string."""
+        # Built by hand below: no job created after commit against the dummy cluster.
+        with patch.object(self.Upgrade, "_k8s_job_create_after_commit"):
+            upgrade = self.env["k8s.odoo.upgrade"].create(
+                {"instance_id": self.instance.id, "modules": "sale, stock"}
+            )
+        self.assertFalse(upgrade.modules_install)
+        api = MagicMock()
+        api.create_namespaced_custom_object.return_value = {"metadata": {"name": "shop-up-1"}}
+        with (
+            patch.object(type(self.cluster), "_get_k8s_client", return_value=MagicMock()),
+            patch(
+                "odoo.addons.odoo_herd.models.k8s_upgrade.client.CustomObjectsApi",
+                return_value=api,
+            ),
+        ):
+            upgrade._trigger_upgrade()
+        spec = api.create_namespaced_custom_object.call_args.kwargs["body"]["spec"]
+        self.assertEqual(spec["modules"], ["sale", "stock"])
+        self.assertEqual(spec["modulesInstall"], [])
+        self.assertEqual(upgrade.job_name, "shop-up-1")
+
     def test_creation_error_fails_the_job(self):
-        with patch.object(
-            self.Upgrade, "_trigger_upgrade", autospec=True, side_effect=RuntimeError("API down")
+        with (
+            patch.object(
+                self.Upgrade, "_trigger_upgrade", autospec=True, side_effect=RuntimeError("API down")
+            ),
+            mute_logger("odoo.addons.odoo_herd.models.k8s_job_mixin"),  # the failure is the point
         ):
             upgrade = self._upgrade()
             self.env.cr.postcommit.run()
