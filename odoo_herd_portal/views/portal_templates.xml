@@ -1,0 +1,600 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <template id="portal_breadcrumbs_herd" inherit_id="portal.portal_breadcrumbs">
+        <xpath expr="//ol[hasclass('o_portal_submenu')]" position="inside">
+            <li
+                t-if="page_name == 'herd_instances'"
+                class="breadcrumb-item active"
+            >Odoo instances</li>
+            <t t-if="page_name == 'herd_new_database'">
+                <li class="breadcrumb-item">
+                    <a href="/my/odoo">Odoo instances</a>
+                </li>
+                <li class="breadcrumb-item active">New database</li>
+            </t>
+            <t t-if="page_name == 'herd_instance'">
+                <li class="breadcrumb-item">
+                    <a href="/my/odoo">Odoo instances</a>
+                </li>
+                <li class="breadcrumb-item active" t-out="herd_prod['name']" />
+            </t>
+        </xpath>
+    </template>
+
+    <template id="portal_my_odoo_instances" name="My Odoo instances">
+        <t t-call="portal.portal_layout" breadcrumbs_searchbar="True">
+            <t
+                t-call="portal.portal_searchbar"
+                breadcrumbs_searchbar="True"
+                title.translate="Odoo instances"
+            />
+            <div
+                t-if="herd_message"
+                class="alert alert-success mt-3"
+                role="status"
+                t-out="herd_message"
+            />
+            <div
+                t-if="herd_error"
+                class="alert alert-danger mt-3"
+                role="alert"
+                t-out="herd_error"
+            />
+            <div t-if="herd_can_request" class="card mt-3 border-primary">
+                <div
+                    class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3"
+                >
+                    <div>
+                        <h5 class="card-title mb-1">You have no Odoo database yet</h5>
+                        <p class="card-text text-muted mb-0">
+                            Choose an offer and a name: we create your production and a staging copy
+                            to test changes before they reach it.
+                        </p>
+                    </div>
+                    <a href="/my/odoo/new" class="btn btn-primary">
+                        <i class="oi me-1" data-icon="add" />Add a database
+                    </a>
+                </div>
+            </div>
+            <div
+                t-elif="not herd_productions and not herd_requests"
+                class="alert alert-info mt-3"
+            >
+                No Odoo instance is linked to your account.
+            </div>
+            <div t-foreach="herd_requests" t-as="req" class="card mt-3">
+                <div class="card-body d-flex flex-wrap justify-content-between gap-2">
+                    <div>
+                        <strong t-out="req['host']" />
+                        <span
+                            t-attf-class="badge ms-1 text-bg-#{'info' if req['state'] == 'requested' else 'danger' if req['state'] in ('failed', 'refused') else 'warning'}"
+                            t-out="req['state_label']"
+                        />
+                        <div class="small text-muted">
+                            <t t-out="req['name']" /> · <t t-out="req['offer']" />
+                            · <t t-out="req['requested_by']" />
+                            · <span
+                            t-out="req['create_date']"
+                            t-options="{'widget': 'date'}"
+                        />
+                        </div>
+                        <div
+                            t-if="req['state'] in ('creating', 'cloning')"
+                            class="small mt-1"
+                        >
+                            Your database is being created: you receive its access by e-mail as soon as it is ready.
+                        </div>
+                        <div
+                            t-if="req['message']"
+                            class="small mt-1"
+                            t-out="req['message']"
+                        />
+                    </div>
+                    <form
+                        t-if="req['state'] == 'requested'"
+                        t-attf-action="/my/odoo/request/#{req['id']}/cancel"
+                        method="post"
+                    >
+                        <input
+                            type="hidden"
+                            name="csrf_token"
+                            t-att-value="request.csrf_token()"
+                        />
+                        <button
+                            type="submit"
+                            class="btn btn-sm btn-link text-danger"
+                        >Cancel</button>
+                    </form>
+                </div>
+            </div>
+            <t t-if="herd_productions" t-call="portal.portal_table">
+                <thead>
+                    <tr>
+                        <th>Production</th>
+                        <th>State</th>
+                        <th>Image</th>
+                        <th class="text-end">Stagings</th>
+                        <th class="text-end">Awaiting confirmation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr t-foreach="herd_productions" t-as="prod">
+                        <td>
+                            <a
+                                t-attf-href="/my/odoo/#{prod['id']}"
+                                t-out="prod['name']"
+                            />
+                            <div
+                                t-if="prod['url']"
+                                class="small text-muted"
+                                t-out="prod['url']"
+                            />
+                        </td>
+                        <td t-out="prod['phase']" />
+                        <td>
+                            <code t-out="prod['image_short']" />
+                        </td>
+                        <td class="text-end" t-out="prod['stagings']" />
+                        <td class="text-end">
+                            <span
+                                t-if="prod['pending']"
+                                class="badge text-bg-warning"
+                                t-out="prod['pending']"
+                            />
+                        </td>
+                    </tr>
+                </tbody>
+            </t>
+        </t>
+    </template>
+
+    <template id="portal_my_odoo_new" name="New Odoo database">
+        <t t-call="portal.portal_layout">
+            <div
+                t-if="herd_error"
+                class="alert alert-danger mt-3"
+                role="alert"
+                t-out="herd_error"
+            />
+            <h3 class="mt-3">Add an Odoo database</h3>
+            <p class="text-muted">
+                We create a production and a staging copy. A member of our team approves each
+                request; you then receive the address and the access by e-mail.
+            </p>
+            <form
+                action="/my/odoo/new/submit"
+                method="post"
+                class="mt-3 o_herd_new_database"
+            >
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    t-att-value="request.csrf_token()"
+                />
+                <fieldset class="mb-4">
+                    <legend class="fs-5">1. Offer</legend>
+                    <div class="row g-3">
+                        <div
+                            t-foreach="herd_offers"
+                            t-as="offer"
+                            class="col-12 col-md-6 col-lg-4"
+                        >
+                            <label
+                                class="card h-100 p-3"
+                                t-attf-for="offer_#{offer['id']}"
+                            >
+                                <div class="form-check">
+                                    <input
+                                        t-attf-id="offer_#{offer['id']}"
+                                        class="form-check-input"
+                                        type="radio"
+                                        name="template_id"
+                                        t-att-value="offer['id']"
+                                        t-att-data-host-suffix="offer['host_suffix']"
+                                        t-att-checked="offer['id'] == herd_template_id or (not herd_template_id and offer_first)"
+                                        required="1"
+                                    />
+                                    <strong
+                                        class="form-check-label"
+                                        t-out="offer['name']"
+                                    />
+                                </div>
+                                <div
+                                    class="small text-muted mt-2"
+                                    t-out="offer['description']"
+                                />
+                            </label>
+                        </div>
+                    </div>
+                </fieldset>
+                <fieldset class="mb-4">
+                    <legend class="fs-5">2. Name</legend>
+                    <label
+                        class="form-label"
+                        for="herd_instance_name"
+                    >Name of your database</label>
+                    <input
+                        id="herd_instance_name"
+                        class="form-control"
+                        type="text"
+                        name="instance_name"
+                        t-att-value="herd_instance_name"
+                        required="1"
+                        minlength="3"
+                        maxlength="30"
+                        pattern="[a-z][a-z0-9\-]{1,28}[a-z0-9]"
+                        autocomplete="off"
+                        spellcheck="false"
+                        placeholder="e.g. mycompany"
+                        aria-describedby="herd_name_help"
+                    />
+                    <div id="herd_name_help" class="form-text">
+                        <div
+                        >3 to 30 characters: lowercase letters, digits and hyphens, starting with a letter.</div>
+                        <div t-if="herd_offers">
+                            <span class="d-none o_herd_name_example">your-name</span>
+                            <span>Production:</span> <code
+                            class="o_herd_host"
+                            t-out="'your-name.%s' % herd_offers[0]['host_suffix']"
+                        />
+                            · <span>Staging:</span> <code
+                            class="o_herd_staging_host"
+                            t-out="'your-name-staging.%s' % herd_offers[0]['host_suffix']"
+                        />
+                        </div>
+                    </div>
+                </fieldset>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="oi me-1" data-icon="send" />Send the request
+                    </button>
+                    <a href="/my/odoo" class="btn btn-link">Cancel</a>
+                </div>
+            </form>
+        </t>
+    </template>
+
+    <template id="portal_my_odoo_instance" name="My Odoo instance">
+        <t t-call="portal.portal_layout">
+            <div
+                t-if="herd_message"
+                class="alert alert-success mt-3"
+                role="status"
+                t-out="herd_message"
+            />
+            <div
+                t-if="herd_error"
+                class="alert alert-danger mt-3"
+                role="alert"
+                t-out="herd_error"
+            />
+
+            <div class="row g-3 mt-1">
+                <!-- Production -->
+                <div class="col-12 col-lg-6">
+                    <div class="card h-100 border-success">
+                        <div class="card-header d-flex justify-content-between">
+                            <strong>Production</strong>
+                            <span
+                                class="badge text-bg-success"
+                                t-out="herd_prod['phase']"
+                            />
+                        </div>
+                        <div class="card-body">
+                            <h4 class="card-title" t-out="herd_prod['name']" />
+                            <p t-if="herd_prod['url']" class="mb-1">
+                                <a
+                                    t-att-href="herd_prod['url']"
+                                    target="_blank"
+                                    t-out="herd_prod['url']"
+                                />
+                            </p>
+                            <p class="mb-0 small">Image: <code
+                                t-out="herd_prod['image_short']"
+                            /></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stagings -->
+                <div t-foreach="herd_stagings" t-as="staging" class="col-12 col-lg-6">
+                    <div class="card h-100 border-warning">
+                        <div class="card-header d-flex justify-content-between">
+                            <strong>Staging</strong>
+                            <span
+                                class="badge text-bg-warning"
+                                t-out="staging['phase']"
+                            />
+                        </div>
+                        <div class="card-body">
+                            <h4 class="card-title" t-out="staging['name']" />
+                            <p t-if="staging['url']" class="mb-1">
+                                <a
+                                    t-att-href="staging['url']"
+                                    target="_blank"
+                                    t-out="staging['url']"
+                                />
+                            </p>
+                            <p class="small">Image: <code
+                                t-out="staging['image_short']"
+                            />
+                                <span
+                                t-if="staging['image'] == herd_prod['image']"
+                                class="text-muted"
+                            >(same as production)</span>
+                            </p>
+
+                            <form
+                                t-attf-action="/my/odoo/#{herd_prod['id']}/resync"
+                                method="post"
+                                class="mb-3"
+                                onsubmit="return confirm(this.dataset.confirm)"
+                                data-confirm="The staging database and files will be replaced by a neutralized copy of the production. Continue?"
+                            >
+                                <input
+                                    type="hidden"
+                                    name="csrf_token"
+                                    t-att-value="request.csrf_token()"
+                                />
+                                <input
+                                    type="hidden"
+                                    name="staging_id"
+                                    t-att-value="staging['id']"
+                                />
+                                <button type="submit" class="btn btn-outline-secondary">
+                                    <i
+                                    class="oi me-1"
+                                    data-icon="refresh"
+                                />Resync staging from production
+                                </button>
+                                <div
+                                    class="form-text"
+                                >Neutralized copy: no e-mails, crons or payments.</div>
+                            </form>
+
+                            <!-- Same image: the request only updates or installs modules. -->
+                            <t
+                                t-set="same_image"
+                                t-value="staging['image'] == herd_prod['image']"
+                            />
+                            <form
+                                t-attf-action="/my/odoo/#{herd_prod['id']}/promote"
+                                method="post"
+                            >
+                                <input
+                                    type="hidden"
+                                    name="csrf_token"
+                                    t-att-value="request.csrf_token()"
+                                />
+                                <input
+                                    type="hidden"
+                                    name="staging_id"
+                                    t-att-value="staging['id']"
+                                />
+                                <div class="mb-2">
+                                    <label
+                                        class="form-label small"
+                                        t-attf-for="modules_#{staging['id']}"
+                                    >Modules to update (optional, comma-separated)</label>
+                                    <input
+                                        t-attf-id="modules_#{staging['id']}"
+                                        class="form-control form-control-sm"
+                                        type="text"
+                                        name="modules"
+                                        placeholder="e.g. sale,project_task_code"
+                                    />
+                                </div>
+                                <div class="mb-2">
+                                    <label
+                                        class="form-label small"
+                                        t-attf-for="install_#{staging['id']}"
+                                    >New modules to install (optional, comma-separated, already installed on the staging)</label>
+                                    <input
+                                        t-attf-id="install_#{staging['id']}"
+                                        class="form-control form-control-sm"
+                                        type="text"
+                                        name="modules_install"
+                                        placeholder="e.g. project_task_pull_request"
+                                    />
+                                </div>
+                                <div class="mb-2">
+                                    <label
+                                        class="form-label small"
+                                        t-attf-for="when_#{staging['id']}"
+                                    >When (optional)</label>
+                                    <input
+                                        t-attf-id="when_#{staging['id']}"
+                                        class="form-control form-control-sm"
+                                        type="datetime-local"
+                                        name="scheduled_at"
+                                    />
+                                </div>
+                                <button
+                                    t-if="not same_image"
+                                    class="btn btn-primary"
+                                    type="submit"
+                                >
+                                    <i
+                                    class="oi me-1"
+                                    data-icon="arrow_upward"
+                                />Move production to this staging's code
+                                </button>
+                                <button t-else="" class="btn btn-primary" type="submit">
+                                    <i
+                                    class="oi me-1"
+                                    data-icon="refresh"
+                                />Update the production's modules
+                                </button>
+                                <div
+                                    t-if="same_image"
+                                    class="form-text"
+                                >The production already runs this code: only the named modules are updated or installed, after a backup.</div>
+                                <div
+                                    class="form-text"
+                                >Creates a request: an approver confirms it with a code sent by e-mail.</div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div t-if="not herd_stagings" class="col-12 col-lg-6">
+                    <div
+                        class="alert alert-info h-100 mb-0"
+                    >This production has no staging yet.</div>
+                </div>
+            </div>
+
+            <!-- Promotions -->
+            <h4 class="mt-4">Promotions to production</h4>
+            <p t-if="not herd_promotions" class="text-muted">No promotion yet.</p>
+            <div t-foreach="herd_promotions" t-as="promo" class="card mb-2">
+                <div class="card-body">
+                    <div class="d-flex flex-wrap justify-content-between gap-2">
+                        <div>
+                            <strong t-out="promo['name']" />
+                            <span
+                                t-attf-class="badge ms-1 text-bg-#{'info' if promo['state'] in ('requested', 'scheduled') else 'success' if promo['state'] == 'done' else 'danger' if promo['state'] == 'failed' else 'secondary' if promo['state'] == 'cancelled' else 'warning'}"
+                                t-out="promo['state_label']"
+                            />
+                            <div class="small text-muted">
+                                From <t t-out="promo['staging']" /> · image <code
+                                t-out="promo['image_short']"
+                            />
+                                <t t-if="promo['modules']"> · modules <t
+                                t-out="promo['modules']"
+                            /></t>
+                                <t t-if="promo['modules_install']"> · install <t
+                                t-out="promo['modules_install']"
+                            /></t>
+                                <t t-if="promo['scheduled_at']"> · scheduled for <span
+                                t-out="promo['scheduled_at']"
+                                t-options="{'widget': 'datetime'}"
+                            /></t>
+                            </div>
+                            <div class="small text-muted">
+                                Requested by <t t-out="promo['requested_by']" />
+                                <span
+                                t-if="promo['requested_by_agent']"
+                                class="badge text-bg-light"
+                            >agent</span>
+                                <t t-if="promo['confirmed_by']"> · confirmed by <t
+                                t-out="promo['confirmed_by']"
+                            /></t>
+                            </div>
+                            <div
+                                t-if="promo['message']"
+                                class="small mt-1"
+                                t-out="promo['message']"
+                            />
+                        </div>
+                        <form
+                            t-if="promo['state'] in ('requested', 'scheduled')"
+                            t-attf-action="/my/odoo/#{herd_prod['id']}/promotion/#{promo['id']}/cancel"
+                            method="post"
+                        >
+                            <input
+                                type="hidden"
+                                name="csrf_token"
+                                t-att-value="request.csrf_token()"
+                            />
+                            <button
+                                type="submit"
+                                class="btn btn-sm btn-link text-danger"
+                            >Cancel</button>
+                        </form>
+                    </div>
+
+                    <t t-if="promo['state'] == 'requested' and herd_is_approver">
+                        <div
+                            t-if="promo['staging_changed']"
+                            class="alert alert-warning small mt-2 mb-2"
+                        >
+                            The staging has received new code since this request: confirming deploys the
+                            image requested (<code
+                            t-out="promo['image_short']"
+                        />), not the staging's current one.
+                        </div>
+                        <div
+                            t-if="not herd_confirm_method"
+                            class="alert alert-warning small mt-2 mb-2"
+                        >
+                            This production requires two-factor authentication to approve.
+                            <a
+                            href="/my/security"
+                        >Enable it in your security settings</a>, then come back here.
+                        </div>
+                        <div
+                            t-else=""
+                            class="d-flex flex-wrap gap-2 mt-2 align-items-end"
+                        >
+                            <form
+                                t-if="herd_confirm_method == 'email'"
+                                t-attf-action="/my/odoo/#{herd_prod['id']}/promotion/#{promo['id']}/send-code"
+                                method="post"
+                            >
+                                <input
+                                    type="hidden"
+                                    name="csrf_token"
+                                    t-att-value="request.csrf_token()"
+                                />
+                                <button
+                                    type="submit"
+                                    class="btn btn-sm btn-outline-primary"
+                                >
+                                    <i
+                                    class="oi me-1"
+                                    data-icon="mail"
+                                />Send me a confirmation code
+                                </button>
+                            </form>
+                            <form
+                                t-attf-action="/my/odoo/#{herd_prod['id']}/promotion/#{promo['id']}/confirm"
+                                method="post"
+                                class="d-flex flex-wrap gap-2 align-items-center"
+                            >
+                                <input
+                                    type="hidden"
+                                    name="csrf_token"
+                                    t-att-value="request.csrf_token()"
+                                />
+                                <label
+                                    t-if="herd_confirm_method == 'totp'"
+                                    class="small mb-0"
+                                    t-attf-for="code_#{promo['id']}"
+                                >Code of your authenticator app</label>
+                                <input
+                                    t-attf-id="code_#{promo['id']}"
+                                    class="form-control form-control-sm"
+                                    type="text"
+                                    name="code"
+                                    inputmode="numeric"
+                                    autocomplete="one-time-code"
+                                    pattern="[0-9]{6}"
+                                    maxlength="6"
+                                    required="1"
+                                    style="width: 8em"
+                                    placeholder="000000"
+                                    aria-label="Confirmation code"
+                                />
+                                <button type="submit" class="btn btn-sm btn-success">
+                                    <i
+                                    class="oi me-1"
+                                    data-icon="check"
+                                />Confirm the promotion
+                                </button>
+                            </form>
+                        </div>
+                        <div
+                            class="form-text"
+                        >A backup of the production is taken first; if it fails, the production is not touched.</div>
+                    </t>
+                    <div
+                        t-elif="promo['state'] == 'requested'"
+                        class="small text-muted mt-2"
+                    >
+                        Waiting for an approver of this production.
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+</odoo>
