@@ -83,7 +83,7 @@ class K8sOdooInstanceRequest(models.Model):
         readonly=True,
         ondelete="restrict",
     )
-    instance_name = fields.Char(string="Name", required=True, readonly=True)
+    instance_name = fields.Char(string="Instance Name", required=True, readonly=True)
     host = fields.Char(compute="_compute_hosts", store=True)
     staging_host = fields.Char(compute="_compute_hosts", store=True)
     state = fields.Selection(

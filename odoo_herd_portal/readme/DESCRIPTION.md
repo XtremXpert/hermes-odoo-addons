@@ -149,8 +149,9 @@ Sur un staging coché « Ouvert aux agents » :
 ```python
 env["k8s.odoo.promotion"].herd_deploy_staging(staging_id, "ghcr.io/…@sha256:…")
 env["k8s.odoo.promotion"].herd_resync_staging(staging_id)
-env["k8s.odoo.promotion"].herd_request_promotion(staging_id, modules="sale,stock",
-                                                 scheduled_at="2026-10-07 02:00:00")
+env["k8s.odoo.promotion"].herd_request_promotion(
+    staging_id, modules="sale,stock", scheduled_at="2026-10-07 02:00:00"
+)
 ```
 
 ## Mise en place

@@ -89,8 +89,7 @@ class K8sOdooUpgrade(models.Model):
         if not self.create_uid:
             return
         try:
-            self.env["bus.bus"]._sendone(
-                self.create_uid.partner_id,
+            self.create_uid._bus_send(
                 "simple_notification",
                 {
                     "title": title,
