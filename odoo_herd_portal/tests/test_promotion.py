@@ -2,6 +2,7 @@ from datetime import timedelta
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
+import freezegun
 from freezegun import freeze_time
 
 from odoo import fields
@@ -15,6 +16,14 @@ from .common import CODE
 from .common import DIGEST_A
 from .common import DIGEST_B
 from .common import HerdPortalMixin
+
+
+# freezegun parcourt les modules chargés pour y remplacer datetime ; à partir de
+# kubernetes 37, cela déclenche l'import paresseux de modèles pydantic dont le
+# schéma échoue sur FakeDatetime (PydanticSchemaGenerationError). kubernetes n'a
+# rien à figer ici. configure() plutôt que freeze_time(ignore=...) : Odoo remplace
+# freeze_time par sa propre classe, qui ne prend pas ce paramètre.
+freezegun.configure(extend_ignore_list=["kubernetes"])
 
 
 class TestHerdPromotion(HerdPortalMixin, TransactionCase):
