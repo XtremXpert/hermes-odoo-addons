@@ -135,8 +135,7 @@ class K8sRestoreWebhook(http.Controller):
 
         try:
             # Send notification via bus
-            record.env["bus.bus"]._sendone(
-                record.create_uid.partner_id,
+            record.create_uid._bus_send(
                 "simple_notification",
                 {
                     "title": title,

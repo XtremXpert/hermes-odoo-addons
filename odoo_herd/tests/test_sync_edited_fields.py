@@ -3,6 +3,7 @@ import json
 from odoo.exceptions import UserError
 from odoo.tests import TransactionCase
 from odoo.tests import tagged
+from odoo.tools import mute_logger
 
 
 @tagged("post_install", "-at_install")
@@ -65,5 +66,7 @@ class TestSyncEditedFields(TransactionCase):
 
     def test_successful_sync_clears(self):
         self.instance.ingress_hosts_editable = "shop.example.com"
-        self.instance.action_sync_to_cluster()  # inactive cluster: nothing sent
+        # inactive cluster: nothing sent, and the warning saying so is expected
+        with mute_logger("odoo.addons.odoo_herd.models.k8s_odoo_instance"):
+            self.instance.action_sync_to_cluster()
         self.assertFalse(self.instance.edited_fields)

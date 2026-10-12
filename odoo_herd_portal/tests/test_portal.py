@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 from odoo.tests import HttpCase
 from odoo.tests import tagged
+from odoo.tools import mute_logger
 
 from .common import CODE
 from .common import DIGEST_B
@@ -173,7 +174,9 @@ class TestHerdPortal(HerdPortalMixin, HttpCase):
 
         # Production now runs the staging image: the second request names a module.
         second = self._agent_request(modules="sale")
-        response = self._post(f"/promotion/{second.id}/confirm", code=code)
+        # auth_totp logs the replay it refuses: expected here.
+        with mute_logger("odoo.addons.auth_totp.models.res_users"):
+            response = self._post(f"/promotion/{second.id}/confirm", code=code)
         self.assertIn("Wrong code", response.text)
         self.assertEqual(second.state, "requested")
 

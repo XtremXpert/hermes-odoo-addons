@@ -553,8 +553,9 @@ le secret S3 nommé dans <tt class="docutils literal">k8s.s3.config</tt>.</li>
 <pre class="code python literal-block">
 <span class="n">env</span><span class="p">[</span><span class="s2">&quot;k8s.odoo.promotion&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">herd_deploy_staging</span><span class="p">(</span><span class="n">staging_id</span><span class="p">,</span> <span class="s2">&quot;ghcr.io/…&#64;sha256:…&quot;</span><span class="p">)</span><span class="w">
 </span><span class="n">env</span><span class="p">[</span><span class="s2">&quot;k8s.odoo.promotion&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">herd_resync_staging</span><span class="p">(</span><span class="n">staging_id</span><span class="p">)</span><span class="w">
-</span><span class="n">env</span><span class="p">[</span><span class="s2">&quot;k8s.odoo.promotion&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">herd_request_promotion</span><span class="p">(</span><span class="n">staging_id</span><span class="p">,</span> <span class="n">modules</span><span class="o">=</span><span class="s2">&quot;sale,stock&quot;</span><span class="p">,</span><span class="w">
-</span>                                                 <span class="n">scheduled_at</span><span class="o">=</span><span class="s2">&quot;2026-10-07 02:00:00&quot;</span><span class="p">)</span>
+</span><span class="n">env</span><span class="p">[</span><span class="s2">&quot;k8s.odoo.promotion&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">herd_request_promotion</span><span class="p">(</span><span class="w">
+</span>    <span class="n">staging_id</span><span class="p">,</span> <span class="n">modules</span><span class="o">=</span><span class="s2">&quot;sale,stock&quot;</span><span class="p">,</span> <span class="n">scheduled_at</span><span class="o">=</span><span class="s2">&quot;2026-10-07 02:00:00&quot;</span><span class="w">
+</span><span class="p">)</span>
 </pre>
 </div>
 <div class="section" id="mise-en-place">
