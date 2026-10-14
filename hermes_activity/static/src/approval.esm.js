@@ -24,8 +24,8 @@ patch(Message.prototype, {
         // corps, corps du message).
         useEffect(() => {
             const corps = this.messageBody();
-            void this.message?.body;
-            if (!corps) {
+            const contenu = this.message?.body;
+            if (!corps || contenu === undefined) {
                 return;
             }
             const boutons = corps.querySelectorAll("a.o_hermes_approve");
@@ -34,7 +34,10 @@ patch(Message.prototype, {
             }
             const onClick = async (ev) => {
                 const lien = ev.currentTarget;
-                const url = new URL(lien.getAttribute("href") || "", window.location.origin);
+                const url = new URL(
+                    lien.getAttribute("href") || "",
+                    window.location.origin
+                );
                 if (url.pathname !== "/hermes/repondre") {
                     return;
                 }
@@ -50,7 +53,9 @@ patch(Message.prototype, {
                     return;
                 }
                 const groupe = lien.closest(".o_hermes_approval");
-                for (const bouton of groupe ? groupe.querySelectorAll("a.o_hermes_approve") : []) {
+                const selecteur = "a.o_hermes_approve";
+                const figes = groupe ? groupe.querySelectorAll(selecteur) : [];
+                for (const bouton of figes) {
                     bouton.style.pointerEvents = "none";
                     bouton.style.opacity = "0.5";
                 }
