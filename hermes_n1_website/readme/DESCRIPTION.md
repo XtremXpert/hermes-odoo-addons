@@ -21,6 +21,15 @@ L'assainissement conserve le balisage des blocs (classes `s_*`, `data-snippet`, 
 
 Le demandeur doit être un administrateur en conversation privée avec N1 (règles de `hermes_n1_audit`). Une demande rejouée ne réécrit pas la page.
 
+## Thème d'un nouveau site
+
+`appliquer_theme_web(website_id, theme, reason, …)` charge un thème **déjà installé** (`theme_*`) sur un site qui n'a pas encore de thème, avec les mêmes étapes que le bouton « Choisir ce thème » d'Odoo, pour ce site seulement :
+
+- n'installe ni ne met à jour aucun module : l'installation d'un thème relève de N3 ;
+- refuse un site qui a déjà un thème, car le remplacer retirerait du site les enregistrements du thème et leurs personnalisations : ce changement se fait dans l'éditeur web ;
+- exige `website.group_website_designer` pour le demandeur et le droit d'écrire sur le site ;
+- consigne l'opération dans `hermes.n1.change`, avec une note. Une demande rejouée ne recharge pas le thème.
+
 ## Dépendances et tests
 
 Dépend de `hermes_n1_audit` et `website`.
