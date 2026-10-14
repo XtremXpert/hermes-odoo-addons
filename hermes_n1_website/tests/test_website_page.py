@@ -209,3 +209,41 @@ class TestN1WebsitePage(TransactionCase):
         )
         self.assertIn('data-snippet="s_text_block"', self.read_page()["html"])
         self.assertTrue(result["audit_id"])
+
+    def test_theme_is_loaded_once_on_a_website_without_theme(self):
+        theme = self.env["ir.module.module"].create(
+            {"name": "theme_n1_test", "state": "installed", "shortdesc": "Thème de test N1"}
+        )
+        self.env["ir.module.module"].create({"name": "theme_n1_autre", "state": "installed"})
+        self.env["ir.module.module"].create({"name": "theme_n1_absent", "state": "uninstalled"})
+        website = self.env["website"].create({"name": "Site N1", "domain": "https://n1.example"})
+        result = self.service.appliquer_theme_web(
+            website.id, "theme_n1_test", "Thème du nouveau site", **self.source()
+        )
+        self.assertTrue(result["ok"])
+        self.assertEqual(website.theme_id, theme)
+        self.assertEqual(result["apres"], {"theme_id": "theme_n1_test"})
+        audit = self.env["hermes.n1.change"].browse(result["audit_id"])
+        self.assertEqual((audit.target_model, audit.target_id), ("website", website.id))
+        self.assertIn("theme_n1_test", str(audit.chatter_message_id.body))
+        replay = self.service.appliquer_theme_web(
+            website.id, "theme_n1_test", "Thème du nouveau site", **self.source()
+        )
+        self.assertTrue(replay["deja_applique"])
+        # An existing theme is never replaced; only installed theme_* modules are accepted.
+        with self.assertRaises(UserError):
+            self.service.appliquer_theme_web(
+                website.id, "theme_n1_autre", "Autre thème", **self.source()
+            )
+        self.assertEqual(website.theme_id, theme)
+        other = self.env["website"].create({"name": "Site N1 bis"})
+        for name in ("theme_n1_absent", "website", "base", None):
+            with self.subTest(theme=name), self.assertRaises(UserError):
+                self.service.appliquer_theme_web(other.id, name, "Motif", **self.source())
+        self.assertFalse(other.theme_id)
+        self.admin.group_ids = [(3, self.env.ref("website.group_website_designer").id)]
+        if not self.admin.has_group("website.group_website_designer"):
+            with self.assertRaises(AccessError):
+                self.service.appliquer_theme_web(
+                    other.id, "theme_n1_test", "Motif", **self.source()
+                )

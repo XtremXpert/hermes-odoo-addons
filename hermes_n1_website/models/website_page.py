@@ -273,6 +273,108 @@ class HermesN1ChangeWebsite(models.Model):
             result.update({"url": page.url, "sha256": _digest(after)})
             return result
 
+    # -- Website theme --------------------------------------------------------------------
+
+    @api.model
+    def appliquer_theme_web(self, website_id, theme, reason, channel_id, message_id, partner_id):
+        """Load an already installed theme on a website that has none yet.
+
+        ``ir.module.module`` is a technical model N1 never touches. This facade only does
+        what Odoo's ``button_choose_theme`` does for one website, without installing or
+        upgrading any module, and never replaces an existing theme: that would unload the
+        theme's records, and the customizations made on them, from the website.
+        """
+        actor, source = self._business_actor(channel_id, message_id, partner_id)
+        if type(website_id) is not int or website_id <= 0:
+            raise UserError(self.env._("Identifiant de site positif requis."))
+        if not isinstance(reason, str) or not 1 <= len(reason.strip()) <= 1000:
+            raise UserError(self.env._("Motif obligatoire."))
+        if not actor.has_group("website.group_website_designer"):
+            raise AccessError(self.env._("Le demandeur n'a pas le droit de modifier le site."))
+        website = self.env["website"].with_user(actor).browse(website_id).exists()
+        if not website:
+            raise UserError(self.env._("Site absent."))
+        website.check_access("write")
+        module = (
+            self.env["ir.module.module"]
+            .sudo()
+            .search([("name", "=", theme), ("state", "=", "installed")], limit=1)
+            if isinstance(theme, str) and theme.startswith("theme_")
+            else None
+        )
+        if not module:
+            raise UserError(
+                self.env._("Thème absent ou non installé ; l'installation relève de N3.")
+            )
+        key = hashlib.sha256(
+            json.dumps([self.env.uid, source.id, "website", website.id, module.name]).encode()
+        ).hexdigest()
+        with self.env.cr.savepoint():
+            self.env.cr.execute("SELECT pg_advisory_xact_lock(%s)", [int(key[:15], 16)])
+            previous = self.sudo().search([("request_key", "=", key)], limit=1)
+            if previous:
+                return previous._result(replayed=True)
+            if website.theme_id:
+                raise UserError(
+                    self.env._(
+                        "Ce site a déjà le thème %s ; le changer dans l'éditeur web.",
+                        website.theme_id.name,
+                    )
+                )
+            # Same steps as button_choose_theme, for this website only and with the actor
+            # as user: Odoo checks website rights in _theme_cleanup.
+            module = module.with_user(actor).sudo().with_context(website_id=website.id)
+            module._theme_remove(website)
+            website.sudo().theme_id = module
+            for stream in module._theme_get_stream_themes().filtered(
+                lambda m: m.state == "installed"
+            ):
+                stream._theme_load(website)
+            self.env["theme.utils"].with_user(actor).sudo().with_context(
+                website_id=website.id
+            )._post_copy(module)
+            self.env.flush_all()
+            audit = (
+                self.sudo()
+                .with_context(mail_create_nosubscribe=True)
+                .create(
+                    {
+                        "request_key": key,
+                        "target_model": "website",
+                        "target_id": website.id,
+                        "requester_id": actor.id,
+                        "agent_id": self.env.uid,
+                        "source_message_id": source.id,
+                        "reason": reason.strip(),
+                        "before_values": {"theme_id": False},
+                        "after_values": {"theme_id": module.name},
+                    }
+                )
+            )
+            body = (
+                (
+                    Markup("<p><strong>Hermes N1 : thème %s appliqué au site %s</strong></p>")
+                    % (module.name, website.name)
+                )
+                + Markup('<p class="mb-1"><strong>Motif</strong></p>')
+                + agent_html(reason)
+                + values_table({"theme_id": ""}, {"theme_id": module.name}, {"theme_id": "Thème"})
+            )
+            note = audit.with_context(
+                mail_notify_noemail=True, mail_post_autofollow=False
+            ).message_post(
+                body=body,
+                author_id=self.env.user.partner_id.id,
+                message_type="comment",
+                subtype_xmlid="mail.mt_note",
+            )
+            if not note:
+                raise UserError(self.env._("Journal obligatoire."))
+            models.Model.write(audit, {"chatter_message_id": note.id})
+            result = audit._result()
+            result.update({"website_id": website.id, "theme": module.name})
+            return result
+
     # -- Odoo snippet catalogue -------------------------------------------------------------
 
     @api.model
