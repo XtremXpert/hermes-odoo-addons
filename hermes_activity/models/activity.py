@@ -63,9 +63,13 @@ class Channel(models.Model):
     def message_post(self, *, body="", **kwargs):
         # API-key clients send Markdown as a plain RPC string. Convert here
         # as well as in repondre(), without needing a web-session password.
-        # Markup from the web route or repondre() is already formatted.
+        # Markup from the web route or repondre() is already formatted. With
+        # body_is_html, the gateway has already escaped and formatted the text:
+        # converting it again would show its tags literally. The flag is then
+        # consumed: the body passed on is Markup, which Odoo expects.
         if isinstance(body, str) and not isinstance(body, Markup) and _is_agent(self.env):
-            body = Markup(html_sanitize(html_depuis_markdown(body)))
+            texte = body if kwargs.pop("body_is_html", False) else html_depuis_markdown(body)
+            body = Markup(html_sanitize(texte))
         return super().message_post(body=body, **kwargs)
 
     def write(self, vals):

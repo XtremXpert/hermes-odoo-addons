@@ -18,6 +18,7 @@ et tableaux. Ce que le modèle produit réellement. Pas un moteur markdown.
 
 import re
 from html import escape
+from html.parser import HTMLParser
 
 # Les liens ne sont suivis que vers http(s) : pas de `javascript:` ni de
 # `data:` fabriqués par le modèle.
@@ -48,7 +49,119 @@ def _en_ligne(texte: str) -> str:
     return "".join(sortie)
 
 
+# Une réponse qui COMMENCE par une balise de bloc a été écrite en HTML par le
+# modèle (2026-10-14 : N1 répond en <p>…</p>, Discuss montrait les balises).
+# On la ramène d'abord en Markdown, puis le chemin habituel échappe tout et
+# réintroduit ses balises : la règle « échapper d'abord » tient. Porté de
+# hermes-agent (odoo_discuss/mise_en_forme.py) : Odoo présente, la passerelle
+# transporte.
+_BLOC_HTML = re.compile(r"\s*<(p|div|ul|ol|h[1-6]|table|pre|blockquote)[\s>]", re.I)
+
+
+class _LecteurHtml(HTMLParser):
+    """HTML simple → Markdown. Rien n'est conservé tel quel : les balises
+    connues deviennent leur équivalent Markdown, les autres disparaissent en
+    gardant leur texte, scripts et styles disparaissent avec leur contenu."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.sortie, self.listes, self.lien, self.muet = [], [], None, 0
+        self.rang, self.entete, self.tableau, self.pre = None, False, [], False
+
+    def ecrire(self, morceau):
+        if self.muet:
+            return
+        if self.rang is not None and self.rang:
+            self.rang[-1] += morceau
+        else:
+            self.sortie.append(morceau)
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if tag in ("script", "style"):
+            self.muet += 1
+        elif tag in ("p", "div", "blockquote", "ul", "ol", "table"):
+            self.ecrire("\n\n")
+            if tag in ("ul", "ol"):
+                self.listes.append(tag)
+        elif tag == "br":
+            self.ecrire("\n")
+        elif tag == "li":
+            self.ecrire("\n" + ("1. " if self.listes and self.listes[-1] == "ol" else "- "))
+        elif tag in ("strong", "b"):
+            self.ecrire("**")
+        elif tag in ("em", "i"):
+            self.ecrire("*")
+        elif tag == "code":
+            self.ecrire("`")
+        elif tag == "pre":
+            self.pre = True
+            self.ecrire("\n\n```\n")
+        elif re.fullmatch(r"h[1-6]", tag):
+            self.ecrire("\n\n### ")
+        elif tag == "a":
+            href = attrs.get("href") or ""
+            self.lien = href if re.match(r"https?://", href) else ""
+            if self.lien:
+                self.ecrire("[")
+        elif tag == "tr":
+            self.rang = []
+        elif tag in ("td", "th"):
+            self.entete = self.entete or tag == "th"
+            if self.rang is not None:
+                self.rang.append("")
+
+    def handle_endtag(self, tag):
+        if tag in ("script", "style"):
+            self.muet = max(0, self.muet - 1)
+        elif tag in ("p", "div", "blockquote", "h1", "h2", "h3", "h4", "h5", "h6"):
+            self.ecrire("\n\n")
+        elif tag in ("ul", "ol"):
+            if self.listes:
+                self.listes.pop()
+            self.ecrire("\n\n")
+        elif tag in ("strong", "b"):
+            self.ecrire("**")
+        elif tag in ("em", "i"):
+            self.ecrire("*")
+        elif tag == "code":
+            self.ecrire("`")
+        elif tag == "pre":
+            self.pre = False
+            self.ecrire("\n```\n\n")
+        elif tag == "a" and self.lien:
+            self.ecrire("](%s)" % self.lien)
+            self.lien = None
+        elif tag == "tr" and self.rang is not None:
+            cellules, self.rang = [" ".join(c.split()) for c in self.rang], None
+            self.sortie.append("\n| " + " | ".join(cellules) + " |")
+            if self.entete and not self.tableau:
+                self.sortie.append("\n|" + "---|" * len(cellules))
+            self.tableau.append(cellules)
+        elif tag == "table":
+            self.tableau, self.entete = [], False
+            self.ecrire("\n\n")
+
+    def handle_data(self, data):
+        if self.rang is not None and self.rang:
+            self.rang[-1] += data
+        else:
+            self.ecrire(data if self.pre else re.sub(r"\s+", " ", data))
+
+
+def markdown_depuis_html(texte: str) -> str:
+    lecteur = _LecteurHtml()
+    lecteur.feed(texte)
+    lecteur.close()
+    texte = "".join(lecteur.sortie)
+    # Lignes nettes : pas d'espace en tête de ligne, pas plus d'une ligne vide.
+    texte = "\n".join(ligne.strip() for ligne in texte.split("\n"))
+    return re.sub(r"\n{3,}", "\n\n", texte).strip()
+
+
 def html_depuis_markdown(texte: str) -> str:
+    if _BLOC_HTML.match(texte or ""):
+        texte = markdown_depuis_html(texte)
     lignes = _echapper(texte or "").split("\n")
     html, para, tableau = [], [], []
     liste = None
