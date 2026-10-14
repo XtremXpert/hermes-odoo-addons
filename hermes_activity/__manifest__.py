@@ -1,6 +1,6 @@
 {
     "name": "Hermes — activité dans Discussion",
-    "version": "20.0.1.1.0",
+    "version": "20.0.1.2.0",
     "author": "Benoît Vézina, Diverse-Cité",
     "website": "https://github.com/XtremXpert/hermes-odoo-addons",
     "license": "AGPL-3",
@@ -10,6 +10,7 @@
         "web.assets_backend": [
             "hermes_activity/static/src/activity.esm.js",
             "hermes_activity/static/src/activity.xml",
+            "hermes_activity/static/src/approval.esm.js",
         ]
     },
     "installable": True,

@@ -19,6 +19,7 @@ et tableaux. Ce que le modèle produit réellement. Pas un moteur markdown.
 import re
 from html import escape
 from html.parser import HTMLParser
+from urllib.parse import quote
 
 # Les liens ne sont suivis que vers http(s) : pas de `javascript:` ni de
 # `data:` fabriqués par le modèle.
@@ -260,3 +261,62 @@ def html_depuis_markdown(texte: str) -> str:
     vider_para()
     fermer_liste()
     return "".join(html)
+
+
+# ── Boutons d'approbation ────────────────────────────────────────────────
+# Repris de hermes-agent (odoo_discuss/mise_en_forme.py, Bemade Inc., AGPL-3).
+# Le framework Hermes demande ses approbations en texte :
+#   « Reply `/approve` to execute, `/approve session` to approve this pattern
+#     for the session, `/approve always` to approve permanently, or `/deny`
+#     to cancel. »
+# Odoo remplace cette phrase par des boutons. Chacun mène à /hermes/repondre
+# (controllers/main.py), qui poste la commande AU NOM DE LA PERSONNE QUI
+# CLIQUE : la garde d'auteur de Hermes la valide comme un message tapé.
+# Liens RELATIFS : l'URL interne qu'utilise l'agent (http://maison:8069)
+# n'est pas joignable depuis le navigateur d'un humain.
+_INVITE_APPROBATION = re.compile(
+    r"Reply\s+`(?P<p>[/!.]?)approve`\s+to\s+execute[\s\S]{0,200}?`(?P=p)deny`\s+to\s+cancel\.?"
+)
+
+
+def _bouton(base, prefixe, cmd, couleur, etiquette):
+    # Classes plutôt que styles : le nettoyeur d'Odoo retire `gap` et
+    # `background`, pas les classes Bootstrap. o_hermes_approve est le
+    # marqueur que static/src/approval.esm.js intercepte.
+    href = base + quote(prefixe + cmd, safe="")
+    return (
+        f'<a class="btn {couleur} btn-sm me-2 mb-1 o_hermes_approve" href="{escape(href)}">'
+        f"{etiquette}</a>"
+    )
+
+
+def remplacer_invite_approbation(texte, canal_id):
+    """Rend (texte sans l'invite, HTML des boutons), ou (texte, "") sans invite.
+
+    S'applique au texte BRUT, avant la conversion : les accents graves y sont
+    encore. Les commandes à taper restent écrites sous les boutons : la mise
+    en forme ne retire jamais un moyen d'agir.
+    """
+    m = _INVITE_APPROBATION.search(texte or "")
+    if not m:
+        return texte, ""
+    prefixe = m.group("p") or "/"
+    base = "/hermes/repondre?canal=%d&cmd=" % int(canal_id)
+    boutons = (
+        '<div class="o_hermes_approval border rounded-3 p-2 mt-1" style="border-color:#e0a800">'
+        + _bouton(base, prefixe, "approve", "btn-success", "✅&nbsp;Approuver")
+        + _bouton(base, prefixe, "approve session", "btn-outline-secondary", "Pour la session")
+        + _bouton(base, prefixe, "approve always", "btn-outline-secondary", "Toujours (permanent)")
+        + _bouton(base, prefixe, "deny", "btn-outline-danger", "❌&nbsp;Refuser")
+        + '<div class="mt-1"><small class="text-muted">'
+        + "ou répondre <code>{p}approve</code>, <code>{p}approve&nbsp;session</code>, "
+        "<code>{p}approve&nbsp;always</code>, <code>{p}deny</code>".format(p=escape(prefixe))
+        + "</small></div></div>"
+    )
+    return (texte[: m.start()] + texte[m.end() :]).strip(), boutons
+
+
+def html_reponse(texte, canal_id):
+    """Réponse d'agent complète : boutons d'approbation, puis mise en forme."""
+    texte, boutons = remplacer_invite_approbation(texte, canal_id)
+    return html_depuis_markdown(texte) + boutons

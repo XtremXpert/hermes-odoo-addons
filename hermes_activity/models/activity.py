@@ -11,7 +11,7 @@ from odoo.exceptions import AccessError
 from odoo.exceptions import UserError
 from odoo.tools import html_sanitize
 
-from .formatting import html_depuis_markdown
+from .formatting import html_reponse
 
 TOOLS = {
     "chercher": "Recherche dans Odoo",
@@ -68,7 +68,10 @@ class Channel(models.Model):
         # converting it again would show its tags literally. The flag is then
         # consumed: the body passed on is Markup, which Odoo expects.
         if isinstance(body, str) and not isinstance(body, Markup) and _is_agent(self.env):
-            texte = body if kwargs.pop("body_is_html", False) else html_depuis_markdown(body)
+            if kwargs.pop("body_is_html", False):
+                texte = body
+            else:
+                texte = html_reponse(body, self[:1].id or 0)
             body = Markup(html_sanitize(texte))
         return super().message_post(body=body, **kwargs)
 
@@ -99,7 +102,7 @@ class Activity(models.AbstractModel):
         if not isinstance(text, str) or not 1 <= len(text) <= 100000:
             raise UserError(self.env._("Réponse invalide."))
         channel = self.env["discuss.channel"].browse(channel_id)
-        body = Markup(html_sanitize(html_depuis_markdown(text)))
+        body = Markup(html_sanitize(html_reponse(text, channel.id)))
         message = channel.message_post(
             body=body, message_type="comment", subtype_xmlid="mail.mt_comment"
         )
