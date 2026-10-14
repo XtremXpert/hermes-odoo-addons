@@ -239,3 +239,18 @@ class TestActivity(TransactionCase):
         )
         self.assertIn("<strong>Déjà formaté</strong>", str(message.body))
         self.assertNotIn("&lt;strong&gt;", str(message.body))
+
+    def test_rpc_html_from_the_gateway_is_not_escaped_again(self):
+        # The odoo_discuss gateway escapes and formats the reply itself, then
+        # posts it with body_is_html=True.
+        message = self.channel.with_user(self.bot).message_post(
+            body="<p><strong>Test</strong> : réponse</p><ul><li>un</li></ul><script>alert(1)</script>",
+            body_is_html=True,
+            message_type="comment",
+            subtype_xmlid="mail.mt_comment",
+        )
+        body = str(message.body)
+        self.assertIn("<strong>Test</strong>", body)
+        self.assertIn("<li>un</li>", body)
+        self.assertNotIn("&lt;", body)
+        self.assertNotIn("<script>", body)
