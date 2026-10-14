@@ -254,3 +254,35 @@ class TestActivity(TransactionCase):
         self.assertIn("<li>un</li>", body)
         self.assertNotIn("&lt;", body)
         self.assertNotIn("<script>", body)
+
+    def test_html_written_by_the_model_is_formatted_not_shown(self):
+        # Odoo presents, the gateway only carries the model's raw text: an
+        # answer written in HTML is brought back to Markdown, then escaped.
+        text = (
+            "<p>Thème : <code>theme_monglia</code> — <b>audit 5</b>.<br>Relu.</p>"
+            '<ul><li>un</li><li>deux <a href="https://x.ca">lien</a></li></ul>'
+            '<script>alert(1)</script><p onclick="x()">fin &lt;b&gt;</p>'
+            '<p><a href="javascript:alert(2)">piège</a></p>'
+            "<table><tr><th>A</th><th><b>B</b></th></tr><tr><td>1</td><td>2</td></tr></table>"
+        )
+        for post in (
+            lambda: self.env["mail.message"].browse(
+                self.service.repondre(**self.source, text=text)
+            ),
+            lambda: self.channel.with_user(self.bot).message_post(
+                body=text, message_type="comment", subtype_xmlid="mail.mt_comment"
+            ),
+        ):
+            body = str(post().body)
+            for markup in (
+                "<strong>audit 5</strong>",
+                "<code>theme_monglia</code>",
+                "<li>un</li>",
+                'href="https://x.ca"',
+                "<th><strong>B</strong></th>",
+                "<td>2</td>",
+                "fin &lt;b&gt;",
+            ):
+                self.assertIn(markup, body)
+            for absent in ("&lt;p&gt;", "alert", "onclick", "javascript"):
+                self.assertNotIn(absent, body)

@@ -1,6 +1,6 @@
 {
     "name": "Hermes — activité dans Discussion",
-    "version": "20.0.1.0.4",
+    "version": "20.0.1.1.0",
     "author": "Benoît Vézina, Diverse-Cité",
     "website": "https://github.com/XtremXpert/hermes-odoo-addons",
     "license": "AGPL-3",
