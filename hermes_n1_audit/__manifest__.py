@@ -1,6 +1,6 @@
 {
     "name": "Hermes N1 — modifications documentées",
-    "version": "20.0.3.1.1",
+    "version": "20.0.3.1.2",
     "author": "Benoît Vézina, Diverse-Cité",
     "website": "https://github.com/XtremXpert/hermes-odoo-addons",
     "license": "AGPL-3",

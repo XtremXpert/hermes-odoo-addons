@@ -2,7 +2,9 @@
 -- against them. Every account holding a group of a hermes_* module is
 -- deactivated and loses its API keys, so a copy can never be driven by an
 -- agent, even with keys cloned from production. Explicit memberships only:
--- agent groups are always assigned directly.
+-- agent groups are always assigned directly. The Hermes technical accounts
+-- (login hermes*, such as hermes_n1_identities, which holds no hermes group)
+-- are neutralized too.
 DELETE FROM res_users_apikeys
  WHERE user_id IN (
        SELECT rel.uid
@@ -11,6 +13,8 @@ DELETE FROM res_users_apikeys
            ON imd.model = 'res.groups'
           AND imd.res_id = rel.gid
         WHERE imd.module LIKE 'hermes\_%'
+        UNION
+       SELECT id FROM res_users WHERE login LIKE 'hermes%'
 );
 
 UPDATE res_users
@@ -22,4 +26,6 @@ UPDATE res_users
            ON imd.model = 'res.groups'
           AND imd.res_id = rel.gid
         WHERE imd.module LIKE 'hermes\_%'
+        UNION
+       SELECT id FROM res_users WHERE login LIKE 'hermes%'
 );
