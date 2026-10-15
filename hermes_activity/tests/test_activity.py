@@ -286,3 +286,19 @@ class TestActivity(TransactionCase):
                 self.assertIn(markup, body)
             for absent in ("&lt;p&gt;", "alert", "onclick", "javascript"):
                 self.assertNotIn(absent, body)
+
+    def test_bold_may_surround_inline_code(self):
+        # N1 on mac, 2026-10-15: "**… base `mac`**" kept its asterisks.
+        text = "**État — base `mac`**\n\n- `a**b**` et *x `y` z*"
+        body = str(
+            self.channel.with_user(self.bot)
+            .message_post(body=text, message_type="comment", subtype_xmlid="mail.mt_comment")
+            .body
+        )
+        for markup in (
+            "<strong>État — base <code>mac</code></strong>",
+            "<code>a**b**</code>",
+            "<em>x <code>y</code> z</em>",
+        ):
+            self.assertIn(markup, body)
+        self.assertNotIn("\x00", body)
