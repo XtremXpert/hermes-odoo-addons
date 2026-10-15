@@ -26,6 +26,13 @@ class TestNeutralize(TransactionCase):
                 ],
             }
         )
+        cls.technical = Users.create(
+            {
+                "name": "Neutralize test technical account",
+                "login": "hermes_test_identities",
+                "group_ids": [(6, 0, [cls.env.ref("base.group_user").id])],
+            }
+        )
         cls.human = Users.create(
             {
                 "name": "Neutralize test human",
@@ -35,6 +42,7 @@ class TestNeutralize(TransactionCase):
         )
         ApiKeys = cls.env["res.users.apikeys"].sudo()
         ApiKeys.with_user(cls.agent).sudo()._generate(None, "agent key", False)
+        ApiKeys.with_user(cls.technical).sudo()._generate(None, "technical key", False)
         ApiKeys.with_user(cls.human).sudo()._generate(None, "human key", False)
 
     def _neutralize(self):
@@ -58,4 +66,12 @@ class TestNeutralize(TransactionCase):
         self.assertTrue(self.human.active)
         self.assertTrue(
             self.env["res.users.apikeys"].sudo().search([("user_id", "=", self.human.id)])
+        )
+
+    def test_neutralize_deactivates_hermes_technical_accounts(self):
+        # hermes_n1_identities holds no hermes group, yet its key drives the proxy.
+        self._neutralize()
+        self.assertFalse(self.technical.active)
+        self.assertFalse(
+            self.env["res.users.apikeys"].sudo().search([("user_id", "=", self.technical.id)])
         )
