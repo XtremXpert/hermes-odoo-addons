@@ -34,20 +34,22 @@ def _echapper(texte: str) -> str:
 def _en_ligne(texte: str) -> str:
     """Gras, italique, code, liens — sur du texte DÉJÀ échappé.
 
-    Le code passe en premier et son contenu est laissé intact : `**` à
-    l'intérieur d'un `code` est du code, pas du gras.
+    Le code est mis de côté d'abord et son contenu est laissé intact : `**`
+    à l'intérieur d'un `code` est du code, pas du gras. Le reste est traité
+    d'un seul tenant, pour qu'un gras puisse entourer du code
+    (« **base `mac`** », 2026-10-15).
     """
-    morceaux = re.split(r"(`[^`]+`)", texte)
-    sortie = []
-    for i, m in enumerate(morceaux):
-        if i % 2:
-            sortie.append("<code>%s</code>" % m[1:-1])
-            continue
-        m = _LIEN.sub(r'<a href="\2" target="_blank">\1</a>', m)
-        m = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", m)
-        m = re.sub(r"(?<![\w*])\*([^*\n]+)\*(?![\w*])", r"<em>\1</em>", m)
-        sortie.append(m)
-    return "".join(sortie)
+    codes = []
+
+    def _mettre_de_cote(m):
+        codes.append("<code>%s</code>" % m[1])
+        return "\x00%d\x00" % (len(codes) - 1)
+
+    texte = re.sub(r"`([^`]+)`", _mettre_de_cote, texte.replace("\x00", ""))
+    texte = _LIEN.sub(r'<a href="\2" target="_blank">\1</a>', texte)
+    texte = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", texte)
+    texte = re.sub(r"(?<![\w*])\*([^*\n]+)\*(?![\w*])", r"<em>\1</em>", texte)
+    return re.sub(r"\x00(\d+)\x00", lambda m: codes[int(m[1])], texte)
 
 
 # Une réponse qui COMMENCE par une balise de bloc a été écrite en HTML par le
