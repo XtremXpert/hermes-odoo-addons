@@ -1,0 +1,305 @@
+# Copyright (C) 2026 Bemade Inc.
+# Copyright (C) 2026 Benoît Vézina, Diverse-Cité
+# License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
+"""HTTP-level tests for the mail gateway controller.
+
+These tests use ``HttpCase`` so the routes go through Odoo's WSGI stack
+exactly as a real client would hit them. Auth is intentionally
+``auth='none'`` on the controller, so we don't authenticate as any user —
+the token alone is what unlocks the endpoint.
+"""
+
+import email.policy
+from unittest.mock import patch
+
+from odoo import SUPERUSER_ID
+from odoo.tests import HttpCase
+from odoo.tests import tagged
+
+SAMPLE_RAW = (
+    b"From: sender@example.org\r\n"
+    b"To: alias@example.org\r\n"
+    b"Subject: probe\r\n"
+    b"Message-Id: <probe-1@example.org>\r\n"
+    b"\r\n"
+    b"body\r\n"
+)
+
+
+@tagged("post_install", "-at_install", "diverse_mail_gateway")
+class TestMailGatewayController(HttpCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.Token = cls.env["diverse.mail_gateway.token"]
+        # Allow plain HTTP under the test runner (Odoo's HttpCase test
+        # client speaks HTTP, not HTTPS).
+        cls.env["ir.config_parameter"].sudo().set_str("diverse_mail_gateway.allow_http", "True")
+
+        # Ensure an alias domain exists so mail routing works in HttpCase.
+        # HttpCase commits setUpClass data, making it visible to HTTP requests.
+        catchall = (
+            cls.env["ir.config_parameter"].sudo().get_str("mail.catchall.domain") or "example.org"
+        )
+        alias_domain = (
+            cls.env["mail.alias.domain"].sudo().search([("name", "=", catchall)], limit=1)
+        )
+        if not alias_domain:
+            alias_domain = cls.env["mail.alias.domain"].sudo().create({"name": catchall})
+        cls.alias_domain = alias_domain
+        cls.env.company.sudo().alias_domain_id = alias_domain
+
+        # Channel + alias committed in setUpClass → visible to HTTP requests.
+        cls.test_channel = (
+            cls.env["discuss.channel"]
+            .sudo()
+            .create({"name": "ctl-test-channel", "channel_type": "channel"})
+        )
+        chan_model_id = (
+            cls.env["ir.model"].sudo().search([("model", "=", "discuss.channel")], limit=1).id
+        )
+        cls.test_alias = (
+            cls.env["mail.alias"]
+            .sudo()
+            .create(
+                {
+                    "alias_name": "ctl-alias",
+                    "alias_domain_id": alias_domain.id,
+                    "alias_model_id": chan_model_id,
+                    "alias_force_thread_id": cls.test_channel.id,
+                    "alias_contact": "everyone",
+                }
+            )
+        )
+
+    def _post(self, path, body=b"", headers=None):
+        url = self.base_url() + path
+        return self.opener.post(
+            url, data=body, headers=headers or {}, allow_redirects=False, timeout=10
+        )
+
+    def _get(self, path, headers=None):
+        url = self.base_url() + path
+        return self.opener.get(url, headers=headers or {}, allow_redirects=False, timeout=10)
+
+    # ---- /health ----------------------------------------------------------
+
+    def test_health_returns_200_without_auth(self):
+        r = self._get("/diverse/mail-gateway/health")
+        self.assertEqual(r.status_code, 200)
+        body = r.json()
+        self.assertTrue(body["ok"])
+        self.assertIn("module_version", body)
+        self.assertIn("odoo_version", body)
+
+    # ---- /check -----------------------------------------------------------
+
+    def test_check_without_token_returns_401(self):
+        r = self._post("/diverse/mail-gateway/check")
+        self.assertEqual(r.status_code, 401)
+        self.assertEqual(r.json(), {"ok": False, "error": "unauthorized"})
+
+    def test_check_with_invalid_token_returns_401(self):
+        r = self._post(
+            "/diverse/mail-gateway/check",
+            headers={"X-Mail-Gateway-Token": "definitely-not-a-real-token"},
+        )
+        self.assertEqual(r.status_code, 401)
+
+    def test_check_with_valid_token_returns_200(self):
+        _, raw = self.Token.action_generate("ctl-check-1")
+        r = self._post("/diverse/mail-gateway/check", headers={"X-Mail-Gateway-Token": raw})
+        self.assertEqual(r.status_code, 200)
+        body = r.json()
+        self.assertTrue(body["ok"])
+        self.assertEqual(body["token_label"], "ctl-check-1")
+
+    def test_check_with_revoked_token_returns_401(self):
+        rec, raw = self.Token.action_generate("ctl-check-revoked")
+        rec.action_revoke()
+        r = self._post("/diverse/mail-gateway/check", headers={"X-Mail-Gateway-Token": raw})
+        self.assertEqual(r.status_code, 401)
+
+    # ---- /process ---------------------------------------------------------
+
+    def test_process_without_token_returns_401(self):
+        r = self._post("/diverse/mail-gateway/process", body=SAMPLE_RAW)
+        self.assertEqual(r.status_code, 401)
+
+    def test_process_with_invalid_token_returns_401(self):
+        r = self._post(
+            "/diverse/mail-gateway/process",
+            body=SAMPLE_RAW,
+            headers={"X-Mail-Gateway-Token": "wrong"},
+        )
+        self.assertEqual(r.status_code, 401)
+
+    def test_process_with_empty_body_returns_400(self):
+        _, raw = self.Token.action_generate("ctl-empty")
+        r = self._post(
+            "/diverse/mail-gateway/process",
+            body=b"",
+            headers={"X-Mail-Gateway-Token": raw},
+        )
+        self.assertEqual(r.status_code, 400)
+        body = r.json()
+        self.assertFalse(body["ok"])
+        self.assertEqual(body["error"], "bad_request")
+
+    def test_process_with_no_alias_returns_422(self):
+        """When Odoo cannot route an incoming message, the gateway returns 422.
+
+        The gateway delegates routing entirely to Odoo and only translates a
+        "no possible route" into HTTP 422 for the LMTP transport. Whether a
+        given message is routable depends on the DB's routing config (aliases,
+        catch-all, or a global router such as ``mail_manual_routing``), which
+        is not this module's concern.
+
+        So we first ask Odoo whether the probe is routable in *this* DB. If a
+        global router accepts it (e.g. a ``mail_manual_routing`` module), the
+        no-route scenario cannot occur here and the test is skipped; otherwise
+        we assert the 422 contract.
+        """
+        unroutable = SAMPLE_RAW.replace(
+            b"To: alias@example.org", b"To: alias@no-such-domain.invalid"
+        )
+
+        # Delegate the routability decision to Odoo itself, with no side
+        # effects (savepoint rollback; message_route computes routes only).
+        mail_thread = self.env(user=SUPERUSER_ID)["mail.thread"]
+        msg = email.message_from_bytes(unroutable, policy=email.policy.default)
+        msg_dict = mail_thread.message_parse(msg)
+        routable = True
+        try:
+            with self.env.cr.savepoint():
+                mail_thread.message_route(msg, msg_dict)
+        except ValueError as exc:
+            if "no possible route" not in str(exc).lower():
+                raise
+            routable = False
+
+        if routable:
+            self.skipTest(
+                "A global router (e.g. mail_manual_routing) accepts otherwise "
+                "unroutable mail in this DB; the no-route path cannot occur."
+            )
+
+        _, raw = self.Token.action_generate("ctl-no-alias")
+        r = self._post(
+            "/diverse/mail-gateway/process",
+            body=unroutable,
+            headers={"X-Mail-Gateway-Token": raw},
+        )
+        self.assertEqual(r.status_code, 422)
+        body = r.json()
+        self.assertFalse(body["ok"])
+        self.assertEqual(body["error"], "no_route")
+
+    def test_process_returning_false_is_422(self):
+        """message_process returning False (a global router such as
+        mail_manual_routing swallowed the message into its lost messages
+        instead of raising) must be reported as 422 no_route, not 200: the
+        LMTP relay must know the delivery did not land on a real thread."""
+        _, raw = self.Token.action_generate("ctl-false-result")
+        MailThread = type(self.env["mail.thread"])
+        with patch.object(MailThread, "message_process", return_value=False):
+            r = self._post(
+                "/diverse/mail-gateway/process",
+                body=SAMPLE_RAW,
+                headers={"X-Mail-Gateway-Token": raw},
+            )
+        self.assertEqual(r.status_code, 422)
+        body = r.json()
+        self.assertFalse(body["ok"])
+        self.assertEqual(body["error"], "no_route")
+
+    def test_process_with_valid_alias_returns_200_and_creates_message(self):
+        # Channel, alias and alias_domain are created in setUpClass (committed)
+        # so they are visible to the HTTP request's independent cursor.
+        catchall = self.alias_domain.name
+        msg_id = "<ctl-test@example.org>"
+        body_bytes = (
+            b"From: sender@example.org\r\n"
+            b"To: ctl-alias@" + catchall.encode() + b"\r\n"
+            b"Subject: from controller test\r\n"
+            b"Message-Id: " + msg_id.encode() + b"\r\n"
+            b"\r\n"
+            b"hello\r\n"
+        )
+
+        _, raw = self.Token.action_generate("ctl-happy-path")
+        r = self._post(
+            "/diverse/mail-gateway/process",
+            body=body_bytes,
+            headers={"X-Mail-Gateway-Token": raw},
+        )
+        self.assertEqual(r.status_code, 200, r.text)
+        body = r.json()
+        self.assertTrue(body["ok"])
+        self.assertEqual(body["message_id"], msg_id)
+
+        msgs = (
+            self.env["mail.message"]
+            .sudo()
+            .search(
+                [
+                    ("model", "=", "discuss.channel"),
+                    ("res_id", "=", self.test_channel.id),
+                    ("message_id", "=", msg_id),
+                ]
+            )
+        )
+        self.assertTrue(msgs, "expected exactly one mail.message for our test")
+
+    def test_process_updates_token_usage(self):
+        rec, raw = self.Token.action_generate("ctl-usage")
+        self.assertEqual(rec.use_count, 0)
+        # Even on no_route (422), token validation succeeded → use_count++
+        self._post(
+            "/diverse/mail-gateway/process",
+            body=SAMPLE_RAW,
+            headers={"X-Mail-Gateway-Token": raw},
+        )
+        rec.invalidate_recordset()
+        self.assertEqual(rec.use_count, 1)
+        self.assertTrue(rec.last_used_at)
+
+    def test_process_save_original_header_is_honoured(self):
+        """X-Mail-Gateway-Save-Original=1 should propagate to message_process kwargs."""
+        _, raw = self.Token.action_generate("ctl-save-orig")
+        with patch(
+            "odoo.addons.mail.models.mail_thread.MailThread.message_process",
+            return_value=False,
+        ) as spy:
+            self._post(
+                "/diverse/mail-gateway/process",
+                body=SAMPLE_RAW,
+                headers={
+                    "X-Mail-Gateway-Token": raw,
+                    "X-Mail-Gateway-Save-Original": "1",
+                    "X-Mail-Gateway-Strip-Attachments": "0",
+                },
+            )
+        self.assertTrue(spy.called)
+        _, kwargs = spy.call_args
+        self.assertTrue(kwargs.get("save_original"))
+        self.assertFalse(kwargs.get("strip_attachments"))
+
+    def test_process_constant_time_token_check(self):
+        """Wrong token responses should not vary noticeably with the
+        number of active tokens. Smoke-checked via the same patch the
+        model test uses — the call count proves we iterate them all."""
+        for i in range(4):
+            self.Token.action_generate(f"ctl-ct-{i}")
+
+        with patch(
+            "odoo.addons.diverse_mail_gateway.models.diverse_mail_gateway_token.hmac.compare_digest",
+            wraps=__import__("hmac").compare_digest,
+        ) as spy:
+            r = self._post(
+                "/diverse/mail-gateway/process",
+                body=SAMPLE_RAW,
+                headers={"X-Mail-Gateway-Token": "wrong-from-controller-test"},
+            )
+        self.assertEqual(r.status_code, 401)
+        self.assertGreaterEqual(spy.call_count, 4)
