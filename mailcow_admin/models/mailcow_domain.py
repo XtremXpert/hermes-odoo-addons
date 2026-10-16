@@ -405,15 +405,20 @@ class MailcowDomain(models.Model):
 
     def action_sync_from_mailcow(self):
         """Synchronise depuis cette fiche (voir action_sync_all_from_mailcow)."""
-        self._exiger("manager")
+        self._exiger("sync")
         self.ensure_one()
         return self.env["mailcow.domain"].action_sync_all_from_mailcow()
 
     @api.model
     def action_sync_all_from_mailcow(self):
-        """Aligner tout l'état local sur le serveur (bouton et menu)."""
-        self._exiger("manager")
-        return self._sync_all_from_mailcow()
+        """Aligner tout l'état local sur le serveur (bouton et menu).
+
+        Le groupe Lecture et synchronisation lit les fiches sans pouvoir les
+        écrire : la synchronisation écrit donc en sudo, APRÈS le contrôle, et
+        n'appelle que des lectures (GET) du serveur.
+        """
+        self._exiger("sync")
+        return self.sudo()._sync_all_from_mailcow()
 
     @api.model
     def donnees_tableau_de_bord(self):

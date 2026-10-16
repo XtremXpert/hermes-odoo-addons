@@ -25,15 +25,19 @@ class MailcowSyncMixin(models.AbstractModel):
         """Refuser l'appel à qui n'a pas le groupe, AVANT tout appel au serveur.
 
         Une méthode publique s'appelle par RPC : l'attribut « groups » d'un
-        bouton ne protège que l'écran. Utilisateur : créer et mettre à jour ;
-        gestionnaire : supprimer, synchroniser, changer un mot de passe.
+        bouton ne protège que l'écran. Lecture et synchronisation : lire et
+        aligner Odoo sur le serveur, sans jamais écrire sur Mailcow (le groupe
+        des agents) ; utilisateur : créer et mettre à jour ; gestionnaire :
+        supprimer, changer un mot de passe, et tout le reste.
         """
         if self.env.su or self.env.user.has_group("mailcow_admin.group_mailcow_" + groupe):
             return
-        raise AccessError(
-            self.env._("Action Mailcow réservée au groupe %s.")
-            % ("Gestionnaire" if groupe == "manager" else "Utilisateur")
-        )
+        nom = {
+            "manager": "Gestionnaire",
+            "user": "Utilisateur",
+            "sync": "Lecture et synchronisation",
+        }[groupe]
+        raise AccessError(self.env._("Action Mailcow réservée au groupe %s.", nom))
 
     def _journaliser(self, corps):
         """Noter dans le fil de la fiche ce qui vient d'être fait sur Mailcow.
@@ -59,7 +63,7 @@ class MailcowSyncMixin(models.AbstractModel):
         Rien n'est écrit, ni dans Odoo ni sur le serveur : la lecture seule du
         serveur suffit à décrire le plan.
         """
-        self._exiger("manager")
+        self._exiger("sync")
         plan = self._sync_all_from_mailcow(dry_run=True)
         apercu = self.env["mailcow.sync.preview"].create(
             {
@@ -76,6 +80,15 @@ class MailcowSyncMixin(models.AbstractModel):
             "view_mode": "form",
             "target": "new",
         }
+
+    def action_preview_sync(self):
+        """L'aperçu, appelé depuis une fiche.
+
+        L'API JSON-2 refuse des identifiants sur une méthode @api.model, et
+        l'outil Odoo des agents en passe toujours : une fiche quelconque du
+        même objet sert de point d'entrée. Les droits sont ceux de l'aperçu.
+        """
+        return self.env[self._name].action_preview_sync_from_mailcow()
 
     @api.model
     def _ecarts(self, fiche, valeurs):
