@@ -3,7 +3,7 @@
     "name": "Mailcow Admin",
     "category": "Productivity",
     "summary": """Administer un serveur Mailcow depuis Odoo""",
-    "version": "20.0.2.0.0",
+    "version": "20.0.2.1.0",
     "depends": ["base", "mail"],
     "data": [
         "security/mailcow_admin_groups.xml",
@@ -11,7 +11,6 @@
         "views/mailcow_email_address_views.xml",
         "views/mailcow_domain_views.xml",
         "views/mailcow_mailbox_views.xml",
-        "wizards/mailcow_mailbox_password_wizard_views.xml",
         "wizards/mailcow_app_password_wizard_views.xml",
         "views/mailcow_alias_views.xml",
         "views/res_config_settings_views.xml",

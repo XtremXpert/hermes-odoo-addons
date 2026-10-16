@@ -85,6 +85,7 @@
                         name="action_reset_password"
                         type="object"
                         string="Changer le mot de passe"
+                        confirm="Remplacer le mot de passe de cette boîte sur Mailcow ? Le nouveau sera affiché une seule fois."
                         invisible="not synced"
                         groups="mailcow_admin.group_mailcow_manager"
                     />
@@ -142,13 +143,6 @@
                         <group string="Mailcow">
                             <field name="synced" />
                             <field name="quota_mb" />
-                            <field
-                                name="password"
-                                invisible="synced"
-                                required="not synced"
-                                password="True"
-                                placeholder="Nécessaire à la création sur Mailcow"
-                            />
                         </group>
                     </group>
                     <group string="Utilisation" invisible="not synced">

@@ -13,6 +13,15 @@ from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
 
+# Délai d'un appel, comme le broker N3 : sans lui, un serveur muet bloque un
+# processus Odoo indéfiniment.
+DELAI = 30
+
+RESULTAT_INCERTAIN = (
+    "Résultat incertain (%s, %s %s) : la modification a pu être faite sur Mailcow. "
+    "Synchronisez depuis Mailcow pour relire l'état avant de réessayer."
+)
+
 
 def en_nombre(valeur):
     """Mailcow envoie parfois les nombres sous forme de texte (« 25 »)."""
@@ -96,26 +105,41 @@ class MailcowClient:
         # Request.add_header() capitalise les noms (X-api-key), ce qui
         # casserait une recherche sensible à la casse.
         request.headers["X-API-Key"] = self.api_key
-        for tentative in (1, 2, 3):
+        # Seule une lecture se reprend. Une écriture a pu aboutir sur le serveur
+        # avant l'erreur reçue : la rejouer créerait ou supprimerait deux fois.
+        lecture = method.upper() == "GET"
+        tentatives = (1, 2, 3) if lecture else (1,)
+        for tentative in tentatives:
             try:
-                with urllib.request.urlopen(request) as response:
+                with urllib.request.urlopen(request, timeout=DELAI) as response:
                     body = response.read().decode("utf-8")
                 break
             except urllib.error.HTTPError as error:
                 # 429 et les 5xx sont passagers : on reprend avant d'abandonner.
-                if error.code in (429, 500, 502, 503, 504) and tentative < 3:
+                passager = error.code in (429, 500, 502, 503, 504)
+                if passager and tentative < tentatives[-1]:
                     time.sleep(tentative)
                     continue
+                if passager and not lecture:
+                    raise MailcowAPIError(
+                        RESULTAT_INCERTAIN % ("HTTP %d" % error.code, method.upper(), path)
+                    ) from error
                 raise MailcowAPIError(
                     "Échec de l'appel à l'API Mailcow (HTTP %d, %s %s) : %s"
                     % (error.code, method.upper(), path, error.reason)
                 ) from error
-            except urllib.error.URLError as error:
-                if tentative < 3:
+            except (urllib.error.URLError, TimeoutError) as error:
+                if tentative < tentatives[-1]:
                     time.sleep(tentative)
                     continue
+                if not lecture:
+                    raise MailcowAPIError(
+                        RESULTAT_INCERTAIN
+                        % (getattr(error, "reason", None) or error, method.upper(), path)
+                    ) from error
                 raise MailcowAPIError(
-                    "Serveur Mailcow inaccessible (%s) : %s" % (url, error.reason)
+                    "Serveur Mailcow inaccessible (%s) : %s"
+                    % (url, getattr(error, "reason", None) or error)
                 ) from error
         try:
             result = json.loads(body)

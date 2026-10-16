@@ -339,6 +339,7 @@ class MailcowDomain(models.Model):
         Mailcow renvoie aussi la clé privée dans la même réponse : elle n'est
         jamais lue ici, et donc jamais rangée dans Odoo.
         """
+        self._exiger("user")
         self.ensure_one()
         client = MailcowClient(self.env)
         reponse = client._request("GET", "/get/dkim/%s" % self.name, None)
@@ -368,6 +369,7 @@ class MailcowDomain(models.Model):
 
     def action_create_on_mailcow(self):
         """Crée le domaine sur Mailcow (ou le met à jour s'il existe déjà)."""
+        self._exiger("user")
         for domain in self:
             client = MailcowClient(self.env)
             client._request("POST", "/add/domain", domain._payload())
@@ -376,6 +378,7 @@ class MailcowDomain(models.Model):
 
     def action_update_on_mailcow(self):
         """Réécrit l'état local sur Mailcow."""
+        self._exiger("user")
         for domain in self:
             client = MailcowClient(self.env)
             client._request(
@@ -391,6 +394,7 @@ class MailcowDomain(models.Model):
 
     def action_delete_on_mailcow(self):
         """Supprime le domaine sur Mailcow, puis l'archive localement."""
+        self._exiger("manager")
         for domain in self:
             client = MailcowClient(self.env)
             client._request("POST", "/delete/domain", {"domain": domain.name})
@@ -401,12 +405,14 @@ class MailcowDomain(models.Model):
 
     def action_sync_from_mailcow(self):
         """Synchronise depuis cette fiche (voir action_sync_all_from_mailcow)."""
+        self._exiger("manager")
         self.ensure_one()
         return self.env["mailcow.domain"].action_sync_all_from_mailcow()
 
     @api.model
     def action_sync_all_from_mailcow(self):
         """Aligner tout l'état local sur le serveur (bouton et menu)."""
+        self._exiger("manager")
         return self._sync_all_from_mailcow()
 
     @api.model

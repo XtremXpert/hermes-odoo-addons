@@ -2,6 +2,7 @@
 from odoo import api
 from odoo import fields
 from odoo import models
+from odoo.exceptions import AccessError
 
 
 class MailcowSyncMixin(models.AbstractModel):
@@ -18,6 +19,21 @@ class MailcowSyncMixin(models.AbstractModel):
     _description = "Mailcow : suivi de synchronisation"
 
     last_synced_on = fields.Datetime(string="Dernière synchronisation", readonly=True)
+
+    @api.model
+    def _exiger(self, groupe):
+        """Refuser l'appel à qui n'a pas le groupe, AVANT tout appel au serveur.
+
+        Une méthode publique s'appelle par RPC : l'attribut « groups » d'un
+        bouton ne protège que l'écran. Utilisateur : créer et mettre à jour ;
+        gestionnaire : supprimer, synchroniser, changer un mot de passe.
+        """
+        if self.env.su or self.env.user.has_group("mailcow_admin.group_mailcow_" + groupe):
+            return
+        raise AccessError(
+            self.env._("Action Mailcow réservée au groupe %s.")
+            % ("Gestionnaire" if groupe == "manager" else "Utilisateur")
+        )
 
     def _journaliser(self, corps):
         """Noter dans le fil de la fiche ce qui vient d'être fait sur Mailcow.
@@ -43,6 +59,7 @@ class MailcowSyncMixin(models.AbstractModel):
         Rien n'est écrit, ni dans Odoo ni sur le serveur : la lecture seule du
         serveur suffit à décrire le plan.
         """
+        self._exiger("manager")
         plan = self._sync_all_from_mailcow(dry_run=True)
         apercu = self.env["mailcow.sync.preview"].create(
             {
@@ -109,24 +126,44 @@ class MailcowSyncMixin(models.AbstractModel):
         Les fiches archivées sont ignorées : elles ont été retirées du serveur,
         et les repousser le ressusciterait sans qu'on l'ait demandé.
         """
+        self._exiger("user")
         creees = mises_a_jour = 0
+        a_noter = []
         for fiche in self.filtered("active"):
             if fiche.synced:
                 fiche.action_update_on_mailcow()
                 mises_a_jour += 1
             else:
-                fiche.action_create_on_mailcow()
+                ligne = fiche._creer_sur_mailcow()
+                if ligne:
+                    a_noter.append(ligne)
                 creees += 1
+        message = "%d créée(s), %d mise(s) à jour sur Mailcow." % (creees, mises_a_jour)
+        if a_noter:
+            message += (
+                "\n\nMots de passe initiaux, à copier maintenant : Odoo ne les garde pas.\n"
+                + "\n".join(a_noter)
+            )
         return {
             "type": "ir.actions.client",
             "tag": "display_notification",
             "params": {
                 "type": "success",
                 "title": "Mailcow",
-                "sticky": False,
-                "message": "%d créée(s), %d mise(s) à jour sur Mailcow." % (creees, mises_a_jour),
+                "sticky": bool(a_noter),
+                "message": message,
             },
         }
+
+    def _creer_sur_mailcow(self):
+        """Créer une fiche sur le serveur pendant une poussée.
+
+        Renvoie la ligne à montrer une fois à l'administrateur, s'il y en a
+        une (le mot de passe initial d'une boîte), sinon None.
+        """
+        self.ensure_one()
+        self.action_create_on_mailcow()
+        return None
 
     def action_forget_locally(self):
         """Retirer la fiche locale sans toucher au serveur.
@@ -134,6 +171,7 @@ class MailcowSyncMixin(models.AbstractModel):
         On archive plutôt que de supprimer : la fiche sort de la vue, mais
         l'historique reste consultable si on s'est trompé.
         """
+        self._exiger("user")
         self.write({"active": False})
         return {
             "type": "ir.actions.client",
@@ -152,6 +190,7 @@ class MailcowSyncMixin(models.AbstractModel):
         Le serveur n'est jamais touché : c'est le nettoyage d'un reste local,
         pas une suppression de boîte.
         """
+        self._exiger("manager")
         nombre = len(self)
         self.unlink()
         return {

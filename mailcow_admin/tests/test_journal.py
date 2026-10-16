@@ -21,7 +21,6 @@ class TestJournal(TransactionCase):
             {
                 "local_part": "trace",
                 "domain_id": self.domain.id,
-                "password": "Un-mot-de-passe-1",
             }
         )
         with patch.object(MailcowClient, "_request", return_value=REPONSE):
@@ -50,7 +49,7 @@ class TestJournal(TransactionCase):
 
     def test_l_auteur_est_l_utilisateur_courant(self):
         boite = self.env["mailcow.mailbox"].create(
-            {"local_part": "trace4", "domain_id": self.domain.id, "password": "Un-mot-de-passe-1"}
+            {"local_part": "trace4", "domain_id": self.domain.id}
         )
         with patch.object(MailcowClient, "_request", return_value=REPONSE):
             boite.action_push_to_mailcow()

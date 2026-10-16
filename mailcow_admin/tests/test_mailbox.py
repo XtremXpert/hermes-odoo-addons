@@ -1,11 +1,10 @@
 # Part of the mailcow_admin Odoo module. See LICENSE for details.
-"""Tests des actions push/pull sur mailcow.mailbox et du wizard de mot de passe."""
+"""Tests des actions push/pull sur mailcow.mailbox et de ses mots de passe."""
 
 from unittest.mock import patch
 
 from odoo.addons.mailcow_admin.services.mailcow_client import MailcowClient
 from odoo.exceptions import UserError
-from odoo.exceptions import ValidationError
 from odoo.tests import TransactionCase
 from odoo.tests import tagged
 
@@ -30,15 +29,34 @@ class TestMailcowMailbox(TransactionCase):
         )
         self.assertEqual(mailbox.email, "info@dc.com")
 
-    def test_create_on_mailcow_requires_password(self):
+    def test_create_generates_password_shown_once_and_never_stored(self):
+        self.assertNotIn("password", self.env["mailcow.mailbox"]._fields)
         mailbox = self.env["mailcow.mailbox"].create(
             {
                 "local_part": "info",
                 "domain_id": self.domain.id,
             }
         )
-        with self.assertRaises(UserError):
-            mailbox.action_create_on_mailcow()
+        with patch.object(MailcowClient, "_request", return_value=[{"type": "success"}]) as request:
+            action = mailbox.action_create_on_mailcow()
+        envoye = request.call_args[0][2]["password"]
+        self.assertGreaterEqual(len(envoye), 20)
+        self.assertEqual(request.call_args[0][2]["password2"], envoye)
+        self.assertIn("info@dc.com : " + envoye, action["params"]["message"])
+        self.assertTrue(action["params"]["sticky"])
+        self.assertNotIn(envoye, " ".join(mailbox.message_ids.mapped("body")))
+
+    def test_failed_create_shows_no_password(self):
+        mailbox = self.env["mailcow.mailbox"].create(
+            {
+                "local_part": "info",
+                "domain_id": self.domain.id,
+            }
+        )
+        with patch.object(MailcowClient, "_request", side_effect=UserError("refus")):
+            with self.assertRaises(UserError):
+                mailbox.action_create_on_mailcow()
+        self.assertFalse(mailbox.synced)
 
     def test_create_on_mailcow_sends_payload_and_marks_synced(self):
         mailbox = self.env["mailcow.mailbox"].create(
@@ -49,12 +67,14 @@ class TestMailcowMailbox(TransactionCase):
                 "quota_mb": 100,
             }
         )
-        mailbox.password = "S3cret!"
-        with patch.object(
-            MailcowClient,
-            "_request",
-            return_value=[{"msg": "mailbox_added", "type": "success"}],
-        ) as request:
+        with (
+            patch.object(type(mailbox), "_nouveau_mot_de_passe", return_value="S3cret!"),
+            patch.object(
+                MailcowClient,
+                "_request",
+                return_value=[{"msg": "mailbox_added", "type": "success"}],
+            ) as request,
+        ):
             mailbox.action_create_on_mailcow()
         request.assert_called_once_with(
             "POST",
@@ -175,7 +195,7 @@ class TestMailcowMailbox(TransactionCase):
         local_only = local_only.search([("local_part", "=", "local")])
         self.assertFalse(local_only.synced)
 
-    def test_reset_password_wizard_sends_new_password(self):
+    def test_reset_password_sends_generated_password_shown_once(self):
         mailbox = self.env["mailcow.mailbox"].create(
             {
                 "local_part": "info",
@@ -183,41 +203,20 @@ class TestMailcowMailbox(TransactionCase):
                 "synced": True,
             }
         )
-        wizard = self.env["mailcow.mailbox.password"].create(
-            {
-                "mailbox_id": mailbox.id,
-                "password": "N3wPass!",
-                "confirm": "N3wPass!",
-            }
-        )
         with patch.object(
             MailcowClient,
             "_request",
             return_value=[{"msg": "mailbox_updated", "type": "success"}],
         ) as request:
-            wizard.action_reset()
+            action = mailbox.action_reset_password()
         payload = request.call_args[0][2]
         self.assertEqual(request.call_args[0][1], "/edit/mailbox")
-        self.assertIn("info@dc.com", payload["items"])
-        self.assertEqual(payload["attr"]["password"], "N3wPass!")
-        self.assertEqual(payload["attr"]["password2"], "N3wPass!")
-        self.assertTrue(mailbox.synced)
-
-    def test_reset_password_mismatch_raises(self):
-        mailbox = self.env["mailcow.mailbox"].create(
-            {
-                "local_part": "info",
-                "domain_id": self.domain.id,
-            }
-        )
-        with self.assertRaises(ValidationError):
-            self.env["mailcow.mailbox.password"].create(
-                {
-                    "mailbox_id": mailbox.id,
-                    "password": "une",
-                    "confirm": "deux",
-                }
-            )
+        self.assertEqual(payload["items"], ["info@dc.com"])
+        nouveau = payload["attr"]["password"]
+        self.assertEqual(payload["attr"]["password2"], nouveau)
+        self.assertIn("info@dc.com : " + nouveau, action["params"]["message"])
+        self.assertNotIn(nouveau, " ".join(mailbox.message_ids.mapped("body")))
+        self.assertNotIn("mailcow.mailbox.password", self.env)
 
     def test_sync_all_works_without_any_local_record(self):
         """Amorcer une base vide : le domaine inconnu est créé à la volée."""
