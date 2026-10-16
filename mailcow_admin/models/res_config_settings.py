@@ -3,6 +3,7 @@ from odoo import fields
 from odoo import models
 
 from ..services.mailcow_client import MailcowClient
+from ..services.mailcow_client import cle_de_l_environnement
 
 
 class ResConfigSettings(models.TransientModel):
@@ -19,6 +20,18 @@ class ResConfigSettings(models.TransientModel):
         help="Clé API créée dans l'interface d'administration de Mailcow "
         "(section API, en bas de l'écran d'accueil).",
     )
+
+    mailcow_api_key_from_env = fields.Boolean(
+        string="Clé API fournie par l'environnement",
+        compute="_compute_mailcow_api_key_from_env",
+        help="La variable MAILCOW_API_KEY du conteneur fournit la clé : le champ "
+        "Clé API Mailcow est alors ignoré.",
+    )
+
+    def _compute_mailcow_api_key_from_env(self):
+        fournie = bool(cle_de_l_environnement(self.env))
+        for reglages in self:
+            reglages.mailcow_api_key_from_env = fournie
 
     def action_test_mailcow_connection(self):
         """Teste la connexion en listant les domaines du serveur.
