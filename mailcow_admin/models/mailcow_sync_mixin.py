@@ -81,6 +81,15 @@ class MailcowSyncMixin(models.AbstractModel):
             "target": "new",
         }
 
+    def action_preview_sync(self):
+        """L'aperçu, appelé depuis une fiche.
+
+        L'API JSON-2 refuse des identifiants sur une méthode @api.model, et
+        l'outil Odoo des agents en passe toujours : une fiche quelconque du
+        même objet sert de point d'entrée. Les droits sont ceux de l'aperçu.
+        """
+        return self.env[self._name].action_preview_sync_from_mailcow()
+
     @api.model
     def _ecarts(self, fiche, valeurs):
         """Les champs dont le serveur s'écarte de la fiche locale."""

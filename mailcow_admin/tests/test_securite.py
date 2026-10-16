@@ -143,6 +143,14 @@ class TestGroupeSynchronisation(FichesMailcow):
         self.assertIn("neuf.test", apercu.plan)
         self.assertFalse(self.env["mailcow.domain"].search([("name", "=", "neuf.test")]))
 
+    def test_apercu_depuis_une_fiche(self):
+        serveur = {"data": [{"domain_name": "neuf.test", "active": "1"}]}
+        with patch.object(MailcowClient, "_request", return_value=serveur):
+            action = self.domaine.with_user(self.agent).action_preview_sync()
+        apercu = self.env["mailcow.sync.preview"].with_user(self.agent).browse(action["res_id"])
+        self.assertIn("neuf.test", apercu.plan)
+        self._refuse(self.utilisateur, self.domaine, "action_preview_sync")
+
     def test_aucune_ecriture_sur_le_serveur_ni_mot_de_passe(self):
         for fiche in (self.domaine, self.boite, self.alias):
             for methode in (
