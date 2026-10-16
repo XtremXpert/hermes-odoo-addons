@@ -18,3 +18,4 @@ from . import test_settings
 from . import test_access
 from . import test_notification
 from . import test_dashboard_ui
+from . import test_securite

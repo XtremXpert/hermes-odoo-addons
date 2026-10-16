@@ -89,6 +89,7 @@ class MailcowAlias(models.Model):
         La réponse de création ne le donne pas : on le relit, sans quoi la
         première modification devrait aller le chercher elle-même.
         """
+        self._exiger("user")
         for alias in self:
             alias._ensure_addresses()
             client = MailcowClient(self.env)
@@ -127,6 +128,7 @@ class MailcowAlias(models.Model):
 
     def action_update_on_mailcow(self):
         """Réécrit l'état local sur Mailcow."""
+        self._exiger("user")
         for alias in self:
             alias._ensure_addresses()
             identifiant = alias.mailcow_id or alias._remote_id()
@@ -157,6 +159,7 @@ class MailcowAlias(models.Model):
 
     def action_delete_on_mailcow(self):
         """Supprime l'alias sur Mailcow, puis l'archive localement."""
+        self._exiger("manager")
         for alias in self:
             client = MailcowClient(self.env)
             client._request(
@@ -181,12 +184,14 @@ class MailcowAlias(models.Model):
 
     def action_sync_from_mailcow(self):
         """Synchronise depuis cette fiche (voir action_sync_all_from_mailcow)."""
+        self._exiger("manager")
         self.ensure_one()
         return self.env["mailcow.alias"].action_sync_all_from_mailcow()
 
     @api.model
     def action_sync_all_from_mailcow(self):
         """Aligner tout l'état local sur le serveur (bouton et menu)."""
+        self._exiger("manager")
         return self._sync_all_from_mailcow()
 
     @api.model

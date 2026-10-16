@@ -1,4 +1,6 @@
 # Part of the mailcow_admin Odoo module. See LICENSE for details.
+import secrets
+
 from odoo import api
 from odoo import fields
 from odoo import models
@@ -37,10 +39,6 @@ class MailcowMailbox(models.Model):
     last_imap_login = fields.Datetime(string="Dernière connexion IMAP", readonly=True)
     last_smtp_login = fields.Datetime(string="Dernière connexion SMTP", readonly=True)
     last_pop3_login = fields.Datetime(string="Dernière connexion POP3", readonly=True)
-    password = fields.Char(
-        string="Mot de passe",
-        help="Utilisé à la création et à la réinitialisation. Jamais stocké dans Odoo.",
-    )
 
     _local_domain_uniq = models.Constraint(
         "unique(local_part, domain_id)", "Cette boîte mail existe déjà sur ce domaine."
@@ -70,10 +68,11 @@ class MailcowMailbox(models.Model):
         self.ensure_one()
         return self.email or self.display_name
 
-    def _attr_payload(self, with_password=False):
+    def _attr_payload(self, password=None):
         """Les attributs modifiables d'une boîte : le « attr » d'une édition.
 
         L'adresse est l'identité (elle va dans « items »), pas un attribut.
+        Le mot de passe n'est passé qu'en argument : il ne touche jamais la base.
         """
         self.ensure_one()
         attr = {
@@ -84,36 +83,58 @@ class MailcowMailbox(models.Model):
             "tls_enforce_in": "1" if self.tls_enforce_in else "0",
             "tls_enforce_out": "1" if self.tls_enforce_out else "0",
         }
-        if with_password:
-            attr["password"] = self.password
-            attr["password2"] = self.password
+        if password:
+            attr["password"] = password
+            attr["password2"] = password
         return attr
 
-    def _base_payload(self, with_password=False):
+    def _base_payload(self, password=None):
         """La charge de création : l'identité, plus les attributs."""
         self.ensure_one()
         return dict(
-            self._attr_payload(with_password),
+            self._attr_payload(password),
             local_part=self.local_part,
             domain=self.domain_id.name,
         )
 
+    @staticmethod
+    def _nouveau_mot_de_passe():
+        return secrets.token_urlsafe(18)
+
+    @staticmethod
+    def _montrer_une_fois(titre, lignes):
+        """La notification est la réponse de l'appel : rien n'est écrit en base."""
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "type": "success",
+                "title": titre,
+                "sticky": True,
+                "message": "\n".join(lignes) + "\n\nCopiez-le maintenant : Odoo ne le garde pas.",
+            },
+        }
+
+    def _creer_sur_mailcow(self):
+        """Créer la boîte avec un mot de passe fabriqué ici, rendu une seule fois.
+
+        Odoo ne stocke aucun mot de passe : ni champ, ni assistant (un
+        assistant transitoire est lui aussi écrit en base).
+        """
+        self.ensure_one()
+        self._exiger("user")
+        mot_de_passe = self._nouveau_mot_de_passe()
+        client = MailcowClient(self.env)
+        client._request("POST", "/add/mailbox", self._base_payload(mot_de_passe))
+        self.write({"last_synced_on": fields.Datetime.now(), "synced": True})
+        self._journaliser("Boîte %s créée sur Mailcow." % self.email)
+        return "%s : %s" % (self.email, mot_de_passe)
+
     def action_create_on_mailcow(self):
-        """Crée la boîte mail sur Mailcow (un mot de passe est requis)."""
-        for mailbox in self:
-            if not mailbox.password:
-                raise UserError(
-                    self.env._(
-                        "Saisissez un mot de passe pour « %s » avant de créer "
-                        "la boîte mail sur Mailcow.",
-                        mailbox.email,
-                    )
-                )
-            client = MailcowClient(self.env)
-            client._request("POST", "/add/mailbox", mailbox._base_payload(with_password=True))
-            mailbox.write({"last_synced_on": fields.Datetime.now(), "synced": True})
-            mailbox._journaliser("Boîte %s créée sur Mailcow." % mailbox.email)
-            mailbox.password = False  # le mot de passe ne doit pas rester dans Odoo
+        """Crée la boîte mail sur Mailcow et montre son mot de passe initial."""
+        self._exiger("user")
+        lignes = [mailbox._creer_sur_mailcow() for mailbox in self]
+        return self._montrer_une_fois("Mot de passe initial", lignes)
 
     def action_create_app_password(self):
         """Ouvrir l'assistant qui créera un mot de passe applicatif.
@@ -121,6 +142,7 @@ class MailcowMailbox(models.Model):
         Mailcow rend ce mot de passe en clair et ne le garde pas : il est créé
         ici, montré une fois, et rangé nulle part.
         """
+        self._exiger("manager")
         self.ensure_one()
         return {
             "type": "ir.actions.act_window",
@@ -137,6 +159,7 @@ class MailcowMailbox(models.Model):
         Un fourre-tout est un alias dont l'adresse est « @domaine » : s'il en
         existe déjà un, il est réorienté, sinon il est créé.
         """
+        self._exiger("user")
         self.ensure_one()
         if not self.synced:
             raise UserError(
@@ -183,6 +206,7 @@ class MailcowMailbox(models.Model):
 
     def action_update_on_mailcow(self):
         """Réécrit l'état local sur Mailcow (jamais le mot de passe)."""
+        self._exiger("user")
         for mailbox in self:
             client = MailcowClient(self.env)
             client._request(
@@ -197,19 +221,29 @@ class MailcowMailbox(models.Model):
             mailbox._journaliser("Mise à jour poussée vers Mailcow.")
 
     def action_reset_password(self):
-        """Ouvre le wizard de réinitialisation du mot de passe."""
-        self.ensure_one()
-        return {
-            "type": "ir.actions.act_window",
-            "name": "Nouveau mot de passe",
-            "res_model": "mailcow.mailbox.password",
-            "view_mode": "form",
-            "target": "new",
-            "context": {"default_mailbox_id": self.id},
-        }
+        """Remplace le mot de passe sur Mailcow et le montre une seule fois."""
+        self._exiger("manager")
+        lignes = []
+        for mailbox in self:
+            mot_de_passe = self._nouveau_mot_de_passe()
+            # Même forme que les autres éditions : {"items": [...], "attr": {...}}.
+            # Un corps plat est accepté puis ignoré, le mot de passe ne changeait
+            # donc jamais malgré une réponse « success ».
+            MailcowClient(self.env)._request(
+                "POST",
+                "/edit/mailbox",
+                {
+                    "items": [mailbox.email],
+                    "attr": {"password": mot_de_passe, "password2": mot_de_passe},
+                },
+            )
+            mailbox._journaliser("Mot de passe remplacé sur Mailcow.")
+            lignes.append("%s : %s" % (mailbox.email, mot_de_passe))
+        return self._montrer_une_fois("Nouveau mot de passe", lignes)
 
     def action_delete_on_mailcow(self):
         """Supprime la boîte mail sur Mailcow, puis l'archive localement."""
+        self._exiger("manager")
         for mailbox in self:
             client = MailcowClient(self.env)
             # Mailcow exige l'adresse complète : « local_part » + « domain »
@@ -226,12 +260,14 @@ class MailcowMailbox(models.Model):
 
     def action_sync_from_mailcow(self):
         """Synchronise depuis cette fiche (voir action_sync_all_from_mailcow)."""
+        self._exiger("manager")
         self.ensure_one()
         return self.env["mailcow.mailbox"].action_sync_all_from_mailcow()
 
     @api.model
     def action_sync_all_from_mailcow(self):
         """Aligner tout l'état local sur le serveur (bouton et menu)."""
+        self._exiger("manager")
         return self._sync_all_from_mailcow()
 
     @api.model

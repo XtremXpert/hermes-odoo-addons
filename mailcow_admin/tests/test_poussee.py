@@ -22,7 +22,6 @@ class TestPoussee(TransactionCase):
             {
                 "local_part": "nouvelle",
                 "domain_id": self.domain.id,
-                "password": "Un-mot-de-passe-1",
             }
         )
         connue = self.env["mailcow.mailbox"].create(
