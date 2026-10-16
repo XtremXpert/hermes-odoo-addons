@@ -405,9 +405,17 @@ des quotas.</li>
 </div>
 <div class="section" id="configuration">
 <h1><a class="toc-backref" href="#toc-entry-1">Configuration</a></h1>
-<p>Dans Réglages → <strong>Mailcow</strong>, renseigner l’URL du serveur et la clé API,
-puis tester la connexion. La clé est stockée dans
-<tt class="docutils literal">ir.config_parameter</tt> (<tt class="docutils literal">mailcow.*</tt>), jamais dans le code.</p>
+<p>Dans Réglages → <strong>Mailcow</strong>, renseigner l’URL du serveur, puis tester la
+connexion.</p>
+<p>Clé API, de préférence hors de la base : la variable d’environnement
+<tt class="docutils literal">MAILCOW_API_KEY</tt> du conteneur Odoo, alimentée par un Secret
+Kubernetes copié depuis Vaultwarden. Elle l’emporte sur le réglage, qui
+est alors masqué. Elle est ignorée sur une base neutralisée
+(<tt class="docutils literal">database.is_neutralized</tt>) : un staging cloné n’agit jamais sur le
+vrai serveur.</p>
+<p>À défaut, la clé saisie dans les réglages est stockée dans
+<tt class="docutils literal">ir.config_parameter</tt> (<tt class="docutils literal">mailcow.api_key</tt>), donc dans les sauvegardes
+et les clones de la base.</p>
 </div>
 <div class="section" id="bug-tracker">
 <h1><a class="toc-backref" href="#toc-entry-2">Bug Tracker</a></h1>

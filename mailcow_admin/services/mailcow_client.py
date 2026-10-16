@@ -3,6 +3,7 @@
 
 import json
 import logging
+import os
 import time
 import urllib.error
 import urllib.request
@@ -16,6 +17,27 @@ _logger = logging.getLogger(__name__)
 # Délai d'un appel, comme le broker N3 : sans lui, un serveur muet bloque un
 # processus Odoo indéfiniment.
 DELAI = 30
+
+# La clé API vient de l'environnement du conteneur quand il la fournit : un
+# Secret Kubernetes copié depuis Vaultwarden, qui reste la source. Elle n'est
+# alors ni dans la base, ni dans ses sauvegardes, ni dans un staging cloné.
+VARIABLE_CLE = "MAILCOW_API_KEY"
+
+
+def cle_de_l_environnement(env):
+    """La clé fournie par l'environnement, sauf sur une base neutralisée.
+
+    Un staging neutralisé ne doit jamais agir sur le vrai serveur, même si son
+    conteneur reçoit la variable par erreur.
+    """
+    cle = os.environ.get(VARIABLE_CLE, "").strip()
+    if not cle:
+        return ""
+    icp = env["ir.config_parameter"].sudo()
+    if icp.get_str("database.is_neutralized", default=""):
+        return ""
+    return cle
+
 
 RESULTAT_INCERTAIN = (
     "Résultat incertain (%s, %s %s) : la modification a pu être faite sur Mailcow. "
@@ -69,9 +91,9 @@ class MailcowAPIError(UserError):
 class MailcowClient:
     """Client de l'API Mailcow v1.
 
-    Lecture de la configuration depuis ``ir.config_parameter``
-    (``mailcow.base_url``, ``mailcow.api_key``), avec surcharge possible
-    pour le test de connexion depuis les réglages.
+    L'URL vient de ``ir.config_parameter`` (``mailcow.base_url``). La clé vient
+    de la variable d'environnement ``MAILCOW_API_KEY`` si elle est fournie, sinon
+    du paramètre ``mailcow.api_key``.
     """
 
     def __init__(self, env, base_url=None, api_key=None):
@@ -83,15 +105,18 @@ class MailcowClient:
         # part dans l'en-tête de la requête, jamais dans une erreur.
         icp = env["ir.config_parameter"].sudo()
         self.base_url = base_url or icp.get_str("mailcow.base_url", default="")
-        self.api_key = api_key or icp.get_str("mailcow.api_key", default="")
+        self.api_key = (
+            api_key or cle_de_l_environnement(env) or icp.get_str("mailcow.api_key", default="")
+        )
 
     def _request(self, method, path, payload=None):
         """Appelle l'API et renvoie la liste ``data`` de la réponse Mailcow."""
         if not self.base_url or not self.api_key:
             raise MailcowAPIError(
                 "Le serveur Mailcow n'est pas configuré. Renseignez l'URL de base "
-                "(paramètre « mailcow.base_url ») et la clé API (paramètre "
-                "« mailcow.api_key ») dans Réglages > Mailcow."
+                "(paramètre « mailcow.base_url ») et la clé API (variable "
+                "d'environnement MAILCOW_API_KEY, ou paramètre « mailcow.api_key ») "
+                "dans Réglages > Mailcow."
             )
         url = self.base_url.rstrip("/") + "/api/v1" + path
         data = json.dumps(payload).encode("utf-8") if payload is not None else None

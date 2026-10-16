@@ -219,3 +219,43 @@ class TestEcrituresNonRejouees(TransactionCase):
         ) as appel:
             self._client()._request("GET", "/get/domain/all", None)
         self.assertEqual(appel.call_args.kwargs["timeout"], 30)
+
+
+@tagged("mailcow_admin", "post_install", "-at_install")
+class TestCleDeLEnvironnement(TransactionCase):
+    """La clé API vient de l'environnement (Vaultwarden), pas de la base."""
+
+    def setUp(self):
+        super().setUp()
+        self.icp = self.env["ir.config_parameter"].sudo()
+        self.icp.set_str("mailcow.base_url", "https://mail.example.com")
+        self.icp.set_str("mailcow.api_key", "cle-en-base")
+        self.icp.set_str("database.is_neutralized", "")
+
+    def test_l_environnement_l_emporte_sur_la_base(self):
+        with patch.dict("os.environ", {"MAILCOW_API_KEY": "cle-de-vault"}):
+            self.assertEqual(MailcowClient(self.env).api_key, "cle-de-vault")
+            reglages = self.env["res.config.settings"].create({})
+            self.assertTrue(reglages.mailcow_api_key_from_env)
+
+    def test_sans_variable_la_base_sert_de_repli(self):
+        with patch.dict("os.environ", {"MAILCOW_API_KEY": ""}):
+            self.assertEqual(MailcowClient(self.env).api_key, "cle-en-base")
+            self.assertFalse(self.env["res.config.settings"].create({}).mailcow_api_key_from_env)
+
+    def test_base_neutralisee_ignore_l_environnement(self):
+        self.icp.set_str("database.is_neutralized", "True")
+        self.icp.set_str("mailcow.api_key", "")
+        with patch.dict("os.environ", {"MAILCOW_API_KEY": "cle-de-vault"}):
+            client = MailcowClient(self.env)
+            self.assertEqual(client.api_key, "")
+            with self.assertRaisesRegex(MailcowAPIError, "pas configuré"):
+                client._request("GET", "/get/domain/all")
+
+    def test_la_cle_n_apparait_dans_aucune_erreur(self):
+        refus = urllib.error.HTTPError("https://mail.example.com", 401, "Unauthorized", {}, None)
+        with patch.dict("os.environ", {"MAILCOW_API_KEY": "cle-de-vault"}):
+            with patch("urllib.request.urlopen", side_effect=refus):
+                with self.assertRaises(MailcowAPIError) as erreur:
+                    MailcowClient(self.env)._request("GET", "/get/domain/all")
+        self.assertNotIn("cle-de-vault", str(erreur.exception))

@@ -29,7 +29,8 @@
                                         placeholder="https://mail.exemple.com"
                                     />
                                 </div>
-                                <div class="row">
+                                <field name="mailcow_api_key_from_env" invisible="1" />
+                                <div class="row" invisible="mailcow_api_key_from_env">
                                     <label
                                         for="mailcow_api_key"
                                         class="col-lg-4 o_light_label"
@@ -39,6 +40,13 @@
                                         password="True"
                                         placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
                                     />
+                                </div>
+                                <div
+                                    class="text-muted"
+                                    invisible="not mailcow_api_key_from_env"
+                                >
+                                    Clé API fournie par l'environnement du serveur
+                                    (MAILCOW_API_KEY, depuis Vaultwarden).
                                 </div>
                                 <div class="mt8">
                                     <button
