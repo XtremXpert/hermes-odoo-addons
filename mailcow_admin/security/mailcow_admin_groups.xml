@@ -6,6 +6,15 @@
         <field name="sequence" eval="40" />
     </record>
 
+    <record id="group_mailcow_sync" model="res.groups">
+        <field name="name">Lecture et synchronisation</field>
+
+        <field name="implied_ids" eval="[(4, ref('base.group_user'))]" />
+        <field
+            name="comment"
+        >Lecture des objets Mailcow et synchronisation depuis le serveur, sans aucune écriture sur Mailcow ni mot de passe. Destiné aux agents.</field>
+    </record>
+
     <record id="group_mailcow_user" model="res.groups">
         <field name="name">Utilisateur</field>
 
@@ -18,7 +27,10 @@
     <record id="group_mailcow_manager" model="res.groups">
         <field name="name">Gestionnaire</field>
 
-        <field name="implied_ids" eval="[(4, ref('group_mailcow_user'))]" />
+        <field
+            name="implied_ids"
+            eval="[(4, ref('group_mailcow_user')), (4, ref('group_mailcow_sync'))]"
+        />
         <field
             name="user_ids"
             eval="[(4, ref('base.user_root')), (4, ref('base.user_admin'))]"

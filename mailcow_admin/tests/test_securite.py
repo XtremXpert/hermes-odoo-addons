@@ -13,9 +13,8 @@ from odoo.tests import tagged
 from .test_robustesse import FausseReponse
 
 
-@tagged("mailcow_admin", "post_install", "-at_install")
-class TestDroitsParMethode(TransactionCase):
-    """Le bouton masqué ne protège pas la méthode : chaque appel RPC est vérifié."""
+class FichesMailcow(TransactionCase):
+    """Un domaine, une boîte et un alias déjà sur le serveur, et des comptes."""
 
     @classmethod
     def setUpClass(cls):
@@ -49,6 +48,11 @@ class TestDroitsParMethode(TransactionCase):
             with self.assertRaises(AccessError, msg=methode):
                 getattr(fiche.with_user(user), methode)()
         appel.assert_not_called()
+
+
+@tagged("mailcow_admin", "post_install", "-at_install")
+class TestDroitsParMethode(FichesMailcow):
+    """Le bouton masqué ne protège pas la méthode : chaque appel RPC est vérifié."""
 
     def test_utilisateur_ne_supprime_ni_ne_synchronise_sur_le_serveur(self):
         for fiche in (self.domaine, self.boite, self.alias):
@@ -86,6 +90,94 @@ class TestDroitsParMethode(TransactionCase):
         with patch.object(MailcowClient, "_request", return_value=[]) as appel:
             self.alias.with_user(gestionnaire).action_delete_on_mailcow()
         self.assertEqual(appel.call_args[0][1], "/delete/alias")
+
+
+@tagged("mailcow_admin", "post_install", "-at_install")
+class TestGroupeSynchronisation(FichesMailcow):
+    """Le groupe des agents lit et synchronise, sans jamais écrire sur Mailcow."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.agent = cls.env["res.users"].create(
+            {
+                "name": "Agent Mailcow",
+                "login": "mailcow_agent_sync",
+                "group_ids": [(6, 0, [cls.env.ref("mailcow_admin.group_mailcow_sync").id])],
+            }
+        )
+
+    def test_synchronise_et_previsualise_en_lecture_seule(self):
+        serveur = {"data": []}
+        for fiche in (self.domaine, self.boite, self.alias):
+            for methode in ("action_sync_all_from_mailcow", "action_sync_from_mailcow"):
+                with patch.object(MailcowClient, "_request", return_value=serveur) as appel:
+                    # Listage vide alors que des fiches existent : refus, sans rien marquer.
+                    with self.assertRaises(MailcowAPIError):
+                        getattr(fiche.with_user(self.agent), methode)()
+                self.assertTrue(appel.call_args_list)
+                self.assertEqual({a[0][0] for a in appel.call_args_list}, {"GET"})
+
+    def test_la_synchronisation_ecrit_en_local(self):
+        serveur = {
+            "data": [
+                {
+                    "domain_name": "droits.test",
+                    "active": "1",
+                    "description": "Relue sur le serveur",
+                }
+            ]
+        }
+        with patch.object(MailcowClient, "_request", return_value=serveur) as appel:
+            self.env["mailcow.domain"].with_user(self.agent).action_sync_all_from_mailcow()
+        self.assertEqual({a[0][0] for a in appel.call_args_list}, {"GET"})
+        self.assertEqual(self.domaine.description, "Relue sur le serveur")
+
+    def test_apercu_lisible_par_l_agent(self):
+        serveur = {"data": [{"domain_name": "neuf.test", "active": "1"}]}
+        with patch.object(MailcowClient, "_request", return_value=serveur):
+            action = (
+                self.env["mailcow.domain"].with_user(self.agent).action_preview_sync_from_mailcow()
+            )
+        apercu = self.env["mailcow.sync.preview"].with_user(self.agent).browse(action["res_id"])
+        self.assertIn("neuf.test", apercu.plan)
+        self.assertFalse(self.env["mailcow.domain"].search([("name", "=", "neuf.test")]))
+
+    def test_aucune_ecriture_sur_le_serveur_ni_mot_de_passe(self):
+        for fiche in (self.domaine, self.boite, self.alias):
+            for methode in (
+                "action_create_on_mailcow",
+                "action_update_on_mailcow",
+                "action_push_to_mailcow",
+                "action_delete_on_mailcow",
+                "action_purge_local",
+                "action_forget_locally",
+            ):
+                self._refuse(self.agent, fiche, methode)
+        for methode in (
+            "action_reset_password",
+            "action_create_app_password",
+            "action_make_catch_all",
+        ):
+            self._refuse(self.agent, self.boite, methode)
+        self._refuse(self.agent, self.domaine, "action_fetch_dkim")
+
+    def test_aucune_ecriture_directe(self):
+        boite = self.boite.with_user(self.agent)
+        self.assertEqual(boite.email, "info@droits.test")
+        with self.assertRaises(AccessError):
+            boite.write({"quota_mb": 1})
+        with self.assertRaises(AccessError):
+            boite.unlink()
+        with self.assertRaises(AccessError):
+            self.env["mailcow.alias"].with_user(self.agent).create(
+                {"alias_name": "x", "domain_id": self.domaine.id}
+            )
+
+    def test_utilisateur_ne_synchronise_toujours_pas_et_gestionnaire_si(self):
+        self._refuse(self.utilisateur, self.domaine, "action_sync_all_from_mailcow")
+        gestionnaire = self.env.ref("mailcow_admin.group_mailcow_manager").user_ids[0]
+        self.assertTrue(gestionnaire.has_group("mailcow_admin.group_mailcow_sync"))
 
 
 @tagged("mailcow_admin", "post_install", "-at_install")
