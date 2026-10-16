@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+    Copyright (C) 2026 Bemade Inc.
+    Copyright (C) 2026 Benoît Vézina, Diverse-Cité
+    License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
+
+    Menu structure (all admin-only via group_diverse_mail_gateway_admin):
+
+        Settings
+          └─ Technical
+              └─ Mail Gateway
+                  ├─ Tokens         (list of diverse.mail_gateway.token)
+                  └─ Generate Token (opens the wizard)
+-->
+<odoo>
+    <menuitem
+        id="menu_diverse_mail_gateway"
+        name="Mail Gateway"
+        parent="base.menu_custom"
+        sequence="10"
+        groups="group_diverse_mail_gateway_admin"
+    />
+
+    <menuitem
+        id="menu_diverse_mail_gateway_tokens"
+        name="Tokens"
+        parent="menu_diverse_mail_gateway"
+        action="action_diverse_mail_gateway_token"
+        sequence="10"
+    />
+
+    <menuitem
+        id="menu_diverse_mail_gateway_generate"
+        name="Generate Token"
+        parent="menu_diverse_mail_gateway"
+        action="action_token_create_wizard"
+        sequence="20"
+    />
+</odoo>
