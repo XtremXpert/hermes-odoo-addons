@@ -1,0 +1,1 @@
+Rien à configurer : la correction s'applique à l'installation, puis à chaque démarrage. Le journal l'annonce par une ligne `module_type « official » donné à N module(s)` quand il y avait quelque chose à corriger.

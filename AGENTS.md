@@ -1,10 +1,11 @@
 # hermes-odoo-addons
 
-Douze modules Odoo maison pour l'infrastructure de Diverse-Cité : courriel (Mailcow),
+Treize modules Odoo maison pour l'infrastructure de Diverse-Cité : courriel (Mailcow),
 téléphonie (Wazo, Asterisk ARI), SMS (VoIP.ms), le socle commun des agents Hermes
 (compte N3, journal N1, activité Discuss, pages web N1, SSO des tableaux de bord), et la
 gestion des instances Odoo du cluster avec sa barrière humaine des mises en production
-(odoo_herd, odoo_herd_portal). Dépôt **public** depuis le 2026-10-11 (diverse-odoo et
+(odoo_herd, odoo_herd_portal), plus un correctif de l'écran Applications
+(base_module_type_official). Dépôt **public** depuis le 2026-10-11 (diverse-odoo et
 mac-demo le vendorisent sans jeton) : rien de secret n'y entre, ni dans un fichier ni
 dans l'historique.
 
@@ -13,20 +14,21 @@ Le local se monte avec `odoo-dev setup --no-docker --yes`, après `cp .env.exemp
 sous-module (`XtremXpert/odoo-deploy`, branche 19.0) qui porte le déploiement — il n'est
 pas nécessaire au développement local.
 
-| module                 | rôle                                         |
-| ---------------------- | -------------------------------------------- |
-| `mailcow_admin`        | domaines, boîtes, alias, tableaux de bord    |
-| `wazo_server`          | serveur Wazo : lignes, postes, CDR           |
-| `wazo_phone`           | téléphone dans Odoo (WebRTC, click-to-call)  |
-| `asterisk_ari`         | Asterisk via ARI                             |
-| `voipms_sms`           | SMS par l'API VoIP.ms                        |
-| `hermes_n3_access`     | compte API de l'agent Hermes N3              |
-| `hermes_n1_audit`      | façade d'écriture N1 et journal immuable     |
-| `hermes_activity`      | réponses et activité des agents dans Discuss |
-| `hermes_n1_website`    | pages web du site par N1 (zone #wrap)        |
-| `hermes_dashboard_sso` | SSO OAuth2 des tableaux de bord Hermes       |
-| `odoo_herd`            | instances Odoo du cluster (opérateur Bemade) |
-| `odoo_herd_portal`     | portail, promotions confirmées, façades      |
+| module                      | rôle                                         |
+| --------------------------- | -------------------------------------------- |
+| `mailcow_admin`             | domaines, boîtes, alias, tableaux de bord    |
+| `wazo_server`               | serveur Wazo : lignes, postes, CDR           |
+| `wazo_phone`                | téléphone dans Odoo (WebRTC, click-to-call)  |
+| `asterisk_ari`              | Asterisk via ARI                             |
+| `voipms_sms`                | SMS par l'API VoIP.ms                        |
+| `hermes_n3_access`          | compte API de l'agent Hermes N3              |
+| `hermes_n1_audit`           | façade d'écriture N1 et journal immuable     |
+| `hermes_activity`           | réponses et activité des agents dans Discuss |
+| `hermes_n1_website`         | pages web du site par N1 (zone #wrap)        |
+| `hermes_dashboard_sso`      | SSO OAuth2 des tableaux de bord Hermes       |
+| `odoo_herd`                 | instances Odoo du cluster (opérateur Bemade) |
+| `odoo_herd_portal`          | portail, promotions confirmées, façades      |
+| `base_module_type_official` | modules visibles dans Applications           |
 
 Le dépôt suit la **disposition des dépôts de modules de l'OCA** (gabarit
 `oca-addons-repo-template`, `.copier-answers.yml`) : chaque module est **à la racine**,
