@@ -20,7 +20,7 @@ env:
   # les tests ont réellement été validés, plutôt que de suivre master.
   # Pour avancer : remplacer par le commit voulu, relancer, corriger, repousser.
   ODOO_COMMIT: 7bab48ba5fdaa9e20744fda66a9627bfff88924a  # branche 20.0 d'Odoo
-  MODULES: asterisk_ari,mailcow_admin,voipms_sms,wazo_phone,wazo_server
+  MODULES: asterisk_ari,base_module_type_official,mailcow_admin,voipms_sms,wazo_phone,wazo_server
 
 jobs:
   qualite:
@@ -143,7 +143,7 @@ jobs:
         # avant les tests rend le suivant assez rapide.
         run: google-chrome --headless=new --no-sandbox --disable-gpu --dump-dom about:blank > /dev/null
 
-      - name: Tests des cinq modules, sur une base neuve
+      - name: Tests des six modules, sur une base neuve
         # Pas de --no-http : les tests HttpCase ouvrent les ecrans dans Chrome
         # et ont besoin du serveur web.
         run: |
@@ -155,7 +155,7 @@ jobs:
             --database=hermes_ci \
             --init=$MODULES \
             --test-enable \
-            --test-tags=/asterisk_ari,/mailcow_admin,/voipms_sms,/wazo_phone,/wazo_server \
+            --test-tags=/asterisk_ari,/base_module_type_official,/mailcow_admin,/voipms_sms,/wazo_phone,/wazo_server \
             --stop-after-init --max-cron-threads=0 --log-level=test \
             2>&1 | tee odoo-tests.log
           # Un test navigateur saute n'est pas un test reussi : Odoo le compte
