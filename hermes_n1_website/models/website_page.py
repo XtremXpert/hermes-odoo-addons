@@ -163,6 +163,14 @@ class HermesN1ChangeWebsite(models.Model):
             )
         return page, website, view, wrap[0]
 
+    def _save_wrap(self, view, wrap, clean):
+        """Replace the #wrap section through the web editor's own save."""
+        section = etree.Element("div", dict(wrap.attrib))
+        fragment = lxml_html.fragment_fromstring(clean or "", create_parent="div")
+        section.text, section[:] = fragment.text, list(fragment)
+        view.save(etree.tostring(section, encoding="unicode", method="html"), xpath=WRAP_XPATH)
+        self.env.flush_all()
+
     @api.model
     def lire_page_web(self, page_id, channel_id, message_id, partner_id):
         actor, _source = self._business_actor(channel_id, message_id, partner_id)
@@ -217,11 +225,7 @@ class HermesN1ChangeWebsite(models.Model):
                         "Cette page contient des %s : la modifier dans l'éditeur web.", blocked
                     )
                 )
-            section = etree.Element("div", dict(wrap.attrib))
-            fragment = lxml_html.fragment_fromstring(clean or "", create_parent="div")
-            section.text, section[:] = fragment.text, list(fragment)
-            view.save(etree.tostring(section, encoding="unicode", method="html"), xpath=WRAP_XPATH)
-            self.env.flush_all()
+            self._save_wrap(view, wrap, clean)
             _page, _website, _view, wrap_after = self._page_wrap(page_id, actor)
             after = _inner(wrap_after)
             audit = (
@@ -271,6 +275,130 @@ class HermesN1ChangeWebsite(models.Model):
             models.Model.write(audit, {"chatter_message_id": note.id})
             result = audit._result()
             result.update({"url": page.url, "sha256": _digest(after)})
+            return result
+
+    @api.model
+    def creer_page_web(
+        self, website_id, name, html, reason, channel_id, message_id, partner_id, add_menu=False
+    ):
+        """Create a new, unpublished page from Odoo's blank page template, then fill its #wrap.
+
+        The generic facade cannot create a ``website.page``: its QWeb view is a technical
+        record. This does what the web editor's "New page" does (``website.new_page``), with
+        the requester's rights and in the website's context, and never overwrites an existing
+        page: a page already at that URL is edited with ``modifier_page_web``. The page stays
+        unpublished, so a human reviews it before it goes live.
+        """
+        actor, source = self._business_actor(channel_id, message_id, partner_id)
+        if type(website_id) is not int or website_id <= 0:
+            raise UserError(self.env._("Identifiant de site positif requis."))
+        if not isinstance(name, str) or not 1 <= len(name.strip()) <= 100:
+            raise UserError(self.env._("Nom de page requis, 100 caractères au plus."))
+        if not isinstance(html, str) or not html.strip() or len(html) > MAX_HTML:
+            raise UserError(self.env._("Contenu HTML requis, %d caractères au plus.", MAX_HTML))
+        if not isinstance(reason, str) or not 1 <= len(reason.strip()) <= 1000:
+            raise UserError(self.env._("Motif obligatoire."))
+        if not isinstance(add_menu, bool):
+            raise UserError(self.env._("add_menu doit être vrai ou faux."))
+        if not actor.has_group("website.group_website_designer"):
+            raise AccessError(self.env._("Le demandeur n'a pas le droit de modifier le site."))
+        website = self.env["website"].with_user(actor).browse(website_id).exists()
+        if not website:
+            raise UserError(self.env._("Site absent."))
+        website.check_access("write")
+        name = name.strip()
+        clean = sanitize(html)
+        key = hashlib.sha256(
+            json.dumps(
+                [self.env.uid, source.id, "website.page:create", website.id, name, _digest(clean)],
+                sort_keys=True,
+            ).encode()
+        ).hexdigest()
+        with self.env.cr.savepoint():
+            self.env.cr.execute("SELECT pg_advisory_xact_lock(%s)", [int(key[:15], 16)])
+            previous = self.sudo().search([("request_key", "=", key)], limit=1)
+            if previous:
+                result = previous._result(replayed=True)
+                result.update({"page_id": previous.target_id, **(previous.after_values or {})})
+                return result
+            site = website.with_context(website_id=website.id)
+            url = "/" + self.env["ir.http"]._slugify(name, max_length=1024, path=True)
+            if not url.strip("/"):
+                raise UserError(self.env._("Ce nom ne donne pas d'adresse de page."))
+            if site.get_unique_path(url) != url:
+                raise UserError(
+                    self.env._(
+                        "Une page ou une adresse existe déjà à %s ; la lire avec lire_page_web "
+                        "et la modifier avec modifier_page_web.",
+                        url,
+                    )
+                )
+            created = site.new_page(name=name, add_menu=add_menu)
+            page, _website, view, wrap = self._page_wrap(created["page_id"], actor)
+            self._save_wrap(view, wrap, clean)
+            _page, _website, _view, wrap_after = self._page_wrap(page.id, actor)
+            after = _inner(wrap_after)
+            values = {
+                "url": page.url,
+                "name": name,
+                "website_id": website.id,
+                "menu": bool(created.get("menu_id")),
+                "publiee": page.is_published,
+                "sha256": _digest(after),
+                "html": after,
+            }
+            audit = (
+                self.sudo()
+                .with_context(mail_create_nosubscribe=True)
+                .create(
+                    {
+                        "request_key": key,
+                        "target_model": "website.page",
+                        "target_id": page.id,
+                        "requester_id": actor.id,
+                        "agent_id": self.env.uid,
+                        "source_message_id": source.id,
+                        "reason": reason.strip(),
+                        "before_values": {},
+                        "after_values": values,
+                    }
+                )
+            )
+            body = (
+                (
+                    Markup("<p><strong>Hermes N1 : page %s créée sur le site %s</strong> ")
+                    % (page.url, website.name)
+                    + Markup("(non publiée)</p>")
+                )
+                + Markup('<p class="mb-1"><strong>Motif</strong></p>')
+                + agent_html(reason)
+                + values_table(
+                    {"url": "", "menu": "", "longueur": 0},
+                    {
+                        "url": page.url,
+                        "menu": "oui" if values["menu"] else "non",
+                        "longueur": len(after),
+                    },
+                    {
+                        "url": "Adresse",
+                        "menu": "Entrée de menu",
+                        "longueur": "Longueur (caractères)",
+                    },
+                )
+            )
+            note = audit.with_context(
+                mail_notify_noemail=True, mail_post_autofollow=False
+            ).message_post(
+                body=body,
+                author_id=self.env.user.partner_id.id,
+                message_type="comment",
+                subtype_xmlid="mail.mt_note",
+            )
+            if not note:
+                raise UserError(self.env._("Journal obligatoire."))
+            models.Model.write(audit, {"chatter_message_id": note.id})
+            result = audit._result()
+            result.update({"page_id": page.id, **values})
             return result
 
     # -- Website theme --------------------------------------------------------------------

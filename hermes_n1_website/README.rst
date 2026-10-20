@@ -53,6 +53,30 @@ Fonctionnement
   - consigne l'opération dans ``hermes.n1.change`` avec le HTML d'avant
     et d'après (retour arrière possible) et une note.
 
+Nouvelle page
+-------------
+
+``creer_page_web(website_id, name, html, reason, …, add_menu=False)``
+crée une page comme « Nouvelle page » dans l'éditeur web
+(``website.new_page``, modèle de page vierge), puis remplit sa zone
+``#wrap`` avec le même assainissement que ``modifier_page_web``. La
+façade générique ne peut pas créer de ``website.page``, dont la vue QWeb
+est un objet technique.
+
+- L'adresse vient du nom (« Ente Auth » donne ``/ente-auth``) ; si une
+  page ou une adresse existe déjà, la création est refusée : la page
+  existante se lit avec ``lire_page_web`` et se modifie avec
+  ``modifier_page_web``. Rien n'est jamais écrasé ni dupliqué.
+- La page est créée **non publiée** : un humain la relit et la publie
+  depuis l'éditeur web.
+- ``add_menu=True`` ajoute une entrée au menu principal du site.
+- Exige ``website.group_website_designer`` et le droit d'écrire sur le
+  site ; s'exécute avec les droits du demandeur et dans le contexte du
+  site.
+- Consigné dans ``hermes.n1.change`` (avant vide, après : adresse, nom,
+  menu, HTML), avec une note. Une demande rejouée ne crée pas de seconde
+  page.
+
 Blocs Odoo
 ----------
 
@@ -85,15 +109,15 @@ Thème d'un nouveau site
 avec les mêmes étapes que le bouton « Choisir ce thème » d'Odoo, pour ce
 site seulement :
 
--  n'installe ni ne met à jour aucun module : l'installation d'un thème
-   relève de N3 ;
--  refuse un site qui a déjà un thème, car le remplacer retirerait du site
-   les enregistrements du thème et leurs personnalisations : ce
-   changement se fait dans l'éditeur web ;
--  exige ``website.group_website_designer`` pour le demandeur et le droit
-   d'écrire sur le site ;
--  consigne l'opération dans ``hermes.n1.change``, avec une note. Une
-   demande rejouée ne recharge pas le thème.
+- n'installe ni ne met à jour aucun module : l'installation d'un thème
+  relève de N3 ;
+- refuse un site qui a déjà un thème, car le remplacer retirerait du
+  site les enregistrements du thème et leurs personnalisations : ce
+  changement se fait dans l'éditeur web ;
+- exige ``website.group_website_designer`` pour le demandeur et le droit
+  d'écrire sur le site ;
+- consigne l'opération dans ``hermes.n1.change``, avec une note. Une
+  demande rejouée ne recharge pas le thème.
 
 Dépendances et tests
 --------------------
@@ -104,9 +128,10 @@ Dépend de ``hermes_n1_audit`` et ``website``.
 
    ADDONS=addons tools/test-modules.sh IMAGE hermes_n1_website
 
-Les tests couvrent la lecture et l'écriture du seul ``#wrap`` avec trace
-et rejeu, l'assainissement, le refus d'une empreinte périmée, d'une page
-à QWeb ou à formulaire.
+Les tests couvrent la création d'une page (non publiée, assainie,
+tracée, jamais en double), la lecture et l'écriture du seul ``#wrap``
+avec trace et rejeu, l'assainissement, le refus d'une empreinte périmée,
+d'une page à QWeb ou à formulaire.
 
 **Table of contents**
 

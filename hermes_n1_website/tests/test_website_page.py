@@ -247,3 +247,85 @@ class TestN1WebsitePage(TransactionCase):
                 self.service.appliquer_theme_web(
                     other.id, "theme_n1_test", "Motif", **self.source()
                 )
+
+    def test_create_page_is_unpublished_sanitized_traced_and_never_overwrites(self):
+        pages = self.env["website.page"].search_count([])
+        result = self.service.creer_page_web(
+            self.website.id,
+            "Ente Auth",
+            '<section class="s_text_block"><p>Double authentification</p>'
+            "<script>alert(1)</script></section>",
+            "Nouvelle page demandée",
+            add_menu=True,
+            **self.source(),
+        )
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["url"], "/ente-auth")
+        self.assertFalse(result["publiee"])
+        self.assertTrue(result["menu"])
+        page = self.env["website.page"].browse(result["page_id"])
+        self.assertEqual((page.url, page.website_id), ("/ente-auth", self.website))
+        self.assertFalse(page.is_published)
+        self.assertEqual(self.env["website.page"].search_count([]), pages + 1)
+        self.assertTrue(self.env["website.menu"].search([("page_id", "=", page.id)], limit=1))
+        read = self.service.lire_page_web(page.id, **self.source())
+        self.assertIn("Double authentification", read["html"])
+        self.assertNotIn("script", read["html"])
+        self.assertTrue(read["modifiable"])
+        audit = self.env["hermes.n1.change"].browse(result["audit_id"])
+        self.assertEqual((audit.target_model, audit.target_id), ("website.page", page.id))
+        self.assertFalse(audit.before_values)
+        self.assertIn("/ente-auth", str(audit.chatter_message_id.body))
+        # Replayed request: same answer, no second page.
+        replay = self.service.creer_page_web(
+            self.website.id,
+            "Ente Auth",
+            '<section class="s_text_block"><p>Double authentification</p>'
+            "<script>alert(1)</script></section>",
+            "Nouvelle page demandée",
+            add_menu=True,
+            **self.source(),
+        )
+        self.assertTrue(replay["deja_applique"])
+        self.assertEqual(replay["page_id"], page.id)
+        self.assertEqual(self.env["website.page"].search_count([]), pages + 1)
+        # A page already at that address is never overwritten nor duplicated.
+        with self.assertRaises(UserError):
+            self.service.creer_page_web(
+                self.website.id, "Ente Auth", "<p>Autre</p>", "Motif", **self.source()
+            )
+        with self.assertRaises(UserError):
+            self.service.creer_page_web(
+                self.website.id, "N1 test page", "<p>Autre</p>", "Motif", **self.source()
+            )
+        self.assertEqual(self.env["website.page"].search_count([]), pages + 1)
+        # Edited afterwards with modifier_page_web, like any page.
+        self.service.modifier_page_web(
+            page.id, "<p>Après</p>", read["sha256"], "Texte révisé", **self.source()
+        )
+        self.assertIn("<p>Après</p>", self.service.lire_page_web(page.id, **self.source())["html"])
+
+    def test_create_page_refuses_invalid_requests(self):
+        bad = [
+            (0, "Page", "<p>x</p>", "Motif"),
+            (999999, "Page", "<p>x</p>", "Motif"),
+            (self.website.id, "", "<p>x</p>", "Motif"),
+            (self.website.id, "x" * 101, "<p>x</p>", "Motif"),
+            (self.website.id, "Page", "", "Motif"),
+            (self.website.id, "Page", "<p>x</p>", ""),
+            (self.website.id, "!!!", "<p>x</p>", "Motif"),
+        ]
+        for args in bad:
+            with self.subTest(args=args[:2]), self.assertRaises(UserError):
+                self.service.creer_page_web(*args, **self.source())
+        with self.assertRaises(UserError):
+            self.service.creer_page_web(
+                self.website.id, "Page", "<p>x</p>", "Motif", add_menu="oui", **self.source()
+            )
+        self.admin.group_ids = [(3, self.env.ref("website.group_website_designer").id)]
+        if not self.admin.has_group("website.group_website_designer"):
+            with self.assertRaises(AccessError):
+                self.service.creer_page_web(
+                    self.website.id, "Refusée", "<p>x</p>", "Motif", **self.source()
+                )
+        self.assertFalse(self.env["website.page"].search([("url", "=", "/refusee")]))
