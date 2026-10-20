@@ -402,6 +402,30 @@ et d’après (retour arrière possible) et une note.</li>
 </li>
 </ul>
 </div>
+<div class="section" id="nouvelle-page">
+<h1>Nouvelle page</h1>
+<p><tt class="docutils literal">creer_page_web(website_id, name, html, reason, …, add_menu=False)</tt>
+crée une page comme « Nouvelle page » dans l’éditeur web
+(<tt class="docutils literal">website.new_page</tt>, modèle de page vierge), puis remplit sa zone
+<tt class="docutils literal">#wrap</tt> avec le même assainissement que <tt class="docutils literal">modifier_page_web</tt>. La
+façade générique ne peut pas créer de <tt class="docutils literal">website.page</tt>, dont la vue QWeb
+est un objet technique.</p>
+<ul class="simple">
+<li>L’adresse vient du nom (« Ente Auth » donne <tt class="docutils literal"><span class="pre">/ente-auth</span></tt>) ; si une
+page ou une adresse existe déjà, la création est refusée : la page
+existante se lit avec <tt class="docutils literal">lire_page_web</tt> et se modifie avec
+<tt class="docutils literal">modifier_page_web</tt>. Rien n’est jamais écrasé ni dupliqué.</li>
+<li>La page est créée <strong>non publiée</strong> : un humain la relit et la publie
+depuis l’éditeur web.</li>
+<li><tt class="docutils literal">add_menu=True</tt> ajoute une entrée au menu principal du site.</li>
+<li>Exige <tt class="docutils literal">website.group_website_designer</tt> et le droit d’écrire sur le
+site ; s’exécute avec les droits du demandeur et dans le contexte du
+site.</li>
+<li>Consigné dans <tt class="docutils literal">hermes.n1.change</tt> (avant vide, après : adresse, nom,
+menu, HTML), avec une note. Une demande rejouée ne crée pas de seconde
+page.</li>
+</ul>
+</div>
 <div class="section" id="blocs-odoo">
 <h1>Blocs Odoo</h1>
 <p>Pour composer une page comme dans l’éditeur web, N1 utilise les blocs
@@ -424,15 +448,34 @@ champ d’un autre enregistrement (<tt class="docutils literal"><span class="pre
 (règles de <tt class="docutils literal">hermes_n1_audit</tt>). Une demande rejouée ne réécrit pas la
 page.</p>
 </div>
+<div class="section" id="theme-d-un-nouveau-site">
+<h1>Thème d’un nouveau site</h1>
+<p><tt class="docutils literal">appliquer_theme_web(website_id, theme, reason, …)</tt> charge un thème
+<strong>déjà installé</strong> (<tt class="docutils literal">theme_*</tt>) sur un site qui n’a pas encore de thème,
+avec les mêmes étapes que le bouton « Choisir ce thème » d’Odoo, pour ce
+site seulement :</p>
+<ul class="simple">
+<li>n’installe ni ne met à jour aucun module : l’installation d’un thème
+relève de N3 ;</li>
+<li>refuse un site qui a déjà un thème, car le remplacer retirerait du
+site les enregistrements du thème et leurs personnalisations : ce
+changement se fait dans l’éditeur web ;</li>
+<li>exige <tt class="docutils literal">website.group_website_designer</tt> pour le demandeur et le droit
+d’écrire sur le site ;</li>
+<li>consigne l’opération dans <tt class="docutils literal">hermes.n1.change</tt>, avec une note. Une
+demande rejouée ne recharge pas le thème.</li>
+</ul>
+</div>
 <div class="section" id="dependances-et-tests">
 <h1>Dépendances et tests</h1>
 <p>Dépend de <tt class="docutils literal">hermes_n1_audit</tt> et <tt class="docutils literal">website</tt>.</p>
 <pre class="code sh literal-block">
 <span class="nv">ADDONS</span><span class="o">=</span>addons<span class="w"> </span>tools/test-modules.sh<span class="w"> </span>IMAGE<span class="w"> </span>hermes_n1_website
 </pre>
-<p>Les tests couvrent la lecture et l’écriture du seul <tt class="docutils literal">#wrap</tt> avec trace
-et rejeu, l’assainissement, le refus d’une empreinte périmée, d’une page
-à QWeb ou à formulaire.</p>
+<p>Les tests couvrent la création d’une page (non publiée, assainie,
+tracée, jamais en double), la lecture et l’écriture du seul <tt class="docutils literal">#wrap</tt>
+avec trace et rejeu, l’assainissement, le refus d’une empreinte périmée,
+d’une page à QWeb ou à formulaire.</p>
 <p><strong>Table of contents</strong></p>
 <div class="contents local topic" id="contents">
 <ul class="simple">
