@@ -434,9 +434,9 @@ hypothèse : le secret TOTP reste sur le téléphone de l’approbateur.</li>
 <li><strong>Agents</strong> = membres de « Opérateur de staging (agents) » ou d’un
 groupe d’un module <tt class="docutils literal">hermes_*</tt>. Ils ne confirment jamais, même
 ajoutés aux approbateurs, et ne peuvent modifier ni l’image d’une
-production, ni l’environnement, les approbateurs, le client ou
-l’ouverture aux agents d’une instance — même en <tt class="docutils literal">sudo</tt> (contrôle sur
-le groupe, jamais sur le contexte).</li>
+production, ni l’environnement, les approbateurs, le client,
+l’ouverture aux agents ou les comptes CI d’une instance — même en
+<tt class="docutils literal">sudo</tt> (contrôle sur le groupe, jamais sur le contexte).</li>
 <li>La confirmation et le démarrage sont des méthodes privées
 (<tt class="docutils literal">_herd_*</tt>), injoignables en RPC autrement que par les routes du
 portail et l’assistant du backend, qui passent l’utilisateur réel aux
@@ -557,6 +557,16 @@ le secret S3 nommé dans <tt class="docutils literal">k8s.s3.config</tt>.</li>
 </span>    <span class="n">staging_id</span><span class="p">,</span> <span class="n">modules</span><span class="o">=</span><span class="s2">&quot;sale,stock&quot;</span><span class="p">,</span> <span class="n">scheduled_at</span><span class="o">=</span><span class="s2">&quot;2026-10-07 02:00:00&quot;</span><span class="w">
 </span><span class="p">)</span>
 </pre>
+<div class="section" id="comptes-ci-sur-un-staging-ferme-aux-agents">
+<h3>Comptes CI sur un staging fermé aux agents</h3>
+<p>Un staging qui contient des données réelles (diverse-odoo) reste fermé
+aux agents. Pour que la CI y demande quand même la promotion, inscrire
+son compte dans « Comptes CI » du staging : il peut alors appeler
+<tt class="docutils literal">herd_request_promotion</tt> et <tt class="docutils literal">herd_staging_status</tt>, <strong>et rien
+d’autre</strong> (ni déploiement, ni resynchronisation, ni annulation). Le
+compte CI reste un agent : il ne confirme jamais et ne touche jamais une
+production.</p>
+</div>
 </div>
 <div class="section" id="mise-en-place">
 <h2>Mise en place</h2>
@@ -566,7 +576,8 @@ authentification » pour une vraie production de client (onglet
 Portail).</li>
 <li>Créer le staging (<tt class="docutils literal">environment = staging</tt>,
 <tt class="docutils literal">production_instance_id</tt> = la production), cocher « Ouvert aux
-agents » si besoin.</li>
+agents » si besoin, ou seulement y inscrire le compte de la CI dans «
+Comptes CI ».</li>
 <li>Donner le groupe « Opérateur de staging (agents) » au compte de
 l’agent, sans aucun groupe <tt class="docutils literal">odoo_herd</tt>.</li>
 </ol>

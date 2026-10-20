@@ -20,6 +20,7 @@ AGENT_FORBIDDEN_FIELDS = {
     "herd_partner_id",
     "herd_approver_ids",
     "herd_agent_allowed",
+    "herd_ci_user_ids",
     "herd_require_2fa",
     "herd_deploy_image",
     "herd_deploy_modules",
@@ -56,6 +57,18 @@ class K8sOdooInstance(models.Model):
         tracking=True,
         help="Staging only: agents (staging operators) may deploy code on it, "
         "resync it and request a promotion of its image.",
+    )
+    herd_ci_user_ids = fields.Many2many(
+        "res.users",
+        "k8s_odoo_instance_herd_ci_user_rel",
+        "instance_id",
+        "user_id",
+        string="CI accounts",
+        tracking=True,
+        help="Staging only: these accounts (a CI) may request a promotion of its "
+        "image and read its delivery status, even when it is not open to agents. "
+        "Nothing else: no deployment, no resync, no cancellation, never a "
+        "confirmation.",
     )
     herd_staging_ids = fields.One2many(
         "k8s.odoo.instance", "production_instance_id", string="Stagings"

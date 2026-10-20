@@ -18,6 +18,7 @@
                         </group>
                         <group string="Staging" invisible="environment != 'staging'">
                             <field name="herd_agent_allowed" />
+                            <field name="herd_ci_user_ids" widget="many2many_tags" />
                         </group>
                     </group>
                     <field
@@ -30,6 +31,7 @@
                             <field name="namespace" />
                             <field name="image" />
                             <field name="herd_agent_allowed" />
+                            <field name="herd_ci_user_ids" widget="many2many_tags" />
                         </list>
                     </field>
                     <field

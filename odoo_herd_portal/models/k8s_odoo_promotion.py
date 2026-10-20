@@ -224,7 +224,7 @@ class K8sOdooPromotion(models.Model):
         of modules. Requests of other users are never touched.
         """
         staging = self.env["k8s.odoo.instance"].sudo().browse(int(staging_id)).exists()
-        self._herd_check_can_operate(staging)
+        self._herd_check_can_request(staging)
         if staging.environment != "staging" or not staging.production_instance_id:
             raise UserError(_("Promotions start from a staging linked to a production."))
         if scheduled_at and fields.Datetime.to_datetime(scheduled_at) <= fields.Datetime.now():
@@ -347,7 +347,7 @@ class K8sOdooPromotion(models.Model):
         """What the CI needs to follow a staging delivery: live images, rollout
         and module update of the last herd_deploy_staging. Nothing else."""
         staging = self.env["k8s.odoo.instance"].sudo().browse(int(staging_id)).exists()
-        self._herd_check_can_operate(staging)
+        self._herd_check_can_request(staging)
         if staging.environment != "staging" or not staging.production_instance_id:
             raise UserError(_("Only a staging linked to a production has a delivery status."))
         staging._herd_advance_deploy()
@@ -371,6 +371,20 @@ class K8sOdooPromotion(models.Model):
         promotion.write({"state": "cancelled", "code_hash": False})
         promotion.message_post(body=_("Cancelled by %s.", self.env.user.display_name))
         return True
+
+    @api.model
+    def _herd_check_can_request(self, staging):
+        """Request a promotion or read the delivery status: the CI accounts
+        listed on the staging (herd_ci_user_ids), then _herd_check_can_operate.
+        Only these two façades call it: resync, cancellation and deployment
+        stay out of reach of a CI account on a staging closed to agents."""
+        if (
+            staging
+            and staging.environment == "staging"
+            and self.env.user in staging.herd_ci_user_ids
+        ):
+            return
+        self._herd_check_can_operate(staging)
 
     @api.model
     def _herd_check_can_operate(self, staging):
