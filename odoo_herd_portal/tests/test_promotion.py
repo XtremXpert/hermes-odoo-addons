@@ -375,6 +375,74 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
         with self.assertRaises(AccessError):
             self.Promotion.with_user(self.stranger).herd_resync_staging(self.staging.id)
 
+    # --- CI accounts on a staging closed to agents ------------------------
+    def _ci_staging(self):
+        """The CI account (an agent, like ci-maison) listed on a staging that is
+        not open to agents: real member data, as the staging of diverse-odoo."""
+        self.staging.herd_agent_allowed = False
+        self.staging.herd_ci_user_ids = self.agent
+
+    def test_ci_account_requests_and_reads_status_on_a_closed_staging(self):
+        self._ci_staging()
+        promotion = self._request(modules="sale")
+        self.assertEqual(promotion.state, "requested")
+        self.assertTrue(promotion.requested_by_agent)
+        status = self.Promotion.with_user(self.agent).herd_staging_status(self.staging.id)
+        self.assertEqual(status["production_image"], self.prod._herd_live_image())
+
+    def test_ci_account_gets_nothing_else_on_a_closed_staging(self):
+        self._ci_staging()
+        promotion = self._request(modules="sale")
+        Promotion = self.Promotion.with_user(self.agent)
+        with self.assertRaises(AccessError):
+            Promotion.herd_resync_staging(self.staging.id)
+        with self.assertRaises(AccessError):
+            Promotion.herd_cancel(promotion.id)
+        with self.assertRaises(AccessError):
+            Promotion.herd_deploy_staging(self.staging.id, DIGEST_A)
+        self.patch_image.assert_not_called()
+
+    def test_ci_account_can_never_confirm(self):
+        self._ci_staging()
+        self.prod.herd_approver_ids |= self.agent
+        promotion = self._request(modules="sale")
+        with self.assertRaises(AccessError):
+            promotion._herd_send_code(self.agent)
+        self.assertEqual(promotion.state, "requested")
+
+    def test_other_agents_stay_out_of_a_ci_staging(self):
+        self._ci_staging()
+        n2 = new_test_user(
+            self.env,
+            login="herd_agent_other",
+            groups="base.group_user,odoo_herd_portal.group_staging_operator",
+        )
+        with self.assertRaises(AccessError):
+            self._request(user=n2, modules="sale")
+        with self.assertRaises(AccessError):
+            self.Promotion.with_user(n2).herd_staging_status(self.staging.id)
+
+    def test_ci_account_is_limited_to_its_stagings(self):
+        self._ci_staging()
+        other = self.staging.copy({"name": "shop-staging-2", "herd_ci_user_ids": False})
+        with self.assertRaises(AccessError):
+            self.Promotion.with_user(self.agent).herd_request_promotion(
+                other.id, modules="sale"
+            )
+        # never a production, even if it were listed
+        self.prod.herd_ci_user_ids = self.agent
+        with self.assertRaises(AccessError):
+            self.Promotion.with_user(self.agent).herd_request_promotion(
+                self.prod.id, modules="sale"
+            )
+
+    def test_agent_cannot_list_itself_as_ci_account(self):
+        self.staging.herd_agent_allowed = False
+        with self.assertRaises(AccessError):
+            self.staging.with_user(self.agent).sudo().write(
+                {"herd_ci_user_ids": [(4, self.agent.id)]}
+            )
+
     # --- overlapping and stale promotions -------------------------------
     def test_second_promotion_refused_while_one_runs(self):
         first = self._request()

@@ -2027,3 +2027,20 @@ msgstr "· planifiée pour"
 #: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance_request__instance_name
 msgid "Instance Name"
 msgstr "Nom de l'instance"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,field_description:odoo_herd_portal.field_k8s_odoo_instance__herd_ci_user_ids
+msgid "CI accounts"
+msgstr "Comptes CI"
+
+#. module: odoo_herd_portal
+#: model:ir.model.fields,help:odoo_herd_portal.field_k8s_odoo_instance__herd_ci_user_ids
+msgid ""
+"Staging only: these accounts (a CI) may request a promotion of its image and"
+" read its delivery status, even when it is not open to agents. Nothing else:"
+" no deployment, no resync, no cancellation, never a confirmation."
+msgstr ""
+"Staging seulement : ces comptes (une CI) peuvent demander la mise en "
+"production de son image et lire l'état de sa livraison, même s'il n'est pas "
+"ouvert aux agents. Rien d'autre : ni déploiement, ni resynchronisation, ni "
+"annulation, jamais de confirmation."

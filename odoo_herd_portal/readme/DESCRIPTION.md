@@ -50,8 +50,8 @@ production ◄── mise à jour des modules ◄── image ◄── sauvegar
 - **Agents** = membres de « Opérateur de staging (agents) » ou d'un groupe d'un module
   `hermes_*`. Ils ne confirment jamais, même ajoutés aux approbateurs, et ne peuvent
   modifier ni l'image d'une production, ni l'environnement, les approbateurs, le
-  client ou l'ouverture aux agents d'une instance — même en `sudo` (contrôle sur le
-  groupe, jamais sur le contexte).
+  client, l'ouverture aux agents ou les comptes CI d'une instance — même en `sudo`
+  (contrôle sur le groupe, jamais sur le contexte).
 - La confirmation et le démarrage sont des méthodes privées (`_herd_*`), injoignables
   en RPC autrement que par les routes du portail et l'assistant du backend, qui
   passent l'utilisateur réel aux contrôles ; personne n'a de droit d'écriture sur
@@ -154,12 +154,22 @@ env["k8s.odoo.promotion"].herd_request_promotion(
 )
 ```
 
+### Comptes CI sur un staging fermé aux agents
+
+Un staging qui contient des données réelles (diverse-odoo) reste fermé aux agents.
+Pour que la CI y demande quand même la promotion, inscrire son compte dans
+« Comptes CI » du staging : il peut alors appeler `herd_request_promotion` et
+`herd_staging_status`, **et rien d'autre** (ni déploiement, ni resynchronisation,
+ni annulation). Le compte CI reste un agent : il ne confirme jamais et ne touche
+jamais une production.
+
 ## Mise en place
 
 1. Sur la production : client, approbateurs, et « Exiger la double authentification »
    pour une vraie production de client (onglet Portail).
 2. Créer le staging (`environment = staging`, `production_instance_id` = la production),
-   cocher « Ouvert aux agents » si besoin.
+   cocher « Ouvert aux agents » si besoin, ou seulement y inscrire le compte de la CI
+   dans « Comptes CI ».
 3. Donner le groupe « Opérateur de staging (agents) » au compte de l'agent, sans
    aucun groupe `odoo_herd`.
 
