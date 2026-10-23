@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <!-- Tableau de bord d'exploitation du tenant : action client OWL
+         (voir static/src/dashboard/). Le composant interroge
+         ``wazo.tenant.dashboard.get_tenant_dashboard`` — santé des
+         usagers et groupes d'appel, activité du journal. Distinct du
+         tableau de bord personnel de wazo_phone (mes appels). -->
+    <record id="action_wazo_tenant_dashboard" model="ir.actions.client">
+        <field name="name">Exploitation</field>
+        <field name="tag">wazo_tenant.dashboard</field>
+    </record>
+
+    <menuitem
+        id="menu_wazo_tenant_dashboard"
+        name="Exploitation"
+        parent="menu_wazo_root"
+        action="action_wazo_tenant_dashboard"
+        sequence="6"
+    />
+</odoo>

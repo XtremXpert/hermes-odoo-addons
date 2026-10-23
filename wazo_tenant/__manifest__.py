@@ -3,7 +3,7 @@
     "name": "Téléphonie Wazo — tenant",
     "category": "Productivity",
     "summary": """Exploitation d'un tenant Wazo : utilisateurs, postes, groupes, CDR""",
-    "version": "20.0.1.0.0",
+    "version": "20.0.2.0.0",
     "depends": ["base", "web", "mail"],
     "data": [
         "security/wazo_groups.xml",
@@ -16,10 +16,20 @@
         "views/wazo_cdr_views.xml",
         "views/res_config_settings_views.xml",
         "views/wazo_menus.xml",
+        "views/wazo_tenant_dashboard_views.xml",
     ],
     "author": "Benoît Vézina, Diverse-Cité",
     "website": "https://github.com/XtremXpert/hermes-odoo-addons",
     "license": "LGPL-3",
+    "assets": {
+        "web.assets_backend": [
+            # « wazo_tenant » se trie avant « web » (« waz » < « web ») :
+            # sans directive d'ordre, nos fichiers passeraient devant
+            # module_loader.js, qui définit odoo.define.
+            ("after", "web/static/src/module_loader.js", "wazo_tenant/static/src/dashboard/*.js"),
+            "wazo_tenant/static/src/dashboard/wazo_tenant_dashboard_templates.xml",
+        ],
+    },
     "installable": True,
     "application": True,
     "auto_install": False,

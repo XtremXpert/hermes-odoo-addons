@@ -393,3 +393,21 @@ class WazoUser(models.Model):
         """Relance la synchronisation après une erreur."""
         self.ensure_one()
         self.action_sync_wazo()
+
+    # ------------------------------------------------------------------
+    # Crochets du pont softphone
+    # ------------------------------------------------------------------
+    # Ces deux crochets sont des no-ops au niveau du tenant : c'est
+    # ``wazo_phone`` (voip_bridge) qui les surcharge pour propager ou
+    # révoquer les identifiants SIP vers l'utilisateur Odoo. Sans ces
+    # no-ops, une installation tenant **seule** échouerait en silence à
+    # chaque synchronisation — le large except de action_sync_wazo
+    # transformerait l'AttributeError en état « error » inexpliqué.
+
+    def _propagate_voip_credentials(self):
+        """No-op : surchargé par wazo_phone (pont softphone)."""
+        return True
+
+    def _revoke_voip_credentials(self):
+        """No-op : surchargé par wazo_phone (pont softphone)."""
+        return True

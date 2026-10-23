@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<templates xml:space="preserve">
+
+    <!-- Tableau de bord d'exploitation du tenant : santé des postes,
+         groupes d'appel, activité du journal. Cartes cliquables vers
+         les listes filtrées. -->
+    <t t-name="wazo_tenant.Dashboard">
+        <div class="o_wazo_tenant_dashboard p-3 overflow-auto h-100">
+            <div class="d-flex align-items-center mb-3">
+                <h4 class="mb-0 me-auto">Exploitation téléphonique</h4>
+                <button
+                    class="btn btn-secondary"
+                    t-on-click="() => this.reload()"
+                    disabled="this.state.loading"
+                >
+                    Rafraîchir
+                </button>
+            </div>
+
+            <div t-if="this.state.loading and !this.state.data" class="text-muted">
+                Chargement…
+            </div>
+
+            <t t-else="">
+                <!-- ── Cartes d'indicateurs ─────────────────────────────── -->
+                <div class="row g-3 mb-4">
+                    <div class="col-6 col-lg-3">
+                        <div
+                            class="card o_stat_card p-3 h-100"
+                            role="button"
+                            t-on-click="() => this.openUsers()"
+                        >
+                            <div class="text-muted small">Usagers</div>
+                            <div class="fs-2">
+                                <t t-out="this.users?.total || 0" />
+                            </div>
+                            <div class="small">
+                                <span
+                                    t-if="this.users?.states.synced"
+                                    class="badge text-bg-success me-1"
+                                >
+                                    <t t-out="this.users.states.synced" /> synchronisés
+                                </span>
+                                <span
+                                    t-if="this.users?.states.error"
+                                    class="badge text-bg-danger"
+                                >
+                                    <t t-out="this.users.states.error" /> en erreur
+                                </span>
+                            </div>
+                            <div
+                                t-if="this.users and this.users.total != this.users.states.synced"
+                                class="small text-warning mt-1"
+                            >
+                                <a
+                                    href="#"
+                                    t-on-click.prevent="() => this.openUsersInError()"
+                                >Les fiches à revoir</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-6 col-lg-3">
+                        <div
+                            class="card o_stat_card p-3 h-100"
+                            role="button"
+                            t-on-click="() => this.openGroups()"
+                        >
+                            <div class="text-muted small">Groupes d'appel</div>
+                            <div class="fs-2">
+                                <t t-out="this.groups?.total || 0" />
+                            </div>
+                            <div
+                                t-if="this.groups?.empty"
+                                class="small text-warning"
+                            >
+                                ⚠ <t t-out="this.groups.empty" /> sans membre
+                                — ils n'appellent personne
+                            </div>
+                            <div
+                                t-if="this.groups and !this.groups.empty"
+                                class="small text-success"
+                            >
+                                Tous ont des membres
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-6 col-lg-3">
+                        <div
+                            class="card o_stat_card p-3 h-100"
+                            role="button"
+                            t-on-click="() => this.openCalls()"
+                        >
+                            <div class="text-muted small">
+                                Appels — <t t-out="this.calls?.window_days || 7" /> jours
+                            </div>
+                            <div class="fs-2">
+                                <t t-out="this.calls?.total || 0" />
+                            </div>
+                            <div
+                                t-if="this.calls?.missed"
+                                class="small text-warning"
+                            >
+                                <a
+                                    href="#"
+                                    t-on-click.prevent="() => this.openMissed()"
+                                ><t t-out="this.calls.missed" /> manqués</a>
+                            </div>
+                            <div
+                                t-if="this.calls and !this.calls.missed"
+                                class="small text-success"
+                            >
+                                Aucun manqué
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-6 col-lg-3">
+                        <div class="card o_stat_card p-3 h-100">
+                            <div class="text-muted small">Dernier appel vu</div>
+                            <div class="fs-5 mt-1">
+                                <t t-out="this.formatDateTime(this.calls?.last_cdr)" />
+                            </div>
+                            <div class="text-muted small mt-1">
+                                Fraîcheur du journal : la synchro planifiée
+                                tourne-t-elle encore ?
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Usagers ───────────────────────────────────────────── -->
+                <h6 class="text-muted text-uppercase">Usagers</h6>
+                <div class="table-responsive card mb-4">
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th>Nom</th>
+                                <th>Poste</th>
+                                <th>État</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr
+                                t-foreach="this.users?.items || []"
+                                t-as="user"
+                                t-key="user.id"
+                            >
+                                <td><t t-out="user.name" /></td>
+                                <td class="text-muted">
+                                    <t t-out="user.extension || '—'" />
+                                </td>
+                                <td>
+                                    <span
+                                        t-attf-class="badge #{user.state == 'synced' ? 'text-bg-success' : (user.state == 'error' ? 'text-bg-danger' : 'text-bg-secondary')}"
+                                    >
+                                        <t t-out="user.state" />
+                                    </span>
+                                    <div
+                                        t-if="user.error_message"
+                                        class="text-danger small text-truncate"
+                                        style="max-width: 18rem;"
+                                        t-att-title="user.error_message"
+                                    >
+                                        <t t-out="user.error_message" />
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr t-if="!this.users?.items?.length">
+                                <td colspan="3" class="text-muted text-center">
+                                    Aucun usager — « Utilisateurs → Créer » pour
+                                    provisionner le premier poste.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- ── Groupes ────────────────────────────────────────────── -->
+                <h6 class="text-muted text-uppercase">Groupes d'appel</h6>
+                <div class="table-responsive card mb-4">
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th>Groupe</th>
+                                <th>Poste</th>
+                                <th>Membres</th>
+                                <th>État</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr
+                                t-foreach="this.groups?.items || []"
+                                t-as="group"
+                                t-key="group.id"
+                            >
+                                <td><t t-out="group.name" /></td>
+                                <td class="text-muted">
+                                    <t t-out="group.extension || '—'" />
+                                </td>
+                                <td>
+                                    <span
+                                        t-attf-class="#{group.member_count ? '' : 'text-warning fw-bold'}"
+                                    >
+                                        <t t-out="group.member_count" />
+                                    </span>
+                                </td>
+                                <td>
+                                    <span
+                                        t-attf-class="badge #{group.state == 'synced' ? 'text-bg-success' : (group.state == 'error' ? 'text-bg-danger' : 'text-bg-secondary')}"
+                                    >
+                                        <t t-out="group.state" />
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr t-if="!this.groups?.items?.length">
+                                <td colspan="4" class="text-muted text-center">
+                                    Aucun groupe d'appel.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- ── Derniers appels ────────────────────────────────────── -->
+                <h6 class="text-muted text-uppercase">Derniers appels</h6>
+                <div class="table-responsive card">
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th>Quand</th>
+                                <th>Sens</th>
+                                <th>De</th>
+                                <th>Vers</th>
+                                <th>Répondu</th>
+                                <th>Durée</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr
+                                t-foreach="this.calls?.recent || []"
+                                t-as="call"
+                                t-key="call.date_start"
+                            >
+                                <td>
+                                    <t t-out="this.formatDateTime(call.date_start)" />
+                                </td>
+                                <td>
+                                    <t t-out="this.directionLabel(call.direction)" />
+                                </td>
+                                <td><t t-out="call.from || '—'" /></td>
+                                <td><t t-out="call.to || '—'" /></td>
+                                <td>
+                                    <span
+                                        t-attf-class="badge #{call.answered ? 'text-bg-success' : 'text-bg-warning'}"
+                                    >
+                                        <t
+                                            t-out="call.answered ? 'oui' : 'manqué'"
+                                        />
+                                    </span>
+                                </td>
+                                <td class="text-muted">
+                                    <t t-out="this.formatSeconds(call.duration)" />
+                                </td>
+                            </tr>
+                            <tr t-if="!this.calls?.recent?.length">
+                                <td colspan="6" class="text-muted text-center">
+                                    Aucun appel dans la fenêtre — soit le calme,
+                                    soit une synchro arrêtée.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </t>
+        </div>
+    </t>
+</templates>

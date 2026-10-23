@@ -3,6 +3,8 @@ from . import test_access
 from . import test_client
 from . import test_client_auth
 from . import test_cdr
+from . import test_dashboard_assets
+from . import test_tenant_dashboard
 from . import test_wazo_user
 from . import test_extension_ranges
 from . import test_extension_validation
