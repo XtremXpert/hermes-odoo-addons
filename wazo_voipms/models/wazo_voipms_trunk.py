@@ -247,17 +247,38 @@ class WazoVoipmsTrunk(models.Model):
         )
         return created["name"]
 
-    def _iax_endpoint_payload(self):
-        """Corps ``POST /endpoints/iax`` : pair « friend » dynamique.
+    def _iax_endpoint_payload(self, client=None):
+        """Corps ``POST /endpoints/iax`` : pair « friend » du POP.
 
-        Mesuré : {name, type: friend, host: dynamic} est accepté tel
-        quel — les identifiants vivent dans le register, pas dans
-        l'endpoint.
+        Mesuré : host = l'IP du POP (l'appel entrant de VoIP.ms s'y
+        matche par IP), context = le contexte incall résolu — le
+        libellé « from-extern » ne désigne rien en dialplan — et
+        secret = le mot de passe du sous-compte, celui que VoIP.ms
+        présente à l'arrivée.
         """
+        import socket
+
+        host = self.pop_host
+        try:
+            infos = socket.getaddrinfo(self.pop_host, 4569, socket.AF_INET, socket.SOCK_DGRAM)
+            ips = {info[4][0] for info in infos}
+            if len(ips) == 1:
+                host = ips.pop()
+        except OSError:
+            pass
+        options = [
+            ["secret", self.voipms_password],
+        ]
+        if client is not None:
+            options.append(["context", self._resolve_incall_context(client)])
         return {
-            "name": "odoo-%s-iax" % re.sub(r"[^a-z0-9]+", "-", self.name.lower()).strip("-"),
+            # Mesuré : VoIP.ms présente l'appel entrant comme
+            # l'utilisateur « voipms » — la section porte CE nom, et le
+            # secret du sous-compte fait l'authentification.
+            "name": "voipms",
             "type": "friend",
-            "host": "dynamic",
+            "host": host,
+            "options": options,
         }
 
     def _iax_register_payload(self, callback_exten=False):
@@ -273,11 +294,11 @@ class WazoVoipmsTrunk(models.Model):
             "auth_password": self.voipms_password,
             "remote_host": self.pop_host,
         }
-        # Mesuré : « ?context » dans la ligne register IAX la CASSE —
-        # Asterisk résout la chaîne entière comme un hôte. Seule
-        # l'extension est sûre : register => user:pass@host/exten.
-        if callback_exten:
-            body["callback_extension"] = callback_exten
+        # Mesuré : tout callback casse le register IAX — « /exten »
+        # (Unregistered sans tentative) comme « ?context » (getaddrinfo
+        # sur la chaîne entière). Register nu : l'entrant passe par
+        # l'endpoint, qui matche par IP et route par son contexte.
+        del callback_exten
         return body
 
     def _voipms_client(self):
@@ -368,7 +389,9 @@ class WazoVoipmsTrunk(models.Model):
                 # ouvert). Chaque étape reprend l'id conservé.
                 if not endpoint_iax_id:
                     endpoint_iax = client.conf(
-                        "POST", "/endpoints/iax", body=self._iax_endpoint_payload()
+                        "POST",
+                        "/endpoints/iax",
+                        body=self._iax_endpoint_payload(client),
                     )
                     endpoint_iax_id = endpoint_iax["id"]
                 if not register_iax_id:

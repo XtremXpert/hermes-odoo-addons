@@ -276,15 +276,13 @@ class TestDidRouting(BridgeTestBase):
         # Routage VoIP.ms vers le sous-compte, pas une URI sip:.
         _method, params = voipms._request.call_args[0]
         self.assertEqual(params["routing"], "account:539175_tiaxiax")
-        # Callback du register pointé vers l'incall du DID — SANS
-        # contexte : « ?context » casse la ligne register (mesuré).
+        # Le register IAX reste NU : tout callback casse l'objet
+        # (mesuré — « /exten » comme « ?context »), l'entrant route
+        # par l'endpoint du trunk, pas par le register.
         register_calls = [
-            c for c in wazo.conf.call_args_list if "/registers/iax/81" in c.args[1]
+            c for c in wazo.conf.call_args_list if "/registers/iax" in c.args[1]
         ]
-        self.assertEqual(len(register_calls), 1)
-        body = register_calls[0].kwargs.get("body") or {}
-        self.assertEqual(body.get("callback_extension"), "14184803381")
-        self.assertNotIn("callback_context", body)
+        self.assertEqual(len(register_calls), 0)
 
     def test_route_via_unprovisioned_iax_trunk_refused(self):
         trunk = self.Trunk.create(

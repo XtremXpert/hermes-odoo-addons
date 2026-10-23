@@ -225,7 +225,9 @@ class VoIPMSDid(models.Model):
         """
         if not self.trunk_id or self.trunk_id.protocol != "iax2":
             return
-        body = self.trunk_id._iax_register_payload(callback_exten=self.number)
+        body = self.trunk_id._iax_register_payload(
+            callback_exten=self._voipms_did_number()
+        )
         client.conf(
             "PUT",
             "/registers/iax/%s" % self.trunk_id.remote_register_iax_id,
@@ -316,10 +318,9 @@ class VoIPMSDid(models.Model):
                     "PUT",
                     "/incalls/%s/extensions/%s" % (incall_id, incall_extension_id),
                 )
-            # Callback du register IAX (entrant) AVANT la bascule :
-            # le routage ne doit jamais pointer vers un register qui
-            # ignore où déposer l'appel.
-            self._update_iax_callback(client)
+            # Plus de callback sur le register IAX : tout callback casse
+            # l'objet (mesuré). L'entrant route par l'endpoint du trunk
+            # — IP du POP + contexte incall + extension livrée.
             # Bascule VoIP.ms : account: (trunk IAX) ou sip:<DID>@<hôte>.
             response = self._voipms_client()._request(
                 "setDIDRouting",
