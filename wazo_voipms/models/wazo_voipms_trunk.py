@@ -172,6 +172,25 @@ class WazoVoipmsTrunk(models.Model):
         )
         return created["name"]
 
+    def _identify_options(self):
+        """Options d'``identify`` : les IP du POP.
+
+        Mesuré : l'INVITE de VoIP.ms arrive sans s'authentifier, et sans
+        identify par IP, Asterisk ne le rattache à aucun endpoint — le
+        rejet « Failed to authenticate » renvoie l'appel au fournisseur
+        (« your call cannot be completed as dialed »).
+        """
+        import socket
+
+        try:
+            infos = socket.getaddrinfo(
+                self.pop_host, 5060, socket.AF_INET, socket.SOCK_DGRAM
+            )
+        except OSError:
+            return []
+        ips = sorted({info[4][0] for info in infos})
+        return [["match", ip] for ip in ips]
+
     def _endpoint_payload(self, client=None):
         """Corps ``POST /endpoints/sip`` : trunk enregistré sur le POP."""
         return {
@@ -201,6 +220,7 @@ class WazoVoipmsTrunk(models.Model):
                 # l'entrant du trunk passe par la registration.
                 ["line", "true"],
             ],
+            "identify_section_options": self._identify_options(),
             "endpoint_section_options": [
                 # Mesuré : le contexte des renvois entrants se désigne par
                 # son nom généré, pas par le libellé « from-extern ».
