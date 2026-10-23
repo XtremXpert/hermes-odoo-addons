@@ -89,7 +89,7 @@
                     </group>
                     <group
                         string="Accès du tenant"
-                        groups="wazo_phone.group_wazo_manager"
+                        groups="wazo_tenant.group_wazo_manager"
                     >
                         <field name="admin_username" />
                         <field name="admin_password" password="True" />
@@ -120,7 +120,7 @@
                     </group>
                     <group
                         string="Coordonnées à remettre au tenant"
-                        groups="wazo_phone.group_wazo_manager"
+                        groups="wazo_tenant.group_wazo_manager"
                         invisible="state != 'created'"
                     >
                         <field

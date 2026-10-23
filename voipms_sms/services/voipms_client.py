@@ -35,7 +35,10 @@ class VoIPMSClient:
             payload.update(params)
         url = API_URL + "?" + urllib.parse.urlencode(payload)
         try:
-            request = urllib.request.Request(url)
+            # VoIP.ms rejects Python's default urllib User-Agent with 403.
+            request = urllib.request.Request(
+                url, headers={"User-Agent": "voipms_sms/1.0 (Odoo)"}
+            )
             with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
                 body = response.read()
         except (urllib.error.URLError, urllib.error.HTTPError, OSError) as error:

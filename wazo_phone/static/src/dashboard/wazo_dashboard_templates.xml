@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<templates xml:space="preserve">
+
+    <!-- Tableau de bord téléphonie : cartes d'indicateurs, série
+         quotidienne en barres CSS, répartition par poste (équipe) et
+         derniers appels. -->
+    <t t-name="wazo_phone.Dashboard">
+        <div class="o_wazo_dashboard p-3 overflow-auto h-100">
+            <div class="d-flex align-items-center mb-3">
+                <h4 class="mb-0 me-auto">Téléphonie — tableau de bord</h4>
+                <select
+                    class="form-select w-auto"
+                    t-att-value="this.state.days"
+                    t-on-change="this.onDaysChange"
+                    aria-label="Période"
+                >
+                    <t t-foreach="this.dayChoices" t-as="choice" t-key="choice">
+                        <option t-att-value="choice">
+                            <t t-out="choice" /> jours
+                        </option>
+                    </t>
+                </select>
+            </div>
+
+            <div t-if="this.state.loading and !this.state.data" class="text-muted">
+                Chargement…
+            </div>
+
+            <t t-else="">
+                <!-- ── Mes appels ──────────────────────────────────────── -->
+                <h6 class="text-muted text-uppercase">
+                    Mes appels
+                    <t t-if="this.state.data?.extension">
+                        (poste <t t-out="this.state.data.extension" />)
+                    </t>
+                </h6>
+                <t t-call="wazo_phone.DashboardCards">
+                    <t t-set="scope" t-value="this.mine" />
+                    <t t-set="scopeName" t-value="'mine'" />
+                </t>
+
+                <!-- ── Équipe (gestionnaire) ───────────────────────────── -->
+                <t t-if="this.team">
+                    <h6 class="text-muted text-uppercase mt-4">Équipe</h6>
+                    <t t-call="wazo_phone.DashboardCards">
+                        <t t-set="scope" t-value="this.team" />
+                        <t t-set="scopeName" t-value="'team'" />
+                    </t>
+
+                    <div class="row g-3 mt-1">
+                        <!-- Répartition par poste. -->
+                        <div class="col-12 col-lg-6">
+                            <div class="card h-100">
+                                <div class="card-header fw-bold">Par poste</div>
+                                <div class="card-body p-0">
+                                    <table class="table table-sm mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Poste</th>
+                                                <th class="text-end">Appels</th>
+                                                <th class="text-end">Manqués</th>
+                                                <th class="text-end">Durée</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr
+                                                t-foreach="this.team.agents"
+                                                t-as="agent"
+                                                t-key="agent.extension"
+                                            >
+                                                <td>
+                                                    <a
+                                                        t-if="agent.partner_id"
+                                                        href="#"
+                                                        t-on-click.prevent="() => this.openPartner(agent.partner_id)"
+                                                        t-out="agent.name"
+                                                    />
+                                                    <t t-else="" t-out="agent.name" />
+                                                    <small
+                                                        class="text-muted"
+                                                        t-out="' (' + agent.extension + ')'"
+                                                    />
+                                                </td>
+                                                <td class="text-end" t-out="agent.total" />
+                                                <td
+                                                    class="text-end"
+                                                    t-att-class="agent.missed ? 'text-danger' : ''"
+                                                    t-out="agent.missed"
+                                                />
+                                                <td
+                                                    class="text-end"
+                                                    t-out="this.formatSeconds(agent.duration)"
+                                                />
+                                            </tr>
+                                            <tr t-if="!this.team.agents.length">
+                                                <td colspan="4" class="text-muted">
+                                                    Aucun appel sur la période.
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Derniers appels de l'équipe. -->
+                        <div class="col-12 col-lg-6">
+                            <t t-call="wazo_phone.DashboardRecent">
+                                <t t-set="scope" t-value="this.team" />
+                            </t>
+                        </div>
+                    </div>
+                </t>
+
+                <!-- Derniers appels (périmètre personnel) quand il n'y a pas
+                     de section équipe pour le porter. -->
+                <div t-if="!this.team" class="row g-3 mt-1">
+                    <div class="col-12 col-lg-6">
+                        <t t-call="wazo_phone.DashboardRecent">
+                            <t t-set="scope" t-value="this.mine" />
+                        </t>
+                    </div>
+                </div>
+            </t>
+        </div>
+    </t>
+
+    <!-- Cartes d'indicateurs + série quotidienne d'un périmètre. -->
+    <t t-name="wazo_phone.DashboardCards">
+        <div class="row g-3">
+            <div class="col-6 col-md-3">
+                <a
+                    class="card text-decoration-none h-100"
+                    href="#"
+                    t-on-click.prevent="() => this.openCdrs(scopeName)"
+                >
+                    <div class="card-body">
+                        <div class="text-muted small">Appels</div>
+                        <div class="fs-3 fw-bold" t-out="scope?.total || 0" />
+                    </div>
+                </a>
+            </div>
+            <div class="col-6 col-md-3">
+                <a
+                    class="card text-decoration-none h-100"
+                    href="#"
+                    t-on-click.prevent="() => this.openCdrs(scopeName, true)"
+                >
+                    <div class="card-body">
+                        <div class="text-muted small">Manqués</div>
+                        <div
+                            class="fs-3 fw-bold"
+                            t-att-class="scope?.missed ? 'text-danger' : ''"
+                            t-out="scope?.missed || 0"
+                        />
+                    </div>
+                </a>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="text-muted small">Taux de réponse (entrant)</div>
+                        <div class="fs-3 fw-bold" t-out="this.answerRate(scope)" />
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="text-muted small">Temps d'appel</div>
+                        <div
+                            class="fs-3 fw-bold"
+                            t-out="this.formatSeconds(scope?.duration_sum)"
+                        />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Série quotidienne : barres CSS, manqués superposés. -->
+        <div class="card mt-3" t-if="scope?.series?.length">
+            <div class="card-header fw-bold">Appels par jour</div>
+            <div class="card-body">
+                <div
+                    class="d-flex align-items-end gap-1"
+                    style="height: 120px"
+                >
+                    <div
+                        t-foreach="this.seriesOf(scope)"
+                        t-as="day"
+                        t-key="day.day"
+                        class="flex-fill d-flex flex-column justify-content-end h-100"
+                        t-att-title="day.day + ' — ' + day.total + ' appel(s), ' + day.missed + ' manqué(s)'"
+                    >
+                        <div
+                            class="bg-danger rounded-top"
+                            t-att-style="'height:' + day.missedHeight + '%; min-height:' + (day.missed ? '2px' : '0')"
+                        />
+                        <div
+                            class="bg-primary rounded-top"
+                            t-att-style="'height:' + (day.height - day.missedHeight) + '%; min-height:' + (day.total - day.missed ? '2px' : '0')"
+                        />
+                        <div
+                            class="text-center text-muted"
+                            style="font-size: 0.65rem"
+                            t-out="this.formatDay(day.day)"
+                        />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </t>
+
+    <!-- Derniers appels d'un périmètre. -->
+    <t t-name="wazo_phone.DashboardRecent">
+        <div class="card h-100">
+            <div class="card-header fw-bold">Derniers appels</div>
+            <ul class="list-group list-group-flush">
+                <li
+                    class="list-group-item"
+                    t-foreach="scope?.recent || []"
+                    t-as="entry"
+                    t-key="entry.id"
+                >
+                    <a
+                        href="#"
+                        class="text-decoration-none"
+                        t-on-click.prevent="() => this.openCdr(entry.id)"
+                    >
+                        <div class="d-flex align-items-center">
+                            <i
+                                class="oi me-2"
+                                t-att-class="entry.direction === 'inbound' ? 'text-success' : 'text-primary'"
+                                t-att-data-icon="entry.direction === 'inbound' ? 'arrow_downward' : 'arrow_upward'"
+                            />
+                            <span class="me-auto">
+                                <t t-out="entry.partner_name or entry.name or entry.num or '—'" />
+                                <small class="text-muted">
+                                    (<t t-out="entry.num" />)
+                                </small>
+                            </span>
+                            <span
+                                class="badge text-bg-light"
+                                t-out="this.formatSeconds(entry.duration)"
+                            />
+                        </div>
+                        <div class="small text-muted">
+                            <t t-out="this.formatDateTime(entry.date)" />
+                            <t t-if="!entry.answered"> · non répondu</t>
+                        </div>
+                    </a>
+                </li>
+                <li t-if="!(scope?.recent || []).length" class="list-group-item text-muted">
+                    Aucun appel sur la période.
+                </li>
+            </ul>
+        </div>
+    </t>
+
+</templates>

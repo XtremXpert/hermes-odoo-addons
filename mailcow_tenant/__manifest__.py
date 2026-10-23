@@ -1,0 +1,27 @@
+# Part of the mailcow_tenant Odoo module. See LICENSE for details.
+{
+    "name": "Mailcow — tenant",
+    "category": "Productivity",
+    "summary": """Exploitation d'un serveur Mailcow : domaines, boîtes, alias""",
+    "version": "20.0.1.0.0",
+    "depends": ["base", "mail"],
+    "data": [
+        "security/mailcow_groups.xml",
+        "security/ir.access.csv",
+        "views/mailcow_email_address_views.xml",
+        "views/mailcow_domain_views.xml",
+        "views/mailcow_mailbox_views.xml",
+        "wizards/mailcow_app_password_wizard_views.xml",
+        "views/mailcow_alias_views.xml",
+        "views/res_config_settings_views.xml",
+        "views/mailcow_menus.xml",
+        "views/mailcow_sync_views.xml",
+    ],
+    "author": "Benoît Vézina, Diverse-Cité",
+    "website": "https://github.com/XtremXpert/hermes-odoo-addons",
+    "license": "LGPL-3",
+    "installable": True,
+    "application": True,
+    "auto_install": False,
+    "pre_init_hook": "adopt_mailcow_admin_xmlids",
+}

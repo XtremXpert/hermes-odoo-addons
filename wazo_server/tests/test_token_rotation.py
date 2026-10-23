@@ -18,8 +18,8 @@ l'Odoo ait le neuf.
 
 from unittest.mock import patch
 
-from odoo.addons.wazo_phone.services.wazo_client import WazoAPIError
-from odoo.addons.wazo_phone.services.wazo_client import WazoClient
+from odoo.addons.wazo_tenant.services.wazo_client import WazoAPIError
+from odoo.addons.wazo_tenant.services.wazo_client import WazoClient
 from odoo.exceptions import AccessError
 from odoo.exceptions import UserError
 from odoo.tests import tagged

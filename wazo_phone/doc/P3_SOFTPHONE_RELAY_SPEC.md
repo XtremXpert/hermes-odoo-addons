@@ -224,7 +224,7 @@ relay ; le pont `voip_bridge` reste un no-op optionnel.
 | **P3.3d**               | sync confd : endpoint référant les templates **`global` + `webrtc`** du tenant          | ✅ fait — payload identique à `webrtc1001` (vérifié live)                                                   |
 | **P3.3e**               | arbitrage multi-onglets (Web Locks + `claimed`) + télécommande                          | ✅ fait — 16/16 tests Node, bundle +7 336 o                                                                 |
 | **P3.3f**               | décision **SDK `@wazo/sdk`** vs SIP.js + portage hold/transfert                         | ✅ **fait** — SDK retenu, bundle vendorisé, moteur interchangeable (`wazo.softphone_engine`), service câblé |
-| **P3.3g**               | notifications d'appel entrant par le **bus Odoo** (canal par utilisateur)               | à faire                                                                                                     |
+| **P3.3g**               | notifications d'appel entrant par le **bus Odoo** (canal par utilisateur)               | ✅ fait — l'onglet propriétaire relaie l'INVITE via ``res.users.notify_wazo_incoming_call`` (canal ``res.users``, abonné d'office) ; bouclage (note contact, activité « appel manqué ») par ``finalize_wazo_call`` |
 | **P3.4**                | démontage : B2BUA, `wazo_registrar.py`, `run_b2bua.sh`, proxy nginx `b2bua…` + son cert | à faire                                                                                                     |
 
 ### Décisions (v3 — remplace le §12 de l'Annexe A)

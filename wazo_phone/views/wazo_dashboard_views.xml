@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <!-- Page de tableau de bord : action client OWL (voir
+         static/src/dashboard/). Le gabarit interroge
+         ``wazo.cdr.get_wazo_dashboard`` — périmètre « mes appels » pour
+         tous, « équipe » en plus pour le groupe gestionnaire. -->
+    <record id="action_wazo_dashboard" model="ir.actions.client">
+        <field name="name">Tableau de bord</field>
+        <field name="tag">wazo_phone.dashboard</field>
+    </record>
+</odoo>

@@ -26,7 +26,7 @@ RACINE="$(cd "$(dirname "$0")/.." && pwd)"
 COURANTE=${COURANTE:-odoo20}
 NEUVE=${NEUVE:-odoo20_neuve}
 SAUVEGARDES=${SAUVEGARDES:-$HOME/.hermes/sauvegardes}
-MODULES="asterisk_ari,mailcow_admin,voipms_sms,wazo_phone,wazo_server"
+MODULES="asterisk_ari,mailcow,mailcow_server,mailcow_tenant,voipms_sms,wazo_phone,wazo_server,wazo_tenant,wazo_voipms"
 SIMULER=0
 for a in "$@"; do [ "$a" = "--simuler" ] && SIMULER=1; done
 

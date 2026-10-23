@@ -25,7 +25,17 @@ from pathlib import Path
 
 RACINE = Path(__file__).resolve().parent.parent
 SERIE = "20.0"
-MODULES = ("asterisk_ari", "mailcow_admin", "voipms_sms", "wazo_phone", "wazo_server")
+MODULES = (
+    "asterisk_ari",
+    "mailcow",
+    "mailcow_server",
+    "mailcow_tenant",
+    "voipms_sms",
+    "wazo_phone",
+    "wazo_server",
+    "wazo_tenant",
+    "wazo_voipms",
+)
 # Disposition OCA : les modules sont à la racine du dépôt.
 DOSSIER_MODULES = RACINE
 

@@ -21,7 +21,17 @@ import sys
 from pathlib import Path
 
 RACINE = Path(__file__).resolve().parent.parent
-NOS_MODULES = ("asterisk_ari", "mailcow_admin", "voipms_sms", "wazo_phone", "wazo_server")
+NOS_MODULES = (
+    "asterisk_ari",
+    "mailcow",
+    "mailcow_server",
+    "mailcow_tenant",
+    "voipms_sms",
+    "wazo_phone",
+    "wazo_server",
+    "wazo_tenant",
+    "wazo_voipms",
+)
 
 # Les racines RÉELLEMENT chargées. `enterprise/` n'y est pas : ses modules
 # n'existent donc pas pour Odoo, ce qu'il consigne justement en « uninstallable ».

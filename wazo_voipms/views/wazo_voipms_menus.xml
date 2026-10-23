@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <menuitem
+        id="menu_wazo_voipms_trunks"
+        name="Trunks VoIP.ms"
+        parent="wazo_tenant.menu_wazo_root"
+        action="action_wazo_voipms_trunk"
+        sequence="80"
+    />
+</odoo>

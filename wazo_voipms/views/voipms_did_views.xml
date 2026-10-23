@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <record id="voipms_did_form_wazo" model="ir.ui.view">
+        <field name="name">voipms.did.form.wazo</field>
+        <field name="model">voipms.did</field>
+        <field name="inherit_id" ref="voipms_sms.voipms_did_view_form" />
+        <field name="arch" type="xml">
+            <xpath expr="//sheet" position="inside">
+                <group string="Pont Wazo (appels)">
+                    <field name="wazo_route_state" readonly="1" widget="badge"
+                           decoration-success="wazo_route_state == 'routed'"
+                           decoration-danger="wazo_route_state == 'error'" />
+                    <field name="wazo_destination_type" />
+                    <field name="wazo_user_id"
+                           invisible="wazo_destination_type != 'user'" />
+                    <field name="wazo_ring_group_id"
+                           invisible="wazo_destination_type != 'group'" />
+                    <div class="oe_button_box" name="wazo_route_buttons">
+                        <button name="action_route_to_wazo" type="object"
+                                string="Router vers Wazo" class="btn-primary"
+                                invisible="wazo_route_state == 'routed' or wazo_destination_type == 'none'" />
+                        <button name="action_unroute_from_wazo" type="object"
+                                string="Retirer le routage"
+                                invisible="wazo_route_state != 'routed'"
+                                confirm="Remettre le DID en sys:hangup et supprimer l'incall ?" />
+                    </div>
+                    <field name="wazo_route_error" readonly="1"
+                           invisible="not wazo_route_error" />
+                </group>
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -15,10 +15,10 @@
     <record id="wazo_user_view_list_tenant" model="ir.ui.view">
         <field name="name">wazo.user.list.tenant</field>
         <field name="model">wazo.user</field>
-        <field name="inherit_id" ref="wazo_phone.wazo_user_view_list" />
+        <field name="inherit_id" ref="wazo_tenant.wazo_user_view_list" />
         <field name="arch" type="xml">
             <xpath expr="//field[@name='name']" position="after">
-                <field name="tenant_id" groups="wazo_phone.group_wazo_manager" />
+                <field name="tenant_id" groups="wazo_tenant.group_wazo_manager" />
             </xpath>
         </field>
     </record>
@@ -26,10 +26,10 @@
     <record id="wazo_user_view_form_tenant" model="ir.ui.view">
         <field name="name">wazo.user.form.tenant</field>
         <field name="model">wazo.user</field>
-        <field name="inherit_id" ref="wazo_phone.wazo_user_view_form" />
+        <field name="inherit_id" ref="wazo_tenant.wazo_user_view_form" />
         <field name="arch" type="xml">
             <xpath expr="//field[@name='extension']" position="after">
-                <field name="tenant_id" groups="wazo_phone.group_wazo_manager" />
+                <field name="tenant_id" groups="wazo_tenant.group_wazo_manager" />
             </xpath>
         </field>
     </record>
@@ -41,7 +41,7 @@
             <search string="Postes Wazo">
                 <field name="name" />
                 <field name="extension" />
-                <field name="tenant_id" groups="wazo_phone.group_wazo_manager" />
+                <field name="tenant_id" groups="wazo_tenant.group_wazo_manager" />
                 <filter
                     name="sans_tenant"
                     string="Sans tenant choisi"
@@ -58,7 +58,7 @@
         </field>
     </record>
 
-    <record id="wazo_phone.action_wazo_user" model="ir.actions.act_window">
+    <record id="wazo_tenant.action_wazo_user" model="ir.actions.act_window">
         <field name="search_view_id" ref="wazo_server_search_wazo_user" />
     </record>
 
@@ -67,10 +67,10 @@
     <record id="wazo_ring_group_view_list_tenant" model="ir.ui.view">
         <field name="name">wazo.ring.group.list.tenant</field>
         <field name="model">wazo.ring.group</field>
-        <field name="inherit_id" ref="wazo_phone.wazo_ring_group_view_list" />
+        <field name="inherit_id" ref="wazo_tenant.wazo_ring_group_view_list" />
         <field name="arch" type="xml">
             <xpath expr="//field[@name='name']" position="after">
-                <field name="tenant_id" groups="wazo_phone.group_wazo_manager" />
+                <field name="tenant_id" groups="wazo_tenant.group_wazo_manager" />
             </xpath>
         </field>
     </record>
@@ -78,10 +78,10 @@
     <record id="wazo_ring_group_view_form_tenant" model="ir.ui.view">
         <field name="name">wazo.ring.group.form.tenant</field>
         <field name="model">wazo.ring.group</field>
-        <field name="inherit_id" ref="wazo_phone.wazo_ring_group_view_form" />
+        <field name="inherit_id" ref="wazo_tenant.wazo_ring_group_view_form" />
         <field name="arch" type="xml">
             <xpath expr="//field[@name='extension']" position="after">
-                <field name="tenant_id" groups="wazo_phone.group_wazo_manager" />
+                <field name="tenant_id" groups="wazo_tenant.group_wazo_manager" />
             </xpath>
         </field>
     </record>
@@ -93,7 +93,7 @@
             <search string="Groupes d'appel">
                 <field name="name" />
                 <field name="extension" />
-                <field name="tenant_id" groups="wazo_phone.group_wazo_manager" />
+                <field name="tenant_id" groups="wazo_tenant.group_wazo_manager" />
                 <filter
                     name="sans_tenant"
                     string="Sans tenant choisi"
@@ -110,7 +110,7 @@
         </field>
     </record>
 
-    <record id="wazo_phone.action_wazo_ring_group" model="ir.actions.act_window">
+    <record id="wazo_tenant.action_wazo_ring_group" model="ir.actions.act_window">
         <field name="search_view_id" ref="wazo_server_search_wazo_ring_group" />
     </record>
 </odoo>

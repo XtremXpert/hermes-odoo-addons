@@ -1,33 +1,10 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <odoo>
     <menuitem
-        id="menu_wazo_root"
-        name="Téléphonie Wazo"
-        groups="wazo_phone.group_wazo_user"
-        sequence="55"
-    />
-    <menuitem
-        id="menu_wazo_users"
-        name="Utilisateurs"
-        parent="menu_wazo_root"
-        action="action_wazo_user"
-    />
-    <menuitem
-        id="menu_wazo_ring_groups"
-        name="Groupes d'appel"
-        parent="menu_wazo_root"
-        action="action_wazo_ring_group"
-    />
-    <menuitem
-        id="menu_wazo_inventory"
-        name="Postes du contexte"
-        parent="menu_wazo_root"
-        action="action_wazo_extension_inventory"
-    />
-    <menuitem
-        id="menu_wazo_cdrs"
-        name="Journal d'appels"
-        parent="menu_wazo_root"
-        action="action_wazo_cdr"
+        id="menu_wazo_dashboard"
+        name="Tableau de bord"
+        parent="wazo_tenant.menu_wazo_root"
+        action="action_wazo_dashboard"
+        sequence="5"
     />
 </odoo>

@@ -59,7 +59,7 @@ def introduire(dossier: Path, genre: str) -> str:
         # Un fichier de modèle, surtout pas un manifeste : la config exempte
         # « **/__manifest__.py » et « **/tests/*.py » d'E501, à dessein. Une
         # faute posée là ne dirait rien du crochet.
-        cible = dossier / "mailcow_admin" / "models" / "res_config_settings.py"
+        cible = dossier / "mailcow_tenant" / "models" / "res_config_settings.py"
         cible.write_text(cible.read_text() + f"\n# {'x' * 140}\n")
     elif genre == "syntaxe":
         cible = dossier / "voipms_sms" / "models" / "syntaxe_cassee.py"
@@ -68,7 +68,7 @@ def introduire(dossier: Path, genre: str) -> str:
         cible = dossier / "asterisk_ari" / "security" / "casse.xml"
         cible.write_text("<odoo><data>\n")
     elif genre == "csv":
-        cible = dossier / "mailcow_admin" / "security" / "ir.access.csv"
+        cible = dossier / "mailcow_tenant" / "security" / "ir.access.csv"
         regle = "regle_cassee,un modele,trop,peu,de,champs,ici"
         cible.write_text(cible.read_text().rstrip("\n") + "\n" + regle + "\n")
     else:

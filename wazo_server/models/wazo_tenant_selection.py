@@ -27,7 +27,7 @@ class WazoServerTenantSelection(models.AbstractModel):
         ondelete="restrict",
         index=True,
         copy=False,
-        groups="wazo_phone.group_wazo_manager",
+        groups="wazo_tenant.group_wazo_manager",
         help="Tenant à administrer pour cette fiche. Laissé vide, c'est le "
         "tenant des réglages qui est utilisé.",
     )

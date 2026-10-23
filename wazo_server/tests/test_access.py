@@ -27,7 +27,7 @@ class TestTenantAccess(TransactionCase):
                         0,
                         [
                             cls.env.ref("base.group_user").id,
-                            cls.env.ref("wazo_phone.group_wazo_manager").id,
+                            cls.env.ref("wazo_tenant.group_wazo_manager").id,
                         ],
                     )
                 ],

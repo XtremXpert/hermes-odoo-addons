@@ -3,17 +3,12 @@
     "name": "Téléphonie Wazo",
     "category": "Productivity",
     "summary": """Connecteur Wazo Platform : utilisateurs, extensions et journal d'appels""",
-    "version": "20.0.3.0.0",
-    "depends": ["base", "web"],
+    "version": "20.0.4.0.0",
+    # « mail » : note sur le contact et activité « appel manqué » du bouclage
+    # d'appel, plus le bus Odoo des notifications (P3.3g).
+    "depends": ["wazo_tenant", "web", "mail"],
     "data": [
-        "security/wazo_groups.xml",
-        "security/ir.access.csv",
-        "data/ir_cron.xml",
-        "views/res_partner_views.xml",
-        "views/wazo_user_views.xml",
-        "views/wazo_ring_group_views.xml",
-        "wizards/wazo_context_inventory_views.xml",
-        "views/wazo_cdr_views.xml",
+        "views/wazo_dashboard_views.xml",
         "views/res_config_settings_views.xml",
         "views/wazo_menus.xml",
     ],
@@ -32,7 +27,10 @@
             # serveur. La directive « après le chargeur » ne dépend ni des noms
             # ni du tri.
             ("after", "web/static/src/module_loader.js", "wazo_phone/static/src/softphone/*.js"),
+            ("after", "web/static/src/module_loader.js", "wazo_phone/static/src/dashboard/*.js"),
+            ("after", "web/static/src/module_loader.js", "wazo_phone/static/src/phone/*.js"),
             "wazo_phone/static/src/softphone/wazo_softphone_templates.xml",
+            "wazo_phone/static/src/dashboard/wazo_dashboard_templates.xml",
         ],
         "wazo_phone.assets_sip": [
             "wazo_phone/static/lib/sip.js",

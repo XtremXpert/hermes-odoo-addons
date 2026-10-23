@@ -89,3 +89,7 @@ known-first-party = ["odoo"]
 # de correspondre dès que la disposition bouge — au déplacement des modules sous
 # « addons/ », la faute est réapparue sans que personne n'ait touché ce fichier.
 "**/wazo_server/models/wazo_server_tenant.py" = ["E402"]
+# Le client Mailcow avale en connaissance de cause l'échec d'envoi d'une
+# notification : elle est informative (retour de synchro), et l'avaler
+# préserve l'opération — c'est le _logger.debug qui le documente.
+"**/mailcow_tenant/services/mailcow_client.py" = ["BLE001"]

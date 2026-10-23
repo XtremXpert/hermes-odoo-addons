@@ -16,8 +16,8 @@ de vérifier **pour quel tenant** chaque appel a été fait.
 
 from unittest.mock import patch
 
-from odoo.addons.wazo_phone.services.wazo_client import WazoAPIError
-from odoo.addons.wazo_phone.services.wazo_client import WazoClient
+from odoo.addons.wazo_tenant.services.wazo_client import WazoAPIError
+from odoo.addons.wazo_tenant.services.wazo_client import WazoClient
 from odoo.exceptions import UserError
 from odoo.exceptions import ValidationError
 from odoo.tests import TransactionCase

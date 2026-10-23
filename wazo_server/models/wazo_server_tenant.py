@@ -29,8 +29,8 @@ _logger = logging.getLogger(__name__)
 from odoo import api
 from odoo import fields
 from odoo import models
-from odoo.addons.wazo_phone.services.wazo_client import WazoAPIError
-from odoo.addons.wazo_phone.services.wazo_client import WazoClient
+from odoo.addons.wazo_tenant.services.wazo_client import WazoAPIError
+from odoo.addons.wazo_tenant.services.wazo_client import WazoClient
 from odoo.exceptions import UserError
 from odoo.exceptions import ValidationError
 
@@ -135,13 +135,13 @@ class WazoServerTenant(models.Model):
     admin_password = fields.Char(
         string="Mot de passe administrateur",
         copy=False,
-        groups="wazo_phone.group_wazo_manager",
+        groups="wazo_tenant.group_wazo_manager",
         help="Généré à la création. À remettre au tenant avec le jeton.",
     )
     api_token = fields.Char(
         string="Jeton d'API du tenant",
         copy=False,
-        groups="wazo_phone.group_wazo_manager",
+        groups="wazo_tenant.group_wazo_manager",
         help="Jeton fabriqué pour le tenant, à installer dans les réglages de "
         "son Odoo. Visible des gestionnaires seulement.",
     )
@@ -150,7 +150,7 @@ class WazoServerTenant(models.Model):
     handover_text = fields.Text(
         string="Coordonnées à remettre au tenant",
         compute="_compute_handover_text",
-        groups="wazo_phone.group_wazo_manager",
+        groups="wazo_tenant.group_wazo_manager",
         help="Bloc à copier tel quel par l'exploitant du tenant : où se posent "
         "les valeurs dans ses réglages, et ce qu'elles valent. Réservé aux "
         "gestionnaires, puisqu'il porte le jeton et le mot de passe.",

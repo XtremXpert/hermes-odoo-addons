@@ -13,10 +13,13 @@ consultez vos appels dans Odoo et, si l'administrateur a activé le **softphone*
 
 ## 1. Ce que vous pouvez faire
 
+- Consulter le **tableau de bord** (menu **Téléphonie Wazo → Tableau de bord**) :
+  vos indicateurs d'appels sur 7, 30 ou 90 jours.
 - Consulter le **journal d'appels** (menu **Téléphonie Wazo → Journal d'appels**).
 - Voir votre **poste Wazo** et votre **utilisateur Wazo** sur votre **fiche Contact**.
 - Parcourir les **appels** associés à chaque contact.
-- (Si le softphone est actif) **appeler/répondre** depuis le navigateur.
+- (Si le softphone est actif) **appeler/répondre** depuis le navigateur, y compris
+  en cliquant sur un numéro de téléphone n'importe où dans Odoo.
 
 Vous disposez d'un **accès en lecture** : vous ne créez ni ne supprimez de postes.
 
@@ -78,24 +81,49 @@ comptabilisé).
 
 ## 4. Softphone (si activé)
 
-L'administrateur peut activer le **softphone WebRTC** (pont vers le module « voip »
-d'Odoo Enterprise). S'il est actif, votre poste Wazo devient utilisable **directement
-dans le navigateur** :
+L'administrateur peut activer le **softphone WebRTC**. S'il est actif, votre poste
+Wazo devient utilisable **directement dans le navigateur** :
 
-- un **cliquable téléphone** apparaît dans l'interface Odoo ;
-- vous **appelez** en cliquant sur un poste/numéro ;
-- vous **répondez** aux appels entrants ;
-- la communication passe en **WebRTC** (chiffrement DTLS, codecs du navigateur), via le
-  point d'accès WebSocket de Wazo.
+- un **icône téléphone** apparaît dans la barre système (en haut à droite) ;
+- vous **appelez** depuis le numéroteur du panneau, ou en cliquant sur le bouton
+  **Appeler** de n'importe quel champ téléphone dans Odoo (click-to-call) ;
+- vous **répondez** aux appels entrants — un seul onglet décroche, les autres
+  agissent en télécommande (attente, DTMF, transfert, raccrochage) ;
+- la communication passe en **WebRTC** (chiffrement DTLS, codecs du navigateur),
+  directement vers Wazo, sans relay.
+
+### Notifications et fin d'appel
+
+- Un appel entrant est **signalé sur toutes vos sessions** (autres navigateurs,
+  autres appareils) par une notification Odoo.
+- À la fin d'un appel, une **note est déposée sur la fiche du contact** identifié.
+- Un appel entrant **manqué** crée une **activité « Appel »** sur le contact et
+  affiche une notification « Appel manqué » sur vos sessions.
 
 ### Conditions
 
-- Le module « voip » d'Enterprise doit être installé et le pont activé.
-- Votre utilisateur Odoo doit avoir reçu vos **identifiants SIP** (propagation
-  automatique par l'administrateur).
+- Votre utilisateur Odoo doit être lié à un **poste Wazo synchronisé** (les
+  identifiants SIP sont propagés automatiquement par l'administrateur).
 
 > Si le softphone n'est pas disponible, vous utilisez votre **poste SIP classique**
 > (identifiant = poste, mot de passe SIP fourni par le gestionnaire).
+
+---
+
+## 4 bis. Tableau de bord
+
+**Téléphonie Wazo → Tableau de bord** présente, sur la période choisie (7, 30 ou
+90 jours) :
+
+- le **nombre d'appels**, les **appels manqués**, le **taux de réponse** des
+  appels entrants et le **temps d'appel** total ;
+- un graphique **appels par jour** (les manqués en rouge) ;
+- vos **derniers appels** — un clic ouvre la fiche de l'appel ;
+- un clic sur les cartes **Appels** / **Manqués** ouvre le journal filtré.
+
+> Le périmètre « **Mes appels** » couvre les appels de votre poste. Les
+> gestionnaires voient en plus la section « **Équipe** » : mêmes indicateurs sur
+> tout le journal et **répartition par poste**.
 
 ---
 

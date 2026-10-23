@@ -22,8 +22,7 @@ import logging
 from odoo import api
 from odoo import fields
 from odoo import models
-
-from ..services.wazo_client import WazoAPIError
+from odoo.addons.wazo_tenant.services.wazo_client import WazoAPIError
 
 _logger = logging.getLogger(__name__)
 

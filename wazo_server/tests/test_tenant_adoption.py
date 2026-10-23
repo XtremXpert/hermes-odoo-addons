@@ -16,8 +16,8 @@ réglages ne montre que lui et ses enfants.
 
 from unittest.mock import patch
 
-from odoo.addons.wazo_phone.services.wazo_client import WazoAPIError
-from odoo.addons.wazo_phone.services.wazo_client import WazoClient
+from odoo.addons.wazo_tenant.services.wazo_client import WazoAPIError
+from odoo.addons.wazo_tenant.services.wazo_client import WazoClient
 from odoo.tests import tagged
 
 from .test_tenant_provisioning import WazoServerTestBase

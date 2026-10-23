@@ -3,7 +3,7 @@
     "name": "VoIP.ms SMS",
     "category": "Productivity",
     "summary": """Envoyer des SMS via l'API VoIP.ms""",
-    "version": "20.0.1.0.0",
+    "version": "20.0.1.0.1",
     "depends": ["base"],
     "data": [
         "security/voipms_sms_groups.xml",

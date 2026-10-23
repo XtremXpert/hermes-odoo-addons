@@ -8,7 +8,7 @@
     <menuitem
         id="menu_wazo_server_root"
         name="Serveur Wazo"
-        groups="wazo_phone.group_wazo_manager"
+        groups="wazo_tenant.group_wazo_manager"
         sequence="95"
     />
     <menuitem

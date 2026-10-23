@@ -37,6 +37,12 @@ import {registry} from "@web/core/registry";
 
 import {SoftphoneArbiter} from "./wazo_softphone_arbiter.esm.js";
 import {
+    buildCallInfo,
+    finalizePayload,
+    isDuplicateIncoming,
+    isEmptyMissedNotice,
+} from "./wazo_call_flow.esm.js";
+import {
     createEngine,
     engineBundleName,
     isEngineLoaded,
@@ -101,6 +107,7 @@ export class WazoSoftphoneService {
         this.env = env;
         this.orm = services.orm;
         this.notification = services.notification;
+        this.busService = services.bus_service;
         this.status = proxy({
             state: STATES.IDLE,
             message: "",
@@ -143,6 +150,20 @@ export class WazoSoftphoneService {
             this._runRemoteCommand(name, payload);
         // Télécommande ← propriétaire : refléter l'état de l'appel.
         this.arbiter.onState = (state) => this._applyRemoteState(state);
+        // ── Notifications bus Odoo (P3.3g) ───────────────────────────────
+        // Chaque session de l'utilisateur est déjà abonnée à son canal
+        // ``res.users`` : l'onglet qui détient le SIP y relaie l'appel
+        // entrant, et ``finalize_wazo_call`` y signale les appels manqués.
+        // Utile aux appareils sans endpoint enregistré — le BroadcastChannel
+        // ne couvre que les onglets du même navigateur.
+        if (this.busService) {
+            this.busService.subscribe("wazo_phone.incoming_call", (payload) =>
+                this._onBusIncomingCall(payload)
+            );
+            this.busService.subscribe("wazo_phone.missed_call", (payload) =>
+                this._onBusMissedCall(payload)
+            );
+        }
         window.addEventListener("beforeunload", () => {
             this.isUnloading = true;
             this._disposeSip();
@@ -392,6 +413,8 @@ export class WazoSoftphoneService {
         if (!this.engine) {
             return;
         }
+        // Suivi de l'appel pour le bouclage (note sur le contact à la fin).
+        this.status.currentCall = buildCallInfo({direction: "outbound", num: target});
         this._setState(STATES.OUTBOUND, _t("Appel en cours vers %(target)s", {target}));
         await this.engine.call(target);
     }
@@ -554,6 +577,11 @@ export class WazoSoftphoneService {
                 break;
             case "incoming":
                 this.ui.shouldBeOnTop = true;
+                this.status.currentCall = buildCallInfo({
+                    direction: "inbound",
+                    num: info.from,
+                    name: info.name,
+                });
                 this._setState(
                     STATES.RINGING,
                     _t("Appel entrant de %(from)s", {
@@ -564,8 +592,16 @@ export class WazoSoftphoneService {
                 // propriétaire diffuse l'appel, et le premier qui décroche
                 // le revendique.
                 this.arbiter.broadcastIncoming(info);
+                // P3.3g : relais vers les AUTRES sessions de l'utilisateur
+                // (autres navigateurs/appareils) via le bus Odoo. Le retour
+                // de la notification sur nos propres onglets est ignoré —
+                // ils sonnent déjà (déduplication côté réception).
+                this._notifyIncomingToBackend(info);
                 break;
             case "in_call":
+                if (this.status.currentCall) {
+                    this.status.currentCall.answered = true;
+                }
                 this._setState(STATES.IN_CALL, _t("En appel"));
                 break;
             case "ended":
@@ -606,6 +642,13 @@ export class WazoSoftphoneService {
         switch (name) {
             case "call":
                 await this._ensureEngine();
+                // Comme ``callOut`` : le suivi sert au bouclage (note sur
+                // le contact) — un appel lancé en télécommande doit être
+                // consigné comme les autres.
+                this.status.currentCall = buildCallInfo({
+                    direction: "outbound",
+                    num: args.target,
+                });
                 return this.engine?.call(args.target);
             case "answer":
                 return this.engine?.answer();
@@ -695,6 +738,8 @@ export class WazoSoftphoneService {
         // Fin d'appel : on libère la revendication dans tous les onglets
         // (et on clôt l'appel entrant qu'ils affichaient).
         this.arbiter.release();
+        // Bouclage : note sur le contact, appel manqué signalé (backend).
+        this._finalizeCall();
         // Le CDR est écrit par Wazo après l'appel : on recharge le journal
         // pour qu'il apparaisse.
         this.loadCallLog();
@@ -703,6 +748,96 @@ export class WazoSoftphoneService {
                 this._setState(STATES.REGISTERED, _t("Prêt"));
             }
         }, 2000);
+    }
+
+    /**
+     * Relaie l'appel entrant vers le canal bus de l'utilisateur (P3.3g).
+     *
+     * Volontairement sans attente ni remontée d'erreur : la sonnerie
+     * locale ne dépend pas du backend, et une session injoignable ne doit
+     * jamais empêcher de répondre.
+     *
+     * @param {Object} info charge utile de l'événement moteur « incoming »
+     */
+    _notifyIncomingToBackend(info) {
+        this.orm
+            .call("res.users", "notify_wazo_incoming_call", [
+                this.env.user.userId,
+                {num: info.from, name: info.name || ""},
+            ])
+            .catch(() => {});
+    }
+
+    /**
+     * Consigne la fin de l'appel courant auprès du backend.
+     *
+     * ``finalize_wazo_call`` identifie le contact, y dépose une note et, pour
+     * un entrant manqué, crée l'activité « Appel » et diffuse la
+     * notification « appel manqué » — qui revient ici par le bus et affiche
+     * le toast. Le retour de la méthode sert à confirmer la note consignée.
+     *
+     * @returns {Promise<void>}
+     */
+    async _finalizeCall() {
+        const payload = finalizePayload(this.status.currentCall);
+        this.status.currentCall = null;
+        if (!payload) {
+            return;
+        }
+        try {
+            const result = await this.orm.call("res.users", "finalize_wazo_call", [
+                this.env.user.userId,
+                payload,
+            ]);
+            if (result && result.partner_name && !result.missed) {
+                this.notification.add(
+                    _t("Appel consigné sur la fiche de %(partner)s", {
+                        partner: result.partner_name,
+                    }),
+                    {type: "info"}
+                );
+            }
+        } catch {
+            // Le bouclage est un confort : un échec ne doit jamais bloquer
+            // la fin d'appel ni afficher d'erreur incompréhensible.
+        }
+    }
+
+    /**
+     * Notification bus « appel entrant » venue d'une autre session (P3.3g).
+     *
+     * @param {?Object} payload ``{num, name}``
+     */
+    _onBusIncomingCall(payload) {
+        if (
+            isDuplicateIncoming({
+                state: this.state,
+                currentCall: this.status.currentCall,
+                payload,
+            })
+        ) {
+            return;
+        }
+        this.notification.add(
+            _t("Appel entrant de %(num)s", {num: payload.num || _t("inconnu")}),
+            {type: "info"}
+        );
+    }
+
+    /**
+     * Notification bus « appel manqué » (émise par ``finalize_wazo_call``).
+     *
+     * @param {?Object} payload ``{num, name, partner_id, partner_name}``
+     */
+    _onBusMissedCall(payload) {
+        if (isEmptyMissedNotice(payload)) {
+            return;
+        }
+        const label = payload.partner_name || payload.name || payload.num;
+        this.notification.add(
+            _t("Appel manqué de %(label)s", {label: label || _t("inconnu")}),
+            {type: "warning"}
+        );
     }
 
     /**
@@ -735,7 +870,7 @@ export class WazoSoftphoneService {
 export {STATES};
 
 const wazoSoftphoneService = {
-    dependencies: ["orm", "notification"],
+    dependencies: ["orm", "notification", "bus_service"],
     start(env, services) {
         return new WazoSoftphoneService(env, services);
     },

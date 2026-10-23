@@ -5,12 +5,12 @@
 odoo:
   source: https://github.com/odoo/odoo.git
   branche: 20.0
-  commit: 7bab48ba5fdaa9e20744fda66a9627bfff88924a
+  commit: 377226c20ff988cf7100e3a36d3dd8992e701fbb
 design-themes:
-  source: https://github.com/odoo/design-themes.git
+  source: git@github.com:odoo/design-themes.git
   branche: 20.0
-  commit: 8f1bb33d011d8d3767c0f7bb8a027d5774c2e0c5
+  commit: 4afc8d773773a9e259d75b84c28bab4fa03ea7b6
 enterprise:
-  source: https://github.com/odoo/enterprise.git
-  branche: master
-  commit: b35e149e7c34d0df5ef436abf603a2d38f57ada7
+  source: git@github.com:odoo/enterprise.git
+  branche: 20.0
+  commit: 2dd2c8efed9c8e0be431679295a0c7650ec39bb5

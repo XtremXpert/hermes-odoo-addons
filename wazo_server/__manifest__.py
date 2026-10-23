@@ -4,7 +4,7 @@
     "category": "Productivity",
     "summary": """Création et encadrement des tenants Wazo""",
     "version": "20.0.1.0.0",
-    "depends": ["wazo_phone"],
+    "depends": ["wazo_tenant"],
     "data": [
         "security/ir.access.csv",
         "views/wazo_server_tenant_views.xml",

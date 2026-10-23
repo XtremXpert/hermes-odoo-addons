@@ -16,9 +16,13 @@ pas nécessaire au développement local.
 
 | module                      | rôle                                         |
 | --------------------------- | -------------------------------------------- |
-| `mailcow_admin`             | domaines, boîtes, alias, tableaux de bord    |
-| `wazo_server`               | serveur Wazo : lignes, postes, CDR           |
+| `mailcow_server`            | plateforme : entretien du serveur Mailcow   |
+| `mailcow_tenant`            | tenant : domaines, boîtes, alias, synchro    |
+| `mailcow`                   | côté usager : vue d'ensemble du serveur      |
+| `wazo_server`               | plateforme : création et cycle des tenants   |
+| `wazo_tenant`               | tenant : usagers, postes, groupes, CDR       |
 | `wazo_phone`                | téléphone dans Odoo (WebRTC, click-to-call)  |
+| `wazo_voipms`               | pont VoIP.ms : trunk sortant, DIDs entrants  |
 | `asterisk_ari`              | Asterisk via ARI                             |
 | `voipms_sms`                | SMS par l'API VoIP.ms                        |
 | `hermes_n3_access`          | compte API de l'agent Hermes N3              |

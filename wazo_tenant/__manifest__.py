@@ -1,0 +1,27 @@
+# Part of the wazo_tenant Odoo module. See LICENSE for details.
+{
+    "name": "Téléphonie Wazo — tenant",
+    "category": "Productivity",
+    "summary": """Exploitation d'un tenant Wazo : utilisateurs, postes, groupes, CDR""",
+    "version": "20.0.1.0.0",
+    "depends": ["base", "web", "mail"],
+    "data": [
+        "security/wazo_groups.xml",
+        "security/ir.access.csv",
+        "data/ir_cron.xml",
+        "views/res_partner_views.xml",
+        "views/wazo_user_views.xml",
+        "views/wazo_ring_group_views.xml",
+        "wizards/wazo_context_inventory_views.xml",
+        "views/wazo_cdr_views.xml",
+        "views/res_config_settings_views.xml",
+        "views/wazo_menus.xml",
+    ],
+    "author": "Benoît Vézina, Diverse-Cité",
+    "website": "https://github.com/XtremXpert/hermes-odoo-addons",
+    "license": "LGPL-3",
+    "installable": True,
+    "application": True,
+    "auto_install": False,
+    "pre_init_hook": "adopt_wazo_phone_xmlids",
+}

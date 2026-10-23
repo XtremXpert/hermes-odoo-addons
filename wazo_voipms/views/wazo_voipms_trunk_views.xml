@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <record id="action_wazo_voipms_trunk" model="ir.actions.act_window">
+        <field name="name">Trunks VoIP.ms</field>
+        <field name="res_model">wazo.voipms.trunk</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="wazo_voipms_trunk_list" model="ir.ui.view">
+        <field name="name">wazo.voipms.trunk.list</field>
+        <field name="model">wazo.voipms.trunk</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name" />
+                <field name="pop_host" />
+                <field name="voipms_username" />
+                <field name="registered" widget="boolean_toggle" readonly="1" />
+                <field name="state" widget="badge"
+                       decoration-success="state == 'synced'"
+                       decoration-warning="state == 'new'"
+                       decoration-danger="state == 'error'" />
+            </list>
+        </field>
+    </record>
+
+    <record id="wazo_voipms_trunk_form" model="ir.ui.view">
+        <field name="name">wazo.voipms.trunk.form</field>
+        <field name="model">wazo.voipms.trunk</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_provision" type="object"
+                            string="Provisionner" class="btn-primary"
+                            invisible="state == 'synced'" />
+                    <button name="action_check_registration" type="object"
+                            string="Vérifier l'enregistrement"
+                            invisible="state != 'synced'" />
+                    <button name="action_unprovision" type="object"
+                            string="Déprovisionner" class="btn-secondary"
+                            invisible="state != 'synced'"
+                            confirm="Retirer le trunk de Wazo ?" />
+                    <button name="action_retry" type="object"
+                            string="Réessayer" invisible="state != 'error'" />
+                    <field name="state" widget="statusbar" />
+                </header>
+                <sheet>
+                    <div class="oe_title"><h1><field name="name" /></h1></div>
+                    <group>
+                        <group string="VoIP.ms">
+                            <field name="pop_host" />
+                            <field name="voipms_username" />
+                            <field name="voipms_password" password="True" />
+                            <field name="caller_id" />
+                        </group>
+                        <group string="Wazo">
+                            <field name="outbound_prefix" />
+                            <field name="registered" readonly="1" />
+                            <field name="error_message" readonly="1"
+                                   invisible="not error_message" />
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+</odoo>
