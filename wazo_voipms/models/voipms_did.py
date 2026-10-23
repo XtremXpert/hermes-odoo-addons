@@ -277,10 +277,16 @@ class VoIPMSDid(models.Model):
             if not incall_extension_id:
                 incall_context = self._resolve_incall_context(client)
                 try:
+                    # Mesuré : l'INVITE de VoIP.ms porte le DID à dix
+                    # chiffres — l'extension de l'incall prend la forme
+                    # locale, l'E.164 ne matche jamais.
                     extension = client.conf(
                         "POST",
                         "/extensions",
-                        body={"exten": self.number, "context": incall_context},
+                        body={
+                            "exten": self._voipms_did_number(),
+                            "context": incall_context,
+                        },
                     )
                 except WazoAPIError as error:
                     # Reprise d'orphelin : le poste survit au rollback.
@@ -289,7 +295,10 @@ class VoIPMSDid(models.Model):
                     response = client.conf(
                         "GET",
                         "/extensions",
-                        params={"exten": self.number, "context": incall_context},
+                        params={
+                            "exten": self._voipms_did_number(),
+                            "context": incall_context,
+                        },
                     )
                     items = (
                         response.get("items") or []

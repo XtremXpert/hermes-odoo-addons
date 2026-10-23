@@ -218,7 +218,9 @@ class TestDidRouting(BridgeTestBase):
         ]
         self.assertTrue(ext_calls)
         ext_body = ext_calls[-1].kwargs.get("body") or {}
-        self.assertEqual(ext_body["exten"], "14184803381")
+        # Mesuré : VoIP.ms livre le DID à dix chiffres — l'extension de
+        # l'incall prend la forme locale.
+        self.assertEqual(ext_body["exten"], "4184803381")
         self.assertEqual(ext_body["context"], "ctx-master-outcall-test")
         paths = [c.args[1] for c in wazo.conf.call_args_list]
         self.assertIn("/incalls/44/extensions/11", paths)
