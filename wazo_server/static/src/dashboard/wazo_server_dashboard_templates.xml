@@ -1,0 +1,309 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<templates xml:space="preserve">
+
+    <!-- Tableau de bord de l'exploitant : tenants, trunk du pont, DIDs,
+         solde VoIP.ms. Cartes cliquables vers les listes filtrées. -->
+    <t t-name="wazo_server.Dashboard">
+        <div class="o_wazo_server_dashboard p-3 overflow-auto h-100">
+            <div class="d-flex align-items-center mb-3">
+                <h4 class="mb-0 me-auto">Serveur Wazo — tableau de bord</h4>
+                <button
+                    class="btn btn-secondary"
+                    t-on-click="() => this.reload()"
+                    disabled="this.state.loading"
+                >
+                    Rafraîchir
+                </button>
+            </div>
+
+            <div t-if="this.state.loading and !this.state.data" class="text-muted">
+                Chargement…
+            </div>
+
+            <t t-else="">
+                <!-- ── Cartes d'indicateurs ─────────────────────────────── -->
+                <div class="row g-3 mb-4">
+                    <div class="col-6 col-lg-3">
+                        <div
+                            class="card o_stat_card p-3 h-100"
+                            role="button"
+                            t-on-click="() => this.openTenants()"
+                        >
+                            <div class="text-muted small">Tenants</div>
+                            <div class="fs-2">
+                                <t t-out="this.tenants?.total || 0" />
+                            </div>
+                            <div class="small">
+                                <span
+                                    t-if="this.tenants?.states.created"
+                                    class="badge text-bg-success me-1"
+                                >
+                                    <t t-out="this.tenants.states.created" /> créés
+                                </span>
+                                <span
+                                    t-if="this.tenants?.states.error"
+                                    class="badge text-bg-danger me-1"
+                                >
+                                    <t t-out="this.tenants.states.error" /> en erreur
+                                </span>
+                                <span
+                                    t-if="this.tenants?.states.new"
+                                    class="badge text-bg-secondary"
+                                >
+                                    <t t-out="this.tenants.states.new" /> à créer
+                                </span>
+                            </div>
+                            <div
+                                t-if="this.tenants?.expiring"
+                                class="small text-warning mt-1"
+                            >
+                                ⚠ <t t-out="this.tenants.expiring" /> jeton(s) à
+                                renouveler sous 30 jours
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-6 col-lg-3">
+                        <div
+                            class="card o_stat_card p-3 h-100"
+                            role="button"
+                            t-on-click="() => this.openTrunks()"
+                        >
+                            <div class="text-muted small">Trunk VoIP.ms</div>
+                            <div class="fs-2">
+                                <t t-out="this.trunks?.items.length || 0" />
+                            </div>
+                            <div class="small">
+                                <t
+                                    t-foreach="this.trunks?.items || []"
+                                    t-as="trunk"
+                                    t-key="trunk.id"
+                                >
+                                    <span
+                                        t-attf-class="badge me-1 #{trunk.registered ? 'text-bg-success' : (trunk.state == 'synced' ? 'text-bg-warning' : 'text-bg-danger')}"
+                                    >
+                                        <t t-out="trunk.name" />
+                                    </span>
+                                </t>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-6 col-lg-3">
+                        <div
+                            class="card o_stat_card p-3 h-100"
+                            role="button"
+                            t-on-click="() => this.openDids()"
+                        >
+                            <div class="text-muted small">DIDs routés</div>
+                            <div class="fs-2">
+                                <t t-out="this.dids?.routed || 0" />
+                                <span class="text-muted fs-5">
+                                    / <t t-out="this.dids?.total || 0" />
+                                </span>
+                            </div>
+                            <div
+                                t-if="this.dids?.muted"
+                                class="small text-warning"
+                            >
+                                <t t-out="this.dids.muted" /> muet(s) —
+                                <a
+                                    href="#"
+                                    t-on-click.prevent="() => this.openMutedDids()"
+                                >les voir</a>
+                            </div>
+                            <div
+                                t-if="!this.dids?.muted and this.dids?.total"
+                                class="small text-success"
+                            >
+                                Tous routés vers Wazo
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-6 col-lg-3">
+                        <div class="card o_stat_card p-3 h-100">
+                            <div class="text-muted small">Solde VoIP.ms</div>
+                            <t t-if="this.balance">
+                                <div t-if="this.balance.amount" class="fs-2">
+                                    $<t t-out="this.balance.amount" />
+                                </div>
+                                <div t-else="" class="text-danger small">
+                                    <t t-out="this.balance.error" />
+                                </div>
+                            </t>
+                            <t t-else="">
+                                <div class="text-muted small">
+                                    Sur demande — ne pas appeler l'API à
+                                    chaque affichage.
+                                </div>
+                            </t>
+                            <button
+                                class="btn btn-sm btn-outline-secondary mt-2"
+                                t-on-click="() => this.refreshBalance()"
+                                disabled="this.state.balanceLoading"
+                            >
+                                <t t-out="this.state.balanceLoading ? 'Lecture…' : 'Actualiser le solde'" />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Tenants ────────────────────────────────────────────── -->
+                <h6 class="text-muted text-uppercase">Tenants hébergés</h6>
+                <div class="table-responsive card mb-4">
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th>Nom</th>
+                                <th>Contexte</th>
+                                <th>État</th>
+                                <th>Expiration du jeton</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr
+                                t-foreach="this.tenants?.items || []"
+                                t-as="tenant"
+                                t-key="tenant.id"
+                            >
+                                <td><t t-out="tenant.name" /></td>
+                                <td class="text-muted"><t t-out="tenant.context_name" /></td>
+                                <td>
+                                    <span
+                                        t-attf-class="badge #{tenant.state == 'created' ? 'text-bg-success' : (tenant.state == 'error' ? 'text-bg-danger' : 'text-bg-secondary')}"
+                                    >
+                                        <t t-out="tenant.state" />
+                                    </span>
+                                </td>
+                                <td>
+                                    <span
+                                        t-attf-class="#{tenant.expires_soon ? 'text-warning fw-bold' : ''}"
+                                        t-out="this.formatDateTime(tenant.token_expires_at)"
+                                    />
+                                </td>
+                            </tr>
+                            <tr t-if="!this.tenants?.items?.length">
+                                <td colspan="4" class="text-muted text-center">
+                                    Aucun tenant — « Tenants → Créer » pour
+                                    provisionner le premier.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- ── Trunk du pont ──────────────────────────────────────── -->
+                <h6 class="text-muted text-uppercase">Trunk SIP VoIP.ms ↔ Wazo</h6>
+                <div class="table-responsive card mb-4">
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th>Trunk</th>
+                                <th>Sous-compte</th>
+                                <th>Provisioning</th>
+                                <th>Enregistrement SIP</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr
+                                t-foreach="this.trunks?.items || []"
+                                t-as="trunk"
+                                t-key="trunk.id"
+                            >
+                                <td>
+                                    <t t-out="trunk.name" />
+                                    <div class="text-muted small">
+                                        <t t-out="trunk.pop_host" />
+                                    </div>
+                                </td>
+                                <td class="text-muted">
+                                    <t t-out="trunk.voipms_username || '—'" />
+                                </td>
+                                <td>
+                                    <span
+                                        t-attf-class="badge #{trunk.state == 'synced' ? 'text-bg-success' : (trunk.state == 'error' ? 'text-bg-danger' : 'text-bg-secondary')}"
+                                    >
+                                        <t t-out="trunk.state" />
+                                    </span>
+                                    <div
+                                        t-if="trunk.error_message"
+                                        class="text-danger small text-truncate"
+                                        style="max-width: 20rem;"
+                                        t-att-title="trunk.error_message"
+                                    >
+                                        <t t-out="trunk.error_message" />
+                                    </div>
+                                </td>
+                                <td>
+                                    <span
+                                        t-attf-class="badge #{trunk.registered ? 'text-bg-success' : 'text-bg-warning'}"
+                                    >
+                                        <t t-out="trunk.registered ? 'enregistré' : 'inconnu'" />
+                                    </span>
+                                </td>
+                                <td class="text-end">
+                                    <button
+                                        class="btn btn-sm btn-outline-secondary"
+                                        t-on-click="() => this.checkRegistration(trunk)"
+                                        disabled="this.state.checking == trunk.id"
+                                    >
+                                        <t t-out="this.checkLabel(trunk)" />
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr t-if="!this.trunks?.items?.length">
+                                <td colspan="5" class="text-muted text-center">
+                                    Aucun trunk — « Trunks VoIP.ms » sous
+                                    « Téléphonie Wazo » pour provisionner le pont.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- ── DIDs ───────────────────────────────────────────────── -->
+                <h6 class="text-muted text-uppercase">
+                    DIDs — routage entrant
+                </h6>
+                <div class="table-responsive card">
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th>Numéro</th>
+                                <th>Routage</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr
+                                t-foreach="this.dids?.items || []"
+                                t-as="did"
+                                t-key="did.id"
+                            >
+                                <td><t t-out="did.number" /></td>
+                                <td>
+                                    <span
+                                        t-attf-class="badge #{did.route_state == 'routed' ? 'text-bg-success' : (did.route_state == 'error' ? 'text-bg-danger' : 'text-bg-secondary')}"
+                                    >
+                                        <t
+                                            t-out="did.route_state == 'routed'
+                                                ? 'vers Wazo'
+                                                : (did.route_state == 'error' ? 'erreur' : 'non routé')"
+                                        />
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr t-if="!this.dids?.items?.length">
+                                <td colspan="2" class="text-muted text-center">
+                                    Aucun DID synchronisé — « SMS VoIP.ms →
+                                    DIDs » puis « Synchroniser ».
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </t>
+        </div>
+    </t>
+</templates>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <!-- Tableau de bord de l'exploitant de la plateforme : action client
+         OWL (voir static/src/dashboard/). Le composant interroge
+         ``wazo.server.dashboard.get_server_dashboard`` — tenants, trunk
+         du pont VoIP.ms (module wazo_voipms), DIDs, solde fournisseur. -->
+    <record id="action_wazo_server_dashboard" model="ir.actions.client">
+        <field name="name">Tableau de bord</field>
+        <field name="tag">wazo_server.dashboard</field>
+    </record>
+
+    <menuitem
+        id="menu_wazo_server_dashboard"
+        name="Tableau de bord"
+        parent="menu_wazo_server_root"
+        action="action_wazo_server_dashboard"
+        sequence="1"
+    />
+</odoo>
