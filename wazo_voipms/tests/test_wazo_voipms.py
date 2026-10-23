@@ -116,7 +116,9 @@ class TestTrunk(BridgeTestBase):
 
         def flaky(method, path, params=None, body=None):
             calls["n"] += 1
-            if calls["n"] == 2:
+            # 1=GET /contexts, 2=POST /contexts, 3=POST endpoint, 4=le
+            # trunk — c'est lui qui échoue.
+            if calls["n"] == 4:
                 raise WazoAPIError("HTTP 500 boom")
             return self._conf_reply(method, path, params=params, body=body)
 
@@ -206,9 +208,20 @@ class TestDidRouting(BridgeTestBase):
             did.action_route_to_wazo()
         self.assertEqual(did.wazo_route_state, "routed")
         self.assertEqual(did.wazo_incall_id, 44)
-        post_body = wazo.conf.call_args_list[0].kwargs.get("body") or {}
-        self.assertEqual(post_body["destination"], {"type": "user", "user_id": 5})
-        self.assertEqual(post_body["extensions"][0]["context"], "from-extern")
+        self.assertEqual(did.wazo_incall_extension_id, 11)
+        incall_body = wazo.conf.call_args_list[0].kwargs.get("body") or {}
+        self.assertEqual(incall_body["destination"], {"type": "user", "user_id": 5})
+        # Le poste du renvoi : créé à part, dans le contexte incall
+        # résolu, puis associé.
+        ext_calls = [
+            c for c in wazo.conf.call_args_list if c.args[1] == "/extensions"
+        ]
+        self.assertTrue(ext_calls)
+        ext_body = ext_calls[-1].kwargs.get("body") or {}
+        self.assertEqual(ext_body["exten"], "14184803381")
+        self.assertEqual(ext_body["context"], "ctx-master-outcall-test")
+        paths = [c.args[1] for c in wazo.conf.call_args_list]
+        self.assertIn("/incalls/44/extensions/11", paths)
         _method, params = voipms._request.call_args[0]
         self.assertEqual(_method, "setDIDRouting")
         # Le DID est normalisé E.164 à la création (voipms.did).
@@ -261,14 +274,15 @@ class TestDidRouting(BridgeTestBase):
         # Routage VoIP.ms vers le sous-compte, pas une URI sip:.
         _method, params = voipms._request.call_args[0]
         self.assertEqual(params["routing"], "account:539175_tiaxiax")
-        # Callback du register pointé vers l'incall du DID.
+        # Callback du register pointé vers l'incall du DID — SANS
+        # contexte : « ?context » casse la ligne register (mesuré).
         register_calls = [
             c for c in wazo.conf.call_args_list if "/registers/iax/81" in c.args[1]
         ]
         self.assertEqual(len(register_calls), 1)
         body = register_calls[0].kwargs.get("body") or {}
         self.assertEqual(body.get("callback_extension"), "14184803381")
-        self.assertEqual(body.get("callback_context"), "from-extern")
+        self.assertNotIn("callback_context", body)
 
     def test_route_via_unprovisioned_iax_trunk_refused(self):
         trunk = self.Trunk.create(

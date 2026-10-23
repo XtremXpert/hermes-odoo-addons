@@ -168,19 +168,50 @@ class VoIPMSDid(models.Model):
         """URI SIP que VoIP.ms appellera : ``sip:<DID>@<hôte Wazo>``."""
         return "sip:%s@%s" % (self.number, self._wazo_public_host())
 
+    def _resolve_incall_context(self, client):
+        """Nom du contexte des renvois entrants, créé au besoin.
+
+        Mesuré sur un Wazo neuf : « from-extern » n'existe pas — et un
+        poste d'incall exige un contexte de type « incall ». Wazo 26
+        génère un nom interne : l'extension désigne ce nom, pas le
+        libellé.
+        """
+        response = client.conf("GET", "/contexts")
+        items = response.get("items") or [] if isinstance(response, dict) else []
+        for item in items:
+            if item.get("label") == "from-extern":
+                return item["name"]
+        created = client.conf(
+            "POST", "/contexts", body={"label": "from-extern", "type": "incall"}
+        )
+        return created["name"]
+
+    def _voipms_did_number(self):
+        """Le DID côté VoIP.ms : sans l'indicatif pays NANP.
+
+        La fiche porte le numéro normalisé E.164 (« 1418… ») mais
+        l'API le refuse tel quel (mesuré : « This is not a valid DID ») —
+        elle veut les dix chiffres locaux.
+        """
+        number = (self.number or "").strip()
+        if len(number) == 11 and number.startswith("1"):
+            return number[1:]
+        return number
+
     def _routing_value(self):
         """Routage VoIP.ms du DID : ``sip:`` ou ``account:``.
 
-        Avec un trunk IAX2, le routage cible le sous-compte : l'appel
-        entre par l'enregistrement IAX du Wazo (mesuré : un sous-compte
-        est mono-protocole, le DID vise le sous-compte, l'appel suit
-        son protocole). Sans trunk, l'URI sip: exige un hôte public.
+        Avec un trunk choisi, le routage cible son sous-compte : l'appel
+        entre par l'enregistrement du Wazo chez VoIP.ms — SIP ou IAX2,
+        c'est l'enregistrement qui porte l'entrant (mesuré : le DID vise
+        le sous-compte, l'appel suit son protocole). Sans trunk, l'URI
+        sip: exige un hôte public.
         """
-        if self.trunk_id and self.trunk_id.protocol == "iax2":
+        if self.trunk_id:
             if self.trunk_id.state != "synced":
                 raise UserError(
                     self.env._(
-                        "Provisionnez d'abord le trunk IAX %s.", self.trunk_id.name
+                        "Provisionnez d'abord le trunk %s.", self.trunk_id.name
                     )
                 )
             return "account:%s" % self.trunk_id.voipms_username
@@ -234,15 +265,48 @@ class VoIPMSDid(models.Model):
                     "POST",
                     "/incalls",
                     body={
-                        "extensions": [
-                            {"context": "from-extern", "exten": self.number}
-                        ],
                         "destination": self._destination_payload(),
                     },
                 )
                 incall_id = incall["id"]
-                extensions = incall.get("extensions") or []
-                incall_extension_id = extensions[0].get("id") if extensions else False
+                incall_extension_id = False
+            # Le poste du renvoi : créé PUIS associé, quel que soit le
+            # chemin — mesuré, les extensions embarquées du POST
+            # /incalls sont ignorées, et une reprise sans poste est un
+            # renvoi muet.
+            if not incall_extension_id:
+                incall_context = self._resolve_incall_context(client)
+                try:
+                    extension = client.conf(
+                        "POST",
+                        "/extensions",
+                        body={"exten": self.number, "context": incall_context},
+                    )
+                except WazoAPIError as error:
+                    # Reprise d'orphelin : le poste survit au rollback.
+                    if "already exists" not in str(error):
+                        raise
+                    response = client.conf(
+                        "GET",
+                        "/extensions",
+                        params={"exten": self.number, "context": incall_context},
+                    )
+                    items = (
+                        response.get("items") or []
+                        if isinstance(response, dict)
+                        else response
+                    )
+                    for item in items:
+                        if str(item.get("exten")) == str(self.number):
+                            extension = item
+                            break
+                    else:
+                        raise
+                incall_extension_id = extension["id"]
+                client.conf(
+                    "PUT",
+                    "/incalls/%s/extensions/%s" % (incall_id, incall_extension_id),
+                )
             # Callback du register IAX (entrant) AVANT la bascule :
             # le routage ne doit jamais pointer vers un register qui
             # ignore où déposer l'appel.
@@ -250,7 +314,7 @@ class VoIPMSDid(models.Model):
             # Bascule VoIP.ms : account: (trunk IAX) ou sip:<DID>@<hôte>.
             response = self._voipms_client()._request(
                 "setDIDRouting",
-                {"did": self.number, "routing": self._routing_value()},
+                {"did": self._voipms_did_number(), "routing": self._routing_value()},
             )
             if str(response.get("status")) != "success":
                 raise UserError(
@@ -296,7 +360,8 @@ class VoIPMSDid(models.Model):
                     body=body,
                 )
             self._voipms_client()._request(
-                "setDIDRouting", {"did": self.number, "routing": "sys:hangup"}
+                "setDIDRouting",
+                {"did": self._voipms_did_number(), "routing": "sys:hangup"},
             )
             # 2. Supprimer l'incall (dissocier l'extension d'abord si présente).
             if self.wazo_incall_id and self.wazo_incall_extension_id:

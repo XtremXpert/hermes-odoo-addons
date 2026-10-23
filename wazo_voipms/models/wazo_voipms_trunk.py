@@ -172,7 +172,7 @@ class WazoVoipmsTrunk(models.Model):
         )
         return created["name"]
 
-    def _endpoint_payload(self):
+    def _endpoint_payload(self, client=None):
         """Corps ``POST /endpoints/sip`` : trunk enregistré sur le POP."""
         return {
             "name": "odoo-%s" % re.sub(r"[^a-z0-9]+", "-", self.name.lower()).strip("-"),
@@ -202,10 +202,30 @@ class WazoVoipmsTrunk(models.Model):
                 ["line", "true"],
             ],
             "endpoint_section_options": [
-                ["context", "from-extern"],
+                # Mesuré : le contexte des renvois entrants se désigne par
+                # son nom généré, pas par le libellé « from-extern ».
+                ["context", self._resolve_incall_context(client)],
                 ["from_user", self.caller_id or self.voipms_username],
             ],
         }
+
+    def _resolve_incall_context(self, client):
+        """Nom du contexte des renvois entrants, créé au besoin.
+
+        Mesuré : « from-extern » est un libellé — Wazo 26 génère un nom
+        interne, et c'est LUI que l'endpoint doit viser dans son option
+        « context » : le libellé littéral pointe dans le vide du
+        dialplan.
+        """
+        response = client.conf("GET", "/contexts")
+        items = response.get("items") or [] if isinstance(response, dict) else []
+        for item in items:
+            if item.get("label") == "from-extern":
+                return item["name"]
+        created = client.conf(
+            "POST", "/contexts", body={"label": "from-extern", "type": "incall"}
+        )
+        return created["name"]
 
     def _iax_endpoint_payload(self):
         """Corps ``POST /endpoints/iax`` : pair « friend » dynamique.
@@ -233,10 +253,10 @@ class WazoVoipmsTrunk(models.Model):
             "auth_password": self.voipms_password,
             "remote_host": self.pop_host,
         }
-        # Mesuré : confd refuse callback_context sans callback_extension
-        # — les deux se posent ensemble, au routage du DID.
+        # Mesuré : « ?context » dans la ligne register IAX la CASSE —
+        # Asterisk résout la chaîne entière comme un hôte. Seule
+        # l'extension est sûre : register => user:pass@host/exten.
         if callback_exten:
-            body["callback_context"] = "from-extern"
             body["callback_extension"] = callback_exten
         return body
 
@@ -349,7 +369,7 @@ class WazoVoipmsTrunk(models.Model):
                 # SIP : endpoint trunk + registration sortante.
                 if not endpoint_uuid:
                     endpoint = client.conf(
-                        "POST", "/endpoints/sip", body=self._endpoint_payload()
+                        "POST", "/endpoints/sip", body=self._endpoint_payload(client)
                     )
                     endpoint_uuid = endpoint["uuid"]
                 if not trunk_id:
