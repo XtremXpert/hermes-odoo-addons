@@ -27,7 +27,7 @@ class VoIPMSClient:
         self.username = username or icp.get_str("voipms.api_username", default="")
         self.token = token or icp.get_str("voipms.api_token", default="")
 
-    def _request(self, method, params=None):
+    def _request(self, method, params=None, timeout=None):
         if not self.username or not self.token:
             raise VoIPMSAPIError("Identifiants VoIP.ms manquants (réglages > VoIP.ms SMS).")
         payload = {"api_username": self.username, "api_password": self.token, "method": method}
@@ -39,7 +39,11 @@ class VoIPMSClient:
             request = urllib.request.Request(
                 url, headers={"User-Agent": "voipms_sms/1.0 (Odoo)"}
             )
-            with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
+            # Provisioning calls are slow (createSubAccount measured at
+            # 12-23 s): a per-call timeout, wider than the default.
+            with urllib.request.urlopen(
+                request, timeout=timeout if timeout is not None else TIMEOUT
+            ) as response:
                 body = response.read()
         except (urllib.error.URLError, urllib.error.HTTPError, OSError) as error:
             # Jamais d'URL dans le message : les identifiants y figurent.

@@ -15,6 +15,7 @@
                            invisible="wazo_destination_type != 'user'" />
                     <field name="wazo_ring_group_id"
                            invisible="wazo_destination_type != 'group'" />
+                    <field name="trunk_id" />
                     <div class="oe_button_box" name="wazo_route_buttons">
                         <button name="action_route_to_wazo" type="object"
                                 string="Router vers Wazo" class="btn-primary"

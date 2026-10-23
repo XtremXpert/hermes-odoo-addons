@@ -42,6 +42,10 @@ class BridgeTestBase(TransactionCase):
         if method == "POST":
             if path == "/endpoints/sip":
                 return {"uuid": "uuid-ep"}
+            if path == "/endpoints/iax":
+                return {"id": 71}
+            if path == "/registers/iax":
+                return {"id": 81}
             if path == "/incalls":
                 return {"id": 44, "extensions": [{"id": 55}]}
             if path == "/contexts":
@@ -152,6 +156,32 @@ class TestTrunk(BridgeTestBase):
         self.assertIn("/trunks/7/endpoints/sip/ep1", deletes)
         self.assertIn("/outcalls/8", deletes)
 
+    def test_provision_iax_creates_endpoint_register_and_trunk(self):
+        trunk = self.Trunk.create(
+            {"name": "IaxTrunk", "protocol": "iax2", "pop_host": "montreal1.voip.ms"}
+        )
+        voipms = self._voipms_mock({"status": "success", "id": 2, "account": "539175_iaxtrunkiax"})
+        wazo = self._wazo_mock()
+        with patch(WAZO_CTOR, return_value=wazo), patch(
+            VOIPMS_CTOR_TRUNK, return_value=voipms
+        ):
+            trunk.action_provision()
+        self.assertEqual(trunk.state, "synced")
+        self.assertEqual(trunk.voipms_username, "539175_iaxtrunkiax")
+        self.assertEqual(trunk.remote_endpoint_iax_id, 71)
+        self.assertEqual(trunk.remote_register_iax_id, 81)
+        self.assertEqual(trunk.remote_trunk_id, 22)
+        # Sous-compte créé en protocole IAX2 (3).
+        params = voipms._request.call_args.kwargs["params"]
+        self.assertEqual(params["protocol"], 3)
+        self.assertEqual(params["username"], "iaxtrunkiax")
+        # Chaîne Wazo : endpoint IAX + register + associations.
+        paths = [c.args[1] for c in wazo.conf.call_args_list]
+        self.assertIn("/endpoints/iax", paths)
+        self.assertIn("/registers/iax", paths)
+        self.assertIn("/trunks/22/endpoints/iax/71", paths)
+        self.assertIn("/trunks/22/registers/iax/81", paths)
+
     def test_prefix_must_be_numeric(self):
         with self.assertRaises(ValidationError):
             self.Trunk.create({"name": "T6", "outbound_prefix": "abc"})
@@ -201,6 +231,67 @@ class TestDidRouting(BridgeTestBase):
             did.action_route_to_wazo()
         self.assertEqual(did.wazo_route_state, "error")
         self.assertIn("pas synchronisé", did.wazo_route_error)
+
+    def test_route_via_iax_trunk_routes_to_account(self):
+        trunk = self.Trunk.create(
+            {"name": "T-Iax", "protocol": "iax2", "state": "synced",
+             "voipms_username": "539175_tiaxiax", "voipms_password": "p",
+             "remote_endpoint_iax_id": 71, "remote_register_iax_id": 81,
+             "remote_trunk_id": 22, "remote_outcall_id": 33,
+             "remote_outcall_extension_id": 11}
+        )
+        did = self.Did.create({"number": "4184803381"})
+        user = self.WazoUser.create(
+            {"name": "Alice", "wazo_state": "synced", "remote_user_id": "5"}
+        )
+        did.write(
+            {
+                "wazo_destination_type": "user",
+                "wazo_user_id": user.id,
+                "trunk_id": trunk.id,
+            }
+        )
+        wazo = self._wazo_mock()
+        voipms = self._voipms_mock()
+        with patch(WAZO_CTOR, return_value=wazo), patch(
+            VOIPMS_CTOR_DID, return_value=voipms
+        ):
+            did.action_route_to_wazo()
+        self.assertEqual(did.wazo_route_state, "routed")
+        # Routage VoIP.ms vers le sous-compte, pas une URI sip:.
+        _method, params = voipms._request.call_args[0]
+        self.assertEqual(params["routing"], "account:539175_tiaxiax")
+        # Callback du register pointé vers l'incall du DID.
+        register_calls = [
+            c for c in wazo.conf.call_args_list if "/registers/iax/81" in c.args[1]
+        ]
+        self.assertEqual(len(register_calls), 1)
+        body = register_calls[0].kwargs.get("body") or {}
+        self.assertEqual(body.get("callback_extension"), "14184803381")
+        self.assertEqual(body.get("callback_context"), "from-extern")
+
+    def test_route_via_unprovisioned_iax_trunk_refused(self):
+        trunk = self.Trunk.create(
+            {"name": "T-Vide", "protocol": "iax2", "voipms_username": "u",
+             "voipms_password": "p"}
+        )
+        did = self.Did.create({"number": "4184803381"})
+        user = self.WazoUser.create(
+            {"name": "Alice", "wazo_state": "synced", "remote_user_id": "5"}
+        )
+        did.write(
+            {"wazo_destination_type": "user", "wazo_user_id": user.id, "trunk_id": trunk.id}
+        )
+        wazo = self._wazo_mock()
+        voipms = self._voipms_mock()
+        with patch(WAZO_CTOR, return_value=wazo), patch(
+            VOIPMS_CTOR_DID, return_value=voipms
+        ):
+            did.action_route_to_wazo()
+        self.assertEqual(did.wazo_route_state, "error")
+        self.assertIn("Provisionnez", did.wazo_route_error)
+        # Rien n'a basculé côté VoIP.ms.
+        voipms._request.assert_not_called()
 
     def test_unroute_resets_both_sides(self):
         did = self._make_did()

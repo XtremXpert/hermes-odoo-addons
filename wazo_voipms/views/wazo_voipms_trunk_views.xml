@@ -47,6 +47,7 @@
                     <div class="oe_title"><h1><field name="name" /></h1></div>
                     <group>
                         <group string="VoIP.ms">
+                            <field name="protocol" />
                             <field name="pop_host" />
                             <field name="voipms_username" />
                             <field name="voipms_password" password="True" />

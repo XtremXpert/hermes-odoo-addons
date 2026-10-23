@@ -37,6 +37,14 @@ class VoIPMSDid(models.Model):
         default="none",
     )
     wazo_user_id = fields.Many2one("wazo.user", string="Utilisateur Wazo")
+    trunk_id = fields.Many2one(
+        "wazo.voipms.trunk",
+        string="Trunk porteur de l'entrant",
+        help="Trunk VoIP.ms par lequel les appels entrants arrivent. "
+        "Un trunk IAX2 les fait cheminer par son enregistrement IAX — "
+        "aucun port à exposer. Un trunk SIP exige que le Wazo soit "
+        "joignable publiquement (URI sip:).",
+    )
     wazo_ring_group_id = fields.Many2one(
         "wazo.ring.group", string="Groupe d'appel"
     )
@@ -117,6 +125,39 @@ class VoIPMSDid(models.Model):
         """URI SIP que VoIP.ms appellera : ``sip:<DID>@<hôte Wazo>``."""
         return "sip:%s@%s" % (self.number, self._wazo_public_host())
 
+    def _routing_value(self):
+        """Routage VoIP.ms du DID : ``sip:`` ou ``account:``.
+
+        Avec un trunk IAX2, le routage cible le sous-compte : l'appel
+        entre par l'enregistrement IAX du Wazo (mesuré : un sous-compte
+        est mono-protocole, le DID vise le sous-compte, l'appel suit
+        son protocole). Sans trunk, l'URI sip: exige un hôte public.
+        """
+        if self.trunk_id and self.trunk_id.protocol == "iax2":
+            if self.trunk_id.state != "synced":
+                raise UserError(
+                    self.env._(
+                        "Provisionnez d'abord le trunk IAX %s.", self.trunk_id.name
+                    )
+                )
+            return "account:%s" % self.trunk_id.voipms_username
+        return self._sip_routing_uri()
+
+    def _update_iax_callback(self, client):
+        """Pointe le callback du register IAX vers l'incall du DID.
+
+        L'appel entrant débarque dans ``from-extern`` à l'extension du
+        DID : c'est ce que ``callback_extension`` règle sur le register.
+        """
+        if not self.trunk_id or self.trunk_id.protocol != "iax2":
+            return
+        body = self.trunk_id._iax_register_payload(callback_exten=self.number)
+        client.conf(
+            "PUT",
+            "/registers/iax/%s" % self.trunk_id.remote_register_iax_id,
+            body=body,
+        )
+
     # ------------------------------------------------------------------
     # Actions
     # ------------------------------------------------------------------
@@ -159,10 +200,14 @@ class VoIPMSDid(models.Model):
                 incall_id = incall["id"]
                 extensions = incall.get("extensions") or []
                 incall_extension_id = extensions[0].get("id") if extensions else False
-            # Bascule VoIP.ms : sip:<DID>@<hôte Wazo>.
+            # Callback du register IAX (entrant) AVANT la bascule :
+            # le routage ne doit jamais pointer vers un register qui
+            # ignore où déposer l'appel.
+            self._update_iax_callback(client)
+            # Bascule VoIP.ms : account: (trunk IAX) ou sip:<DID>@<hôte>.
             response = self._voipms_client()._request(
                 "setDIDRouting",
-                {"did": self.number, "routing": self._sip_routing_uri()},
+                {"did": self.number, "routing": self._routing_value()},
             )
             if str(response.get("status")) != "success":
                 raise UserError(
@@ -197,7 +242,16 @@ class VoIPMSDid(models.Model):
         self.ensure_one()
         client = self._wazo_client()
         try:
-            # 1. Retirer le routage VoIP.ms.
+            # 1. Retirer le routage VoIP.ms, et d'abord le callback
+            # IAX : l'entrant ne doit plus tomber dans from-extern sur
+            # un poste qui n'a plus d'incall.
+            if self.trunk_id and self.trunk_id.protocol == "iax2":
+                body = self.trunk_id._iax_register_payload()
+                client.conf(
+                    "PUT",
+                    "/registers/iax/%s" % self.trunk_id.remote_register_iax_id,
+                    body=body,
+                )
             self._voipms_client()._request(
                 "setDIDRouting", {"did": self.number, "routing": "sys:hangup"}
             )
