@@ -107,6 +107,26 @@ class WazoVoipmsTrunk(models.Model):
         """Contexte des renvois sortants — ``to-extern`` sur Wazo 26."""
         return "to-extern"
 
+    def _resolve_outcall_context(self, client):
+        """Nom **réel** du contexte sortant, créé au besoin.
+
+        Mesuré sur un Wazo neuf : le provisionnement d'un tenant ne crée
+        que son contexte interne, et ``POST /extensions`` refuse un
+        contexte inconnu (HTTP 400). Wazo 26 génère de plus un nom
+        interne (``ctx-…-<uuid>``) : l'extension désigne le contexte
+        par ce **nom**, pas par son libellé ``to-extern`` — d'où la
+        résolution, et non l'écriture directe du libellé.
+        """
+        response = client.conf("GET", "/contexts")
+        items = response.get("items") or [] if isinstance(response, dict) else []
+        for item in items:
+            if item.get("label") == self._outcall_context():
+                return item["name"]
+        created = client.conf(
+            "POST", "/contexts", body={"name": self._outcall_context(), "type": "outcall"}
+        )
+        return created["name"]
+
     def _endpoint_payload(self):
         """Corps ``POST /endpoints/sip`` : trunk enregistré sur le POP."""
         return {
@@ -117,12 +137,24 @@ class WazoVoipmsTrunk(models.Model):
                 ["username", self.voipms_username],
                 ["password", self.voipms_password],
             ],
+            # La registration s'authentifie avec ses propres identifiants
+            # — mesuré : sans cette section, le REGISTER part nu et
+            # voip.ms le rejette (« Rejected » côté Asterisk).
+            "registration_outbound_auth_section_options": [
+                ["username", self.voipms_username],
+                ["password", self.voipms_password],
+            ],
             "registration_section_options": [
                 ["client_uri", "sip:%s@%s" % (self.voipms_username, self.pop_host)],
                 ["server_uri", "sip:%s" % self.pop_host],
                 ["retry_interval", "60"],
                 ["expiration", "120"],
                 ["outbound_proxy", "sip:%s" % self.pop_host],
+                # Wazo injecte « endpoint = <nom> » dans la registration
+                # d'un trunk ; sans « line », Asterisk refuse l'objet
+                # (mesuré : « without enabling line support »). Avec lui,
+                # l'entrant du trunk passe par la registration.
+                ["line", "true"],
             ],
             "endpoint_section_options": [
                 ["context", "from-extern"],
@@ -136,27 +168,55 @@ class WazoVoipmsTrunk(models.Model):
     def _ensure_voipms_subaccount(self):
         """Crée le sous-compte chez VoIP.ms si aucun identifiant n'est saisi.
 
-        ``createSubAccount`` rend un mot de passe généré par le portail ;
-        il est stocké sur la fiche (champ limité au groupe gestionnaire).
+        ``createSubAccount`` exige une longue liste de paramètres, mesurée
+        en conditions réelles : sans ``protocol``, ``auth_type``,
+        ``allowed_codecs``, ``dtmf_mode``, ``nat``, ``lock_international``,
+        ``international_route`` et ``music_on_hold``, l'API refuse un par
+        un (« Protocol was not provided », etc.). Le mot de passe est
+        généré localement — le portail ne le rend jamais en retour — et
+        stocké sur la fiche (champ limité au groupe gestionnaire).
         """
         if self.voipms_username and self.voipms_password:
             return
+        import secrets
+
+        sip_password = secrets.token_urlsafe(18)
+        username = re.sub(r"[^a-z0-9]+", "", self.name.lower())
         client = self._voipms_client()
         response = client._request(
             "createSubAccount",
-            {"username": self.name, "description": "Trunk Odoo %s" % self.name},
+            {
+                "username": username,
+                # 1 = SIP, 3 = IAX2 (getProtocols) ; 1 = User/Password
+                # (getAuthTypes) : le trunk Wazo s'authentifie par
+                # identifiants, son IP est privée derrière le NAT.
+                "protocol": 1,
+                "auth_type": 1,
+                "password": sip_password,
+                "description": "Trunk Odoo %s" % self.name,
+                "device_type": 1,  # 1 = IP PBX / passerelle (getDeviceTypes)
+                "allowed_codecs": "ulaw;g729",
+                "dtmf_mode": "rfc2833",
+                "nat": "yes",
+                "lock_international": 1,  # verrouillé : lever = geste explicite
+                "international_route": 1,
+                "music_on_hold": "default",
+            },
         )
-        account = (response or {}).get("account") or {}
-        username = account.get("username") or (response or {}).get("username")
-        password = account.get("password") or (response or {}).get("password")
-        if not username or not password:
+        # Réponse mesurée : {"status": "success", "id": …, "account":
+        # "539175_diversecite"} — « account » est le nom d'utilisateur
+        # COMPLET (numéro de compte principal + « _ » + nom donné).
+        full_username = (response or {}).get("account")
+        if not full_username:
             raise UserError(
                 self.env._(
-                    "VoIP.ms a créé le sous-compte sans rendre ses identifiants SIP : "
-                    "renseignez-les à la main depuis le portail."
+                    "VoIP.ms a créé le sous-compte sans rendre son nom "
+                    "d'utilisateur : renseignez-le à la main depuis le portail."
                 )
             )
-        self.sudo().write({"voipms_username": username, "voipms_password": password})
+        self.sudo().write(
+            {"voipms_username": full_username, "voipms_password": sip_password}
+        )
 
     # ------------------------------------------------------------------
     # Actions
@@ -167,18 +227,22 @@ class WazoVoipmsTrunk(models.Model):
         self.ensure_one()
         if self.state == "synced":
             raise UserError(self.env._("Le trunk %s est déjà provisionné.", self.name))
+        # Identifiants distants relus AVANT le try : si l'échec survient
+        # dès le sous-compte VoIP.ms, le bloc d'erreur doit pouvoir les
+        # écrire sans UnboundLocalError — mesuré en conditions réelles.
+        endpoint_uuid = self.remote_endpoint_uuid
+        trunk_id = self.remote_trunk_id
+        outcall_id = self.remote_outcall_id
+        extension_id = self.remote_outcall_extension_id
         try:
             self._ensure_voipms_subaccount()
             client = self._wazo_client()
             # Endpoint SIP trunk (idempotent : on reprend l'uuid conservé).
-            endpoint_uuid = self.remote_endpoint_uuid
             if not endpoint_uuid:
                 endpoint = client.conf(
                     "POST", "/endpoints/sip", body=self._endpoint_payload()
                 )
                 endpoint_uuid = endpoint["uuid"]
-            # Trunk + association endpoint.
-            trunk_id = self.remote_trunk_id
             if not trunk_id:
                 trunk = client.conf("POST", "/trunks", body={})
                 trunk_id = trunk["id"]
@@ -186,36 +250,74 @@ class WazoVoipmsTrunk(models.Model):
                     "PUT", "/trunks/%s/endpoints/sip/%s" % (trunk_id, endpoint_uuid)
                 )
             # Outcall + motif de numérotation.
-            outcall_id = self.remote_outcall_id
             if not outcall_id:
-                outcall = client.conf(
-                    "POST", "/outcalls", body={"name": "out-%s" % self.name}
-                )
+                # Reprise idempotente : un outcall orphelin d'une tentative
+                # échouée est réutilisé par son nom, pas refusé (mesuré :
+                # « Outcall already exists » sinon — l'outcall survit au
+                # rollback Odoo, lui).
+                try:
+                    outcall = client.conf(
+                        "POST", "/outcalls", body={"name": "out-%s" % self.name}
+                    )
+                except WazoAPIError as error:
+                    if "already exists" not in str(error):
+                        raise
+                    response = client.conf("GET", "/outcalls")
+                    items = (
+                        response.get("items") or []
+                        if isinstance(response, dict)
+                        else []
+                    )
+                    for item in items:
+                        if item.get("name") == "out-%s" % self.name:
+                            outcall = item
+                            break
+                    else:
+                        raise
                 outcall_id = outcall["id"]
-            extension_id = self.remote_outcall_extension_id
             if not extension_id:
                 extension = client.conf(
                     "POST",
                     "/extensions",
                     body={
-                        "context": self._outcall_context(),
+                        # Nom réel (généré par Wazo), résolu ou créé à la
+                        # volée : le libellé « to-extern » ne désigne pas
+                        # le contexte dans les requêtes.
+                        "context": self._resolve_outcall_context(client),
                         "exten": "_%s." % self.outbound_prefix,
                     },
                 )
                 extension_id = extension["id"]
-                client.conf(
-                    "PUT", "/outcalls/%s/extensions/%s" % (outcall_id, extension_id)
-                )
+            # Association systématique (idempotente) : elle exige un corps
+            # OutcallExtension — sans lui, confd répond 400 (mesuré) — et
+            # une reprise après échec ne doit pas la sauter. Le préfixe de
+            # sortie est retiré du numéro avant l'envoi au trunk.
             client.conf(
-                "PUT", "/outcalls/%s/trunks" % outcall_id, body=[{"id": trunk_id}]
+                "PUT",
+                "/outcalls/%s/extensions/%s" % (outcall_id, extension_id),
+                body={"strip_digits": len(self.outbound_prefix)},
+            )
+            # Schéma TrunksId : un dict « trunks », pas une liste nue —
+            # mesuré : la liste seule fait répondre 400 « Invalid input
+            # type ».
+            client.conf(
+                "PUT",
+                "/outcalls/%s/trunks" % outcall_id,
+                body={"trunks": [{"id": trunk_id}]},
             )
         except (WazoAPIError, VoIPMSAPIError, UserError) as error:
+            # Tout ce qui a été créé à distance est conservé : la reprise
+            # est idempotente, elle ne recrée rien — mesuré : perdre l'id
+            # du trunk laissait un trunk orphelin côté Wazo, et la
+            # relance échouait sur son association déjà existante.
             self.write(
                 {
                     "state": "error",
                     "error_message": str(error),
-                    "remote_endpoint_uuid": endpoint_uuid or self.remote_endpoint_uuid,
-                    "remote_trunk_id": self.remote_trunk_id,
+                    "remote_endpoint_uuid": endpoint_uuid,
+                    "remote_trunk_id": trunk_id,
+                    "remote_outcall_id": outcall_id,
+                    "remote_outcall_extension_id": extension_id,
                 }
             )
             return False
@@ -262,7 +364,9 @@ class WazoVoipmsTrunk(models.Model):
         try:
             if self.remote_outcall_id:
                 _ignore_404(
-                    "PUT", "/outcalls/%s/trunks" % self.remote_outcall_id, body=[]
+                    "PUT",
+                    "/outcalls/%s/trunks" % self.remote_outcall_id,
+                    body={"trunks": []},
                 )
                 if self.remote_outcall_extension_id:
                     _ignore_404(

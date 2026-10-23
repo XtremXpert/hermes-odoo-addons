@@ -44,7 +44,12 @@ class BridgeTestBase(TransactionCase):
                 return {"uuid": "uuid-ep"}
             if path == "/incalls":
                 return {"id": 44, "extensions": [{"id": 55}]}
+            if path == "/contexts":
+                # Wazo 26 génère un nom interne, pas le libellé.
+                return {"id": 21, "name": "ctx-master-outcall-test"}
             return {"id": self._conf_ids.get(path.strip("/").split("/")[0], 0)}
+        if path == "/contexts":
+            return {"items": []}
         return {}
 
     def _wazo_mock(self):
@@ -62,8 +67,11 @@ class BridgeTestBase(TransactionCase):
 class TestTrunk(BridgeTestBase):
     def test_provision_creates_subaccount_then_wazo_chain(self):
         trunk = self.Trunk.create({"name": "TestTrunk", "pop_host": "montreal1.voip.ms"})
+        # Réponse mesurée en conditions réelles : « account » porte le nom
+        # complet (numéro de compte + « _ » + nom), le mot de passe n'est
+        # jamais rendu — il est généré et stocké localement.
         voipms = self._voipms_mock(
-            {"status": "success", "username": "123_x", "password": "pw"}
+            {"status": "success", "id": 856700, "account": "123_x"}
         )
         wazo = self._wazo_mock()
         with patch(WAZO_CTOR, return_value=wazo), patch(

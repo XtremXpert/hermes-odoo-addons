@@ -18,6 +18,7 @@ et le tableau de bord ne fait que les lire.
 
 import logging
 
+from odoo import api
 from odoo import fields
 from odoo import models
 from odoo.addons.voipms_sms.services.voipms_client import VoIPMSAPIError
@@ -62,6 +63,7 @@ class WazoServerDashboard(models.AbstractModel):
             return {"amount": None, "error": "Réponse sans solde exploitable."}
         return {"amount": "%.2f" % amount, "error": None}
 
+    @api.model
     def get_server_dashboard(self, with_balance=False):
         """Tous les agrégats du tableau de bord, en un seul appel.
 
@@ -70,8 +72,13 @@ class WazoServerDashboard(models.AbstractModel):
         chargement de la page.
         """
         Tenant = self.env["wazo.server.tenant"]
-        Trunk = self.env["wazo.voipms.trunk"]
-        Did = self.env["voipms.did"]
+        # Trunk et DIDs lus en sudo : c'est l'état opérationnel du pont,
+        # pas des données SMS — et l'exploitant de la plateforme n'a pas
+        # à porter les groupes du module SMS pour surveiller sa
+        # téléphonie. Le menu qui mène ici est déjà réservé au groupe
+        # gestionnaire.
+        Trunk = self.env["wazo.voipms.trunk"].sudo()
+        Did = self.env["voipms.did"].sudo()
 
         tenants = Tenant.search([], order="name")
         trunks = Trunk.search([], order="name")

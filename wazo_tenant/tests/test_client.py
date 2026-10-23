@@ -132,3 +132,46 @@ class TestWazoClientRequest(WazoClientTestBase):
     def test_empty_response_returns_none(self):
         with patch("urllib.request.urlopen", side_effect=self._fake_urlopen(b"")):
             self.assertIsNone(WazoClient(self.env).conf("GET", "/users"))
+
+
+@tagged("wazo_tenant", "post_install", "-at_install")
+class TestWazoClientSSL(TransactionCase):
+    """« wazo.ssl_verify » : la vérification TLS est la règle, et
+    l'exception (PBX interne auto-signé, mesuré sur le nôtre) doit être
+    explicite — un contexte non vérifié posé sans que le paramètre
+    l'autorise serait une tolérance cachée."""
+
+    def _urlopen_kwargs(self, ssl_verify):
+        import io
+
+        icp = self.env["ir.config_parameter"].sudo()
+        icp.set_str("wazo.url", "https://wazo.example.com")
+        icp.set_str("wazo.api_key", "key")
+        icp.set_str("wazo.ssl_verify", str(ssl_verify))
+        body = json.dumps({"items": []}).encode("utf-8")
+        fake_cm = type(
+            "CM",
+            (),
+            {
+                "__enter__": lambda self: io.BytesIO(body),
+                "__exit__": lambda self, *a: False,
+            },
+        )()
+        with patch("urllib.request.urlopen", return_value=fake_cm) as urlopen:
+            client = WazoClient(self.env)
+            client.conf("GET", "/users")
+        return urlopen.call_args.kwargs
+
+    def test_ssl_verified_by_default(self):
+        kwargs = self._urlopen_kwargs(True)
+        # Pas de contexte détendu : urlopen vérifie par défaut.
+        self.assertIsNone(kwargs.get("context"))
+
+    def test_ssl_unverified_when_explicitly_allowed(self):
+        import ssl
+
+        kwargs = self._urlopen_kwargs(False)
+        context = kwargs.get("context")
+        self.assertIsNotNone(context)
+        self.assertEqual(context.check_hostname, False)
+        self.assertEqual(context.verify_mode, ssl.CERT_NONE)

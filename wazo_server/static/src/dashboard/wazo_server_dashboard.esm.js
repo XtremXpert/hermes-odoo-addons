@@ -11,16 +11,16 @@
  * Règles OWL 3 apprises dans ce dépôt : l'état réactif se fabrique avec
  * « proxy », le gabarit qualifie par « this. », et on rend avec « t-out ».
  */
-import {Component, onWillStart, proxy} from "@odoo/owl";
+import {Component, onWillStart, proxy, useProps} from "@odoo/owl";
 import {registry} from "@web/core/registry";
 import {useService} from "@web/core/utils/hooks";
+import {standardActionServiceProps} from "@web/webclient/actions/action_plugin";
 
 export class WazoServerDashboard extends Component {
     static template = "wazo_server.Dashboard";
-    static props = {
-        action: {type: Object, optional: true},
-        "*": true,
-    };
+    // Owl 3 : les props d'une action client doivent être déclarées via
+    // useProps — un « static props » fait planter le composant au chargement.
+    props = useProps({...standardActionServiceProps});
 
     setup() {
         this.orm = useService("orm");
@@ -39,9 +39,7 @@ export class WazoServerDashboard extends Component {
         this.state.loading = true;
         try {
             this.state.data = await this.orm.call(
-                "wazo.server.dashboard",
-                "get_server_dashboard"
-            );
+                "wazo.server.dashboard", "get_server_dashboard", []);
         } finally {
             this.state.loading = false;
         }

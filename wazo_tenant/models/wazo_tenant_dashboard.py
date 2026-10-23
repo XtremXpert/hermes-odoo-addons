@@ -19,6 +19,7 @@ le PBX reste le geste explicite des boutons de synchronisation des fiches
 import logging
 from datetime import timedelta
 
+from odoo import api
 from odoo import fields
 from odoo import models
 
@@ -35,6 +36,7 @@ class WazoTenantDashboard(models.AbstractModel):
     _name = "wazo.tenant.dashboard"
     _description = "Tableau de bord d'exploitation du tenant Wazo"
 
+    @api.model
     def get_tenant_dashboard(self):
         """Tous les agrégats du tableau de bord, en un seul appel."""
         User = self.env["wazo.user"]

@@ -26,6 +26,12 @@ class ResConfigSettings(models.TransientModel):
         config_parameter="wazo.line_context",
         help="Contexte Asterisk utilisé pour les lignes et postes (défaut : « default »).",
     )
+    wazo_ssl_verify = fields.Boolean(
+        string="Vérifier le certificat TLS",
+        config_parameter="wazo.ssl_verify",
+        help="Désactiver uniquement pour un serveur Wazo au certificat "
+        "auto-signé (PBX interne). La vérification reste la règle.",
+    )
     wazo_voicemail_language = fields.Char(
         string="Langue des messageries vocales",
         config_parameter="wazo.voicemail_language",

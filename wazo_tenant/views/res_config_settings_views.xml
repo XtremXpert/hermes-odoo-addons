@@ -25,6 +25,9 @@
                                 placeholder="Token API généré dans Wazo"
                             />
                         </setting>
+                        <setting string="Certificat TLS">
+                            <field name="wazo_ssl_verify" />
+                        </setting>
                         <setting string="Tenant (optionnel)">
                             <field
                                 name="wazo_tenant_id"

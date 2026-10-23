@@ -21,6 +21,7 @@ préserver la casse exacte des en-têtes ``X-Auth-Token`` et
 import base64
 import json
 import logging
+import ssl
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -100,6 +101,15 @@ class WazoClient:
         if tenant_id is None:
             tenant_id = icp.get_str("wazo.tenant_id", default="")
         self.tenant_id = tenant_id or ""
+        # Un PBX interne porte souvent un certificat auto-signé (CN=localhost,
+        # mesuré sur le nôtre) : la vérification TLS stricte d'urllib y échoue.
+        # L'exception est explicite — paramètre « wazo.ssl_verify », défaut
+        # « True » — jamais une tolérance cachée.
+        self.ssl_verify = icp.get_str("wazo.ssl_verify", default="True").lower() not in {
+            "false",
+            "0",
+            "no",
+        }
 
     # -- Points d'entrée par microservice ----------------------------------
 
@@ -242,8 +252,18 @@ class WazoClient:
                 headers["Wazo-Tenant"] = self.tenant_id
         data = json.dumps(body).encode("utf-8") if body is not None else None
         request = urllib.request.Request(url, data=data, headers=headers, method=method)
+        # Contexte TLS : vérifié par défaut ; non vérifié seulement si
+        # « wazo.ssl_verify » l'autorise explicitement (certificat
+        # auto-signé du PBX interne).
+        context = None
+        if not self.ssl_verify:
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            context.check_hostname = False
+            context.verify_mode = ssl.CERT_NONE
         try:
-            with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
+            with urllib.request.urlopen(
+                request, timeout=TIMEOUT, context=context
+            ) as response:
                 raw = response.read()
         except urllib.error.HTTPError as error:
             detail = ""
