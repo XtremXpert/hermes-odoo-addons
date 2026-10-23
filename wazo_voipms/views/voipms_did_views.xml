@@ -16,6 +16,14 @@
                     <field name="wazo_ring_group_id"
                            invisible="wazo_destination_type != 'group'" />
                     <field name="trunk_id" />
+                    <field name="wazo_queue_id"
+                           invisible="wazo_destination_type != 'queue'" />
+                    <field name="wazo_ivr_id"
+                           invisible="wazo_destination_type != 'ivr'" />
+                    <field name="wazo_conference_id"
+                           invisible="wazo_destination_type != 'conference'" />
+                    <field name="wazo_voicemail_id"
+                           invisible="wazo_destination_type != 'voicemail'" />
                     <div class="oe_button_box" name="wazo_route_buttons">
                         <button name="action_route_to_wazo" type="object"
                                 string="Router vers Wazo" class="btn-primary"

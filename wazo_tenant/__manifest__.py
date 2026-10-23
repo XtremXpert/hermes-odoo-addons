@@ -3,7 +3,7 @@
     "name": "Téléphonie Wazo — tenant",
     "category": "Productivity",
     "summary": """Exploitation d'un tenant Wazo : utilisateurs, postes, groupes, CDR""",
-    "version": "20.0.2.0.0",
+    "version": "20.0.3.0.0",
     "depends": ["base", "web", "mail"],
     "data": [
         "security/wazo_groups.xml",
@@ -12,6 +12,7 @@
         "views/res_partner_views.xml",
         "views/wazo_user_views.xml",
         "views/wazo_ring_group_views.xml",
+        "views/wazo_objects_views.xml",
         "wizards/wazo_context_inventory_views.xml",
         "views/wazo_cdr_views.xml",
         "views/res_config_settings_views.xml",

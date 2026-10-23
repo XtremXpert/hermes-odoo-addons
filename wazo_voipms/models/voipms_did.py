@@ -32,6 +32,10 @@ class VoIPMSDid(models.Model):
             ("none", "Aucune"),
             ("user", "Utilisateur Wazo"),
             ("group", "Groupe d'appel"),
+            ("queue", "File d'attente"),
+            ("ivr", "Menu vocal (IVR)"),
+            ("conference", "Salle de conférence"),
+            ("voicemail", "Messagerie vocale"),
         ],
         string="Destination Wazo",
         default="none",
@@ -48,6 +52,10 @@ class VoIPMSDid(models.Model):
     wazo_ring_group_id = fields.Many2one(
         "wazo.ring.group", string="Groupe d'appel"
     )
+    wazo_queue_id = fields.Many2one("wazo.queue", string="File d'attente")
+    wazo_ivr_id = fields.Many2one("wazo.ivr", string="Menu vocal")
+    wazo_conference_id = fields.Many2one("wazo.conference", string="Conférence")
+    wazo_voicemail_id = fields.Many2one("wazo.voicemail", string="Messagerie vocale")
     wazo_incall_id = fields.Integer(string="ID incall Wazo", readonly=True)
     wazo_incall_extension_id = fields.Integer(
         string="ID extension incall", readonly=True
@@ -69,16 +77,33 @@ class VoIPMSDid(models.Model):
     # Validation et résolution de la destination
     # ------------------------------------------------------------------
 
-    @api.constrains("wazo_destination_type", "wazo_user_id", "wazo_ring_group_id")
+    @api.constrains(
+        "wazo_destination_type",
+        "wazo_user_id",
+        "wazo_ring_group_id",
+        "wazo_queue_id",
+        "wazo_ivr_id",
+        "wazo_conference_id",
+        "wazo_voicemail_id",
+    )
     def _check_wazo_destination(self):
+        #: (clé du type, champ m2o) — un seul requis par type choisi.
+        attendus = {
+            "user": "wazo_user_id",
+            "group": "wazo_ring_group_id",
+            "queue": "wazo_queue_id",
+            "ivr": "wazo_ivr_id",
+            "conference": "wazo_conference_id",
+            "voicemail": "wazo_voicemail_id",
+        }
         for did in self:
-            if did.wazo_destination_type == "user" and not did.wazo_user_id:
+            champ = attendus.get(did.wazo_destination_type)
+            if champ and not did[champ]:
                 raise ValidationError(
-                    self.env._("Choisissez l'utilisateur Wazo de destination.")
-                )
-            if did.wazo_destination_type == "group" and not did.wazo_ring_group_id:
-                raise ValidationError(
-                    self.env._("Choisissez le groupe d'appel de destination.")
+                    self.env._(
+                        "Choisissez la destination Wazo du routage (%s).",
+                        did.wazo_destination_type,
+                    )
                 )
 
     def _wazo_client(self):
@@ -119,6 +144,24 @@ class VoIPMSDid(models.Model):
                 "type": "group",
                 "group_id": self.wazo_ring_group_id.remote_group_id,
             }
+        # Destinations objets : chaque id distant, avec le refus net si
+        # la cible n'est pas synchronisée.
+        pour_objet = {
+            "queue": (self.wazo_queue_id, "remote_queue_id", "queue_id"),
+            "ivr": (self.wazo_ivr_id, "remote_ivr_id", "ivr_id"),
+            "conference": (self.wazo_conference_id, "remote_conference_id", "conference_id"),
+            "voicemail": (self.wazo_voicemail_id, "remote_voicemail_id", "voicemail_id"),
+        }
+        cible = pour_objet.get(self.wazo_destination_type)
+        if cible:
+            objet, champ_id, cle_corps = cible
+            if objet.wazo_state != "synced":
+                raise UserError(
+                    self.env._(
+                        "%s n'est pas synchronisé sur Wazo.", objet.name
+                    )
+                )
+            return {"type": self.wazo_destination_type, cle_corps: objet[champ_id]}
         return {"type": "none"}
 
     def _sip_routing_uri(self):

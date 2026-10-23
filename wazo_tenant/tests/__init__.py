@@ -9,4 +9,5 @@ from . import test_wazo_user
 from . import test_extension_ranges
 from . import test_extension_validation
 from . import test_ring_group
+from . import test_wazo_objects
 from . import test_context_inventory

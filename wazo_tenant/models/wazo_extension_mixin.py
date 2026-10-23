@@ -62,6 +62,9 @@ RANGE_TYPE_LABELS = {
 EXTENSION_HOLDERS = {
     "wazo.user": "à l'utilisateur Wazo « %s »",
     "wazo.ring.group": "au groupe d'appel « %s »",
+    "wazo.queue": "à la file d'attente « %s »",
+    "wazo.conference": "à la salle de conférence « %s »",
+    "wazo.parking": "au parc de stationnement « %s »",
 }
 
 
@@ -212,6 +215,27 @@ class WazoExtensionMixin(models.AbstractModel):
         proprietaires = self._line_owners(client)
         return next((proprietaires[ligne] for ligne in lignes if ligne in proprietaires), "")
 
+    def _adopt_remote_orphan(self, client):
+        """Reprend une ressource restée seule côté Wazo après un rollback.
+
+        Le rollback Odoo efface l'id distant conservé, pas la ressource :
+        à la reprise, chaque modèle peut ici retrouver la sienne par son
+        nom et réadopter poste et objet. No-op par défaut.
+        """
+        return False
+
+    def _own_extension_owner_ids(self):
+        """Ids distants des objets de CE record, par type de pièce jointe.
+
+        Un échec de synchronisation laisse la ressource distante orpheline
+        (le rollback Odoo efface l'id local) : à la reprise, le contrôle du
+        poste voit l'extension « attachée à un objet » — le sien. Chaque
+        modèle avec poste surcharge ce crochet pour dire lesquels sont à
+        lui : la pièce jointe reconnue n'est plus un refus, elle ouvre la
+        reprise. Vide par défaut : les modèles sans objet distant.
+        """
+        return {}
+
     def _check_extension_allowed(self, client, context, existing):
         """Refuse un poste hors plage, réservé à un autre type, ou déjà pris.
 
@@ -234,13 +258,25 @@ class WazoExtensionMixin(models.AbstractModel):
         pas de règle à faire respecter et on laisse passer — sinon le module
         deviendrait inutilisable sur un PBX sans plages.
         """
+        # Reprendre d'abord l'orphelin d'une tentative échouée : sans lui,
+        # le contrôle refuserait la ressource... la sienne.
+        if self.wazo_state == "error":
+            self._adopt_remote_orphan(client)
         if existing is not None:
+            # Ids distants de CE record : une pièce jointe à soi n'est pas
+            # un squattage, c'est une reprise (mesuré : « appartient déjà à
+            # une file » — la sienne, laissée orpheline par un rollback).
+            siens = {
+                str(v) for v in self._own_extension_owner_ids().values() if v
+            }
             # 1. Rattaché à un objet (autre type, ou le même) : refus net et
             #    précis. Les libellés sont ceux de la ressource, donc justes
             #    pour les deux modèles.
             for cle, libelle in OTHER_TYPE_LABELS.items():
                 if existing.get(cle):
                     objet = existing.get(cle) or {}
+                    if str(objet.get("id") or objet.get("uuid") or "") in siens:
+                        continue
                     nom = objet.get("label") or objet.get("name") or ""
                     raise UserError(
                         self.env._(
@@ -311,9 +347,14 @@ class WazoExtensionMixin(models.AbstractModel):
                         )
                     )
 
-            # 2. Dans la plage de son propre type ?
+            # 2. Dans la plage de son propre type ? Seulement si Wazo
+            #    sait déclarer une plage pour ce type : un parc de
+            #    stationnement n'a pas de plage côté Wazo (mesuré : refus
+            #    abusif « n'est dans aucune plage » sinon).
             plages_type = declarees.get(self._extension_type) or []
-            if not in_ranges(self.extension, plages_type):
+            if self._extension_type in declarees and not in_ranges(
+                self.extension, plages_type
+            ):
                 raise UserError(
                     self.env._(
                         "Le poste %(poste)s n'est dans aucune plage déclarée pour les "

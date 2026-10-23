@@ -25,6 +25,36 @@
         action="action_wazo_extension_inventory"
     />
     <menuitem
+        id="menu_wazo_queues"
+        name="Files d'attente"
+        parent="menu_wazo_root"
+        action="action_wazo_queue"
+    />
+    <menuitem
+        id="menu_wazo_conferences"
+        name="Conférences"
+        parent="menu_wazo_root"
+        action="action_wazo_conference"
+    />
+    <menuitem
+        id="menu_wazo_ivrs"
+        name="Menus vocaux"
+        parent="menu_wazo_root"
+        action="action_wazo_ivr"
+    />
+    <menuitem
+        id="menu_wazo_voicemails"
+        name="Messageries vocales"
+        parent="menu_wazo_root"
+        action="action_wazo_voicemail"
+    />
+    <menuitem
+        id="menu_wazo_parkings"
+        name="Stationnement"
+        parent="menu_wazo_root"
+        action="action_wazo_parking"
+    />
+    <menuitem
         id="menu_wazo_cdrs"
         name="Journal d'appels"
         parent="menu_wazo_root"

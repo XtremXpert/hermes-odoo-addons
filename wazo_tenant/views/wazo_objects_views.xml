@@ -1,0 +1,293 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <!--
+        Files, conférences, IVR, messageries autonomes, parcs : vues
+        compactes sur le même patron que les groupes d'appel — en-tête
+        de cycle (synchroniser / réessayer / retirer), état, message.
+    -->
+
+    <!-- ════════ Files d'attente ════════ -->
+
+    <record id="action_wazo_queue" model="ir.actions.act_window">
+        <field name="name">Files d'attente</field>
+        <field name="res_model">wazo.queue</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="wazo_queue_view_list" model="ir.ui.view">
+        <field name="name">wazo.queue.list</field>
+        <field name="model">wazo.queue</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name" />
+                <field name="extension" />
+                <field name="member_count" string="Membres" />
+                <field name="wazo_state" widget="badge"
+                       decoration-success="wazo_state == 'synced'"
+                       decoration-danger="wazo_state == 'error'" />
+            </list>
+        </field>
+    </record>
+
+    <record id="wazo_queue_view_form" model="ir.ui.view">
+        <field name="name">wazo.queue.form</field>
+        <field name="model">wazo.queue</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_sync_wazo" type="object" string="Synchroniser"
+                            class="btn-primary" invisible="wazo_state == 'synced'" />
+                    <button name="action_retry_sync" type="object" string="Réessayer"
+                            invisible="wazo_state != 'error'" />
+                    <button name="action_delete_wazo" type="object" string="Retirer de Wazo"
+                            invisible="wazo_state == 'new'"
+                            confirm="Retirer la file et son poste de Wazo ?" />
+                    <field name="wazo_state" widget="statusbar" />
+                </header>
+                <sheet>
+                    <div class="oe_title"><h1><field name="name" /></h1></div>
+                    <group>
+                        <group>
+                            <field name="extension" />
+                            <field name="member_ids" widget="many2many_tags" />
+                        </group>
+                        <group>
+                            <field name="error_message" readonly="1"
+                                   invisible="not error_message" />
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ════════ Conférences ════════ -->
+
+    <record id="action_wazo_conference" model="ir.actions.act_window">
+        <field name="name">Conférences</field>
+        <field name="res_model">wazo.conference</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="wazo_conference_view_list" model="ir.ui.view">
+        <field name="name">wazo.conference.list</field>
+        <field name="model">wazo.conference</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name" />
+                <field name="extension" />
+                <field name="max_users" string="Plafond" />
+                <field name="wazo_state" widget="badge"
+                       decoration-success="wazo_state == 'synced'"
+                       decoration-danger="wazo_state == 'error'" />
+            </list>
+        </field>
+    </record>
+
+    <record id="wazo_conference_view_form" model="ir.ui.view">
+        <field name="name">wazo.conference.form</field>
+        <field name="model">wazo.conference</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_sync_wazo" type="object" string="Synchroniser"
+                            class="btn-primary" invisible="wazo_state == 'synced'" />
+                    <button name="action_retry_sync" type="object" string="Réessayer"
+                            invisible="wazo_state != 'error'" />
+                    <button name="action_delete_wazo" type="object" string="Retirer de Wazo"
+                            invisible="wazo_state == 'new'"
+                            confirm="Retirer la salle et son poste de Wazo ?" />
+                    <field name="wazo_state" widget="statusbar" />
+                </header>
+                <sheet>
+                    <div class="oe_title"><h1><field name="name" /></h1></div>
+                    <group>
+                        <group>
+                            <field name="extension" />
+                            <field name="max_users" />
+                        </group>
+                        <group>
+                            <field name="pin" password="True" />
+                            <field name="admin_pin" password="True" />
+                            <field name="error_message" readonly="1"
+                                   invisible="not error_message" />
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ════════ Menus vocaux (IVR) ════════ -->
+
+    <record id="action_wazo_ivr" model="ir.actions.act_window">
+        <field name="name">Menus vocaux</field>
+        <field name="res_model">wazo.ivr</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="wazo_ivr_view_list" model="ir.ui.view">
+        <field name="name">wazo.ivr.list</field>
+        <field name="model">wazo.ivr</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name" />
+                <field name="timeout" string="Délai (s)" />
+                <field name="wazo_state" widget="badge"
+                       decoration-success="wazo_state == 'synced'"
+                       decoration-danger="wazo_state == 'error'" />
+            </list>
+        </field>
+    </record>
+
+    <record id="wazo_ivr_view_form" model="ir.ui.view">
+        <field name="name">wazo.ivr.form</field>
+        <field name="model">wazo.ivr</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_sync_wazo" type="object" string="Synchroniser"
+                            class="btn-primary" invisible="wazo_state == 'synced'" />
+                    <button name="action_retry_sync" type="object" string="Réessayer"
+                            invisible="wazo_state != 'error'" />
+                    <button name="action_delete_wazo" type="object" string="Retirer de Wazo"
+                            invisible="wazo_state == 'new'"
+                            confirm="Retirer le menu vocal de Wazo ?" />
+                    <field name="wazo_state" widget="statusbar" />
+                </header>
+                <sheet>
+                    <div class="oe_title"><h1><field name="name" /></h1></div>
+                    <group>
+                        <group>
+                            <field name="menu_sound" />
+                            <field name="timeout" />
+                            <field name="max_tries" />
+                        </group>
+                        <group>
+                            <field name="error_message" readonly="1"
+                                   invisible="not error_message" />
+                        </group>
+                    </group>
+                    <div class="text-muted">
+                        Le menu se rejoint par un renvoi entrant : routez un
+                        DID vers ce menu (module wazo_voipms) ou bâtissez ses
+                        choix dans l'interface Wazo.
+                    </div>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ════════ Messageries vocales autonomes ════════ -->
+
+    <record id="action_wazo_voicemail" model="ir.actions.act_window">
+        <field name="name">Messageries vocales</field>
+        <field name="res_model">wazo.voicemail</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="wazo_voicemail_view_list" model="ir.ui.view">
+        <field name="name">wazo.voicemail.list</field>
+        <field name="model">wazo.voicemail</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name" />
+                <field name="number" />
+                <field name="language" />
+                <field name="wazo_state" widget="badge"
+                       decoration-success="wazo_state == 'synced'"
+                       decoration-danger="wazo_state == 'error'" />
+            </list>
+        </field>
+    </record>
+
+    <record id="wazo_voicemail_view_form" model="ir.ui.view">
+        <field name="name">wazo.voicemail.form</field>
+        <field name="model">wazo.voicemail</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_sync_wazo" type="object" string="Synchroniser"
+                            class="btn-primary" invisible="wazo_state == 'synced'" />
+                    <button name="action_retry_sync" type="object" string="Réessayer"
+                            invisible="wazo_state != 'error'" />
+                    <button name="action_delete_wazo" type="object" string="Retirer de Wazo"
+                            invisible="wazo_state == 'new'"
+                            confirm="Retirer la messagerie de Wazo ?" />
+                    <field name="wazo_state" widget="statusbar" />
+                </header>
+                <sheet>
+                    <div class="oe_title"><h1><field name="name" /></h1></div>
+                    <group>
+                        <group>
+                            <field name="number" />
+                            <field name="language" />
+                        </group>
+                        <group>
+                            <field name="error_message" readonly="1"
+                                   invisible="not error_message" />
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ════════ Parcs de stationnement ════════ -->
+
+    <record id="action_wazo_parking" model="ir.actions.act_window">
+        <field name="name">Stationnement</field>
+        <field name="res_model">wazo.parking</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="wazo_parking_view_list" model="ir.ui.view">
+        <field name="name">wazo.parking.list</field>
+        <field name="model">wazo.parking</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name" />
+                <field name="extension" string="Poste" />
+                <field name="slots_start" string="Créneaux" />
+                <field name="slots_end" string="à" />
+                <field name="wazo_state" widget="badge"
+                       decoration-success="wazo_state == 'synced'"
+                       decoration-danger="wazo_state == 'error'" />
+            </list>
+        </field>
+    </record>
+
+    <record id="wazo_parking_view_form" model="ir.ui.view">
+        <field name="name">wazo.parking.form</field>
+        <field name="model">wazo.parking</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_sync_wazo" type="object" string="Synchroniser"
+                            class="btn-primary" invisible="wazo_state == 'synced'" />
+                    <button name="action_retry_sync" type="object" string="Réessayer"
+                            invisible="wazo_state != 'error'" />
+                    <button name="action_delete_wazo" type="object" string="Retirer de Wazo"
+                            invisible="wazo_state == 'new'"
+                            confirm="Retirer le parc et son poste de Wazo ?" />
+                    <field name="wazo_state" widget="statusbar" />
+                </header>
+                <sheet>
+                    <div class="oe_title"><h1><field name="name" /></h1></div>
+                    <group>
+                        <group>
+                            <field name="extension" />
+                            <field name="slots_start" />
+                            <field name="slots_end" />
+                        </group>
+                        <group>
+                            <field name="park_timeout" />
+                            <field name="error_message" readonly="1"
+                                   invisible="not error_message" />
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+</odoo>

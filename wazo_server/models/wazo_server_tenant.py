@@ -129,6 +129,10 @@ class WazoServerTenant(models.Model):
     user_range_end = fields.Char(string="Postes — fin", default="1999")
     group_range_start = fields.Char(string="Groupes — début", default="2000")
     group_range_end = fields.Char(string="Groupes — fin", default="2099")
+    queue_range_start = fields.Char(string="Files — début", default="3000")
+    queue_range_end = fields.Char(string="Files — fin", default="3099")
+    conference_range_start = fields.Char(string="Conférences — début", default="4000")
+    conference_range_end = fields.Char(string="Conférences — fin", default="4099")
 
     admin_username = fields.Char(string="Administrateur du tenant", default="odoo_admin")
     admin_user_uuid = fields.Char(string="UUID administrateur", readonly=True, copy=False)
@@ -516,6 +520,15 @@ class WazoServerTenant(models.Model):
                             ],
                             "group_ranges": [
                                 {"start": self.group_range_start, "end": self.group_range_end}
+                            ],
+                            "queue_ranges": [
+                                {"start": self.queue_range_start, "end": self.queue_range_end}
+                            ],
+                            "conference_room_ranges": [
+                                {
+                                    "start": self.conference_range_start,
+                                    "end": self.conference_range_end,
+                                }
                             ],
                         },
                     )
