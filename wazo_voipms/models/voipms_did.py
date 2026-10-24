@@ -41,6 +41,13 @@ class VoIPMSDid(models.Model):
         default="none",
     )
     wazo_user_id = fields.Many2one("wazo.user", string="Utilisateur Wazo")
+    #: Appartenance : rempli au routage depuis le trunk (le tenant
+    #: propriétaire). Chaque Odoo de tenant ne route que ses DIDs ;
+    #: maison les voit tous (menu Serveur Wazo → DIDs).
+    tenant_slug = fields.Char(
+        string="Slug du tenant propriétaire",
+        readonly=True, copy=False,
+    )
     trunk_id = fields.Many2one(
         "wazo.voipms.trunk",
         string="Trunk porteur de l'entrant",
@@ -241,6 +248,9 @@ class VoIPMSDid(models.Model):
     # ------------------------------------------------------------------
 
     def action_route_to_wazo(self):
+        """Stampe l'appartenance : le DID prend le slug de son trunk."""
+        if self.trunk_id and self.trunk_id.tenant_slug:
+            self.sudo().write({"tenant_slug": self.trunk_id.tenant_slug})
         """Crée l'incall Wazo puis bascule le routage VoIP.ms en sip:.
 
         L'ordre est choisi pour ne jamais laisser le DID sans destination :

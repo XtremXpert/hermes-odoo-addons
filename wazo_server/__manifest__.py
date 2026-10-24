@@ -17,6 +17,7 @@
         "views/wazo_tenant_selection_views.xml",
         "views/wazo_server_menus.xml",
         "views/wazo_server_dashboard_views.xml",
+        "views/server_dids_views.xml",
     ],
     "assets": {
         "web.assets_backend": [

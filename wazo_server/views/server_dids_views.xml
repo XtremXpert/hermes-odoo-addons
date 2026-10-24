@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <!-- Le serveur voit TOUS les DIDs du compte VoIP.ms, leur
+         appartenance (slug du tenant) et leur routage — chaque Odoo
+         de tenant ne configure que les siens. -->
+    <record id="action_server_all_dids" model="ir.actions.act_window">
+        <field name="name">DIDs (tous)</field>
+        <field name="res_model">voipms.did</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="server_dids_view_list" model="ir.ui.view">
+        <field name="name">voipms.did.list.server</field>
+        <field name="model">voipms.did</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="tenant_slug" string="Tenant" />
+                <field name="number" />
+                <field name="wazo_route_state" widget="badge"
+                       decoration-success="wazo_route_state == 'routed'"
+                       decoration-danger="wazo_route_state == 'error'" />
+                <field name="trunk_id" />
+                <field name="wazo_user_id" />
+            </list>
+        </field>
+    </record>
+
+    <menuitem
+        id="menu_server_dids"
+        name="DIDs (tous)"
+        parent="menu_wazo_server_root"
+        action="action_server_all_dids"
+        sequence="30"
+    />
+</odoo>

@@ -80,6 +80,15 @@ class WazoVoipmsTrunk(models.Model):
     # « protocol » à la création, 1 = SIP, 3 = IAX2) : le choix fait ici
     # décide de la jambe Wazo <-> VoIP.ms — les usagers restent en
     # WebRTC/SIP vers le Wazo dans tous les cas.
+    #: Le tenant propriétaire du trunk — et des DIDs qu'il porte.
+    #: Maison (le serveur) voit tout ; l'Odoo d'un tenant ne route
+    #: que les siens (mesuré : le design voulu — chaque DID se règle
+    #: dans l'Odoo de SON tenant).
+    tenant_slug = fields.Char(
+        string="Slug du tenant propriétaire",
+        help="Le DID routé par ce trunk appartient à ce tenant : son "
+        "Odoo le configure, maison (le serveur) le voit.",
+    )
     protocol = fields.Selection(
         selection=[
             ("sip", "SIP"),
