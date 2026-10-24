@@ -79,12 +79,22 @@
                         </group>
                         <group string="Contexte et plages">
                             <field name="context_name" />
-                            <field name="remote_context_name" />
-                            <field name="context_id" />
-                            <field name="user_range_start" />
-                            <field name="user_range_end" />
-                            <field name="group_range_start" />
-                            <field name="group_range_end" />
+                            <field name="remote_context_name" readonly="1" />
+                            <field name="context_id" readonly="1" />
+                            <!-- Plages : configurables à la création seulement.
+                                 Laissées aux valeurs par défaut, le
+                                 provisionnement alloue le prochain bloc de
+                                 mille libre — un bloc par tenant (mesuré :
+                                 les plages qui se chevauchent refusent le
+                                 poste de l'un chez l'autre). -->
+                            <field name="user_range_start" readonly="state != 'new'" />
+                            <field name="user_range_end" readonly="state != 'new'" />
+                            <field name="group_range_start" readonly="state != 'new'" />
+                            <field name="group_range_end" readonly="state != 'new'" />
+                            <field name="queue_range_start" readonly="state != 'new'" />
+                            <field name="queue_range_end" readonly="state != 'new'" />
+                            <field name="conference_range_start" readonly="state != 'new'" />
+                            <field name="conference_range_end" readonly="state != 'new'" />
                         </group>
                     </group>
                     <group
