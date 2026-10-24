@@ -97,6 +97,13 @@ class WazoRingGroup(models.Model):
         default="new",
         required=True,
     )
+    #: Id NUMÉRIQUE du groupe côté Wazo — mesuré : les destinations
+    #: d'incall l'exigent (« group_id: Not a valid integer » pour un
+    #: UUID), alors que les associations (membres, extensions) parlent
+    #: en UUID. Les deux vivent sur la fiche.
+    remote_group_numeric_id = fields.Integer(
+        string="ID numérique groupe Wazo", readonly=True, copy=False
+    )
     remote_group_id = fields.Char(
         string="UUID groupe Wazo",
         help="UUID du groupe côté Wazo — c'est lui qui sert aux associations (extension, membres).",
@@ -225,7 +232,10 @@ class WazoRingGroup(models.Model):
                 # L'uuid est consigné **tout de suite**. Si la suite échoue, la
                 # ressource déjà créée reste connue — donc supprimable et
                 # reprenable. Sinon elle vivrait au PBX sans trace dans Odoo.
-                self.sudo().write({"remote_group_id": groupe.get("uuid")})
+                self.sudo().write({
+                        "remote_group_id": groupe.get("uuid"),
+                        "remote_group_numeric_id": groupe.get("id"),
+                    })
                 # 2. L'extension ensuite : elle doit exister avant d'être
                 #    associée.
                 extension = client.conf(
@@ -244,7 +254,10 @@ class WazoRingGroup(models.Model):
                     groupe = client.conf("POST", "/groups", body=self._group_body())
                     # Consigné tout de suite, pour la même raison qu'à la
                     # création neuve.
-                    self.sudo().write({"remote_group_id": groupe.get("uuid")})
+                    self.sudo().write({
+                        "remote_group_id": groupe.get("uuid"),
+                        "remote_group_numeric_id": groupe.get("id"),
+                    })
                     client.conf(
                         "PUT", "/groups/%s/extensions/%s" % (groupe["uuid"], extension["id"])
                     )

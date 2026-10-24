@@ -142,7 +142,9 @@ class VoIPMSDid(models.Model):
                 )
             return {
                 "type": "group",
-                "group_id": self.wazo_ring_group_id.remote_group_id,
+                # Mesuré : confd exige l'id NUMÉRIQUE du groupe pour un
+                # incall — l'UUID est refusé (« Not a valid integer »).
+                "group_id": self.wazo_ring_group_id.remote_group_numeric_id,
             }
         # Destinations objets : chaque id distant, avec le refus net si
         # la cible n'est pas synchronisée.
