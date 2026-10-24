@@ -296,7 +296,7 @@ export class WazoSoftphoneService {
             const config = await this.orm.call(
                 "res.users",
                 "get_wazo_softphone_config",
-                [this.env.user.userId]
+                [[]]
             );
             this.config = config || null;
             return this.config;
@@ -525,7 +525,7 @@ export class WazoSoftphoneService {
     async loadCallLog(limit = 50) {
         try {
             const entries = await this.orm.call("res.users", "get_wazo_call_log", [
-                this.env.user.userId,
+                [],
                 limit,
             ]);
             this.callLog = proxy(entries || []);
@@ -762,7 +762,7 @@ export class WazoSoftphoneService {
     _notifyIncomingToBackend(info) {
         this.orm
             .call("res.users", "notify_wazo_incoming_call", [
-                this.env.user.userId,
+                [],
                 {num: info.from, name: info.name || ""},
             ])
             .catch(() => {});
@@ -786,7 +786,7 @@ export class WazoSoftphoneService {
         }
         try {
             const result = await this.orm.call("res.users", "finalize_wazo_call", [
-                this.env.user.userId,
+                [],
                 payload,
             ]);
             if (result && result.partner_name && !result.missed) {
