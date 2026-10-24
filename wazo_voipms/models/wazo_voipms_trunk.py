@@ -122,9 +122,26 @@ class WazoVoipmsTrunk(models.Model):
     # ------------------------------------------------------------------
 
     def _wazo_client(self):
-        return self.env["wazo.user"]._wazo_client()
+        """Client scoped to THIS trunk's tenant, not the global parameter.
+
+        The server instance (maison) routes trunks that live in different
+        tenants: the ``Wazo-Tenant`` header must follow ``tenant_slug``,
+        resolved through ``wazo.server.tenant`` when that module is around
+        (it is not on tenant instances — the global param already fits).
+        """
+        from odoo.addons.wazo_tenant.services.wazo_client import WazoClient
+
+        return WazoClient(self.env, tenant_id=self._wazo_tenant_uuid())
 
     def _wazo_tenant_uuid(self):
+        if self.tenant_slug:
+            Tenant = self.env.get("wazo.server.tenant")
+            if Tenant is not None:
+                tenant = Tenant.sudo().search(
+                    [("slug", "=", self.tenant_slug)], limit=1
+                )
+                if tenant and tenant.remote_uuid:
+                    return tenant.remote_uuid
         return self.env["wazo.user"]._wazo_tenant_uuid()
 
     def _outcall_context(self):

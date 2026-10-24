@@ -114,6 +114,9 @@ class VoIPMSDid(models.Model):
                 )
 
     def _wazo_client(self):
+        """Route through the tenant that owns the trunk, not the global param."""
+        if self.trunk_id:
+            return self.trunk_id._wazo_client()
         return self.env["wazo.user"]._wazo_client()
 
     def _wazo_public_host(self):
