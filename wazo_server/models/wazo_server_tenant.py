@@ -463,6 +463,50 @@ class WazoServerTenant(models.Model):
     # Création
     # ------------------------------------------------------------------
 
+    #: Étendue d'un bloc alloué à un tenant — mille extensions.
+    _BLOC = 1000
+
+    def _plages_defaut(self):
+        """Les plages sont-elles encore aux valeurs du modèle ?"""
+        return (
+            self.user_range_start == "1000"
+            and self.user_range_end == "1999"
+            and self.group_range_start == "2000"
+            and self.queue_range_start == "3000"
+        )
+
+    def _allouer_bloc(self):
+        """Réserve un bloc d'extensions par tenant — jamais les mêmes.
+
+        Mesuré : les plages par défaut se chevauchent d'un tenant à
+        l'autre, et le poste 1000 de l'un refuse celui de l'autre côté
+        Odoo — un poste doit désigner une seule personne. Le bloc de
+        mille se découpe en quatre plages : usagers (700), groupes
+        (100), files (100), conférences (100).
+        """
+        debut = 1000
+        for t in self.search([]):
+            if t.id == self.id or t.state != "created":
+                continue
+            for fin in (t.user_range_end, t.group_range_end,
+                        t.queue_range_end, t.conference_range_end):
+                try:
+                    debut = max(debut, int(fin or 0) + 1)
+                except ValueError:
+                    continue
+        debut = ((debut + self._BLOC - 1) // self._BLOC) * self._BLOC
+        fin = debut + self._BLOC - 1
+        self.write({
+            "user_range_start": str(debut),
+            "user_range_end": str(debut + 699),
+            "group_range_start": str(debut + 700),
+            "group_range_end": str(debut + 799),
+            "queue_range_start": str(debut + 800),
+            "queue_range_end": str(debut + 899),
+            "conference_range_start": str(debut + 900),
+            "conference_range_end": str(fin),
+        })
+
     def action_create_on_wazo(self):
         """Crée le tenant de bout en bout : tenant, contexte, accès, jeton.
 
@@ -473,6 +517,11 @@ class WazoServerTenant(models.Model):
         supprimer proprement ce qui existe.
         """
         self.ensure_one()
+        # Plages réservées par tenant : allouer le prochain bloc libre
+        # AVANT de créer le contexte — les défauts se chevauchent
+        # d'un tenant à l'autre (mesuré).
+        if self._plages_defaut():
+            self._allouer_bloc()
         if self.state == "created":
             raise UserError(
                 self.env._(

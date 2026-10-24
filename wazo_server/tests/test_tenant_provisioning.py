@@ -196,8 +196,10 @@ class TestTenantCreation(WazoServerTestBase):
             tenant.action_create_on_wazo()
         appel = self._appel(appels, "confd", "POST", "/contexts")
         self.assertEqual(appel[3]["label"], "ctx-alpha-internal")
-        self.assertEqual(appel[3]["user_ranges"], [{"start": "1000", "end": "1999"}])
-        self.assertEqual(appel[3]["group_ranges"], [{"start": "2000", "end": "2099"}])
+        # Bloc alloué : le premier tenant reçoit le bloc 1000 — usagers
+        # 1000-1699, groupes 1700-1799 (le schéma un-bloc-par-tenant).
+        self.assertEqual(appel[3]["user_ranges"], [{"start": "1000", "end": "1699"}])
+        self.assertEqual(appel[3]["group_ranges"], [{"start": "1700", "end": "1799"}])
         self.assertEqual(appel[4], NOUVEAU)
 
     def test_admin_user_is_created_inside_the_tenant(self):
