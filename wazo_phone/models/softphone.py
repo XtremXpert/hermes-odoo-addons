@@ -180,8 +180,11 @@ class ResUsersWazoSoftphone(models.Model):
 
         Retourne le dictionnaire de ``wazo.user.get_softphone_config`` (ou
         ``{}`` si l'utilisateur n'a pas d'utilisateur Wazo synchronisé).
+
+        Le frontend appelle la méthode sur ``res.users`` (recordset vide) :
+        ``env.user`` reprend alors la main, sinon ``ensure_one`` explose.
         """
-        self.ensure_one()
+        self = self or self.env.user
         wiz = self.wazo_user_id
         return wiz.get_softphone_config() if wiz else {}
 
@@ -192,8 +195,10 @@ class ResUsersWazoSoftphone(models.Model):
         destination est l'extension Wazo de l'utilisateur. Retourne une
         liste de dictionnaires (bornée par ``limit``) ; chaque entrée
         porte l'autre partie de l'appel (numéro, nom, contact identifié).
+
+        Même appel sur recordset vide que ``get_wazo_softphone_config``.
         """
-        self.ensure_one()
+        self = self or self.env.user
         wiz = self.wazo_user_id
         if not wiz or not wiz.extension:
             return []
