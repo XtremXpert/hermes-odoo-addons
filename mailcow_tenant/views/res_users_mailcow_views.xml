@@ -6,11 +6,11 @@
         <field name="model">res.users</field>
         <field name="inherit_id" ref="base.view_users_form" />
         <field name="arch" type="xml">
-            <xpath expr="//div[hasclass('oe_title')]" position="after">
-                <div class="oe_button_box" groups="voipms_sms.group_voipms_manager">
-                    <button name="action_create_mailcow_mailbox" type="object"
-                            string="Créer la boîte Mailcow" class="btn-primary" />
-                </div>
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_create_mailcow_mailbox" type="object"
+                        string="Créer la boîte Mailcow" class="oe_stat_button"
+                        icon="envelope"
+                        groups="mailcow_tenant.group_mailcow_manager" />
             </xpath>
         </field>
     </record>
