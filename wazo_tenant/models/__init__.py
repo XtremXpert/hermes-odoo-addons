@@ -11,3 +11,5 @@ from . import wazo_voicemail
 from . import wazo_parking
 from . import wazo_cdr
 from . import wazo_tenant_dashboard
+
+from . import res_users_account

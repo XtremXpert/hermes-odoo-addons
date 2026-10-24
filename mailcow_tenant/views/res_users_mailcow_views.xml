@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <!-- "Create Mailcow mailbox" button on the user form. -->
+    <record id="res_users_view_form_mailcow_account" model="ir.ui.view">
+        <field name="name">res.users.form.mailcow.account</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="base.view_users_form" />
+        <field name="arch" type="xml">
+            <xpath expr="//div[hasclass('oe_title')]" position="after">
+                <div class="oe_button_box" groups="voipms_sms.group_voipms_manager">
+                    <button name="action_create_mailcow_mailbox" type="object"
+                            string="Créer la boîte Mailcow" class="btn-primary" />
+                </div>
+            </xpath>
+        </field>
+    </record>
+</odoo>

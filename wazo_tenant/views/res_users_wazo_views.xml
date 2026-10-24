@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <!-- "Create Wazo account" button on the user form. -->
+    <record id="res_users_view_form_wazo_account" model="ir.ui.view">
+        <field name="name">res.users.form.wazo.account</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="base.view_users_form" />
+        <field name="arch" type="xml">
+            <xpath expr="//div[hasclass('oe_title')]" position="after">
+                <div class="oe_button_box" groups="wazo_tenant.group_wazo_manager">
+                    <button name="action_create_wazo_account" type="object"
+                            string="Créer le compte Wazo" class="btn-primary"
+                            invisible="wazo_user_id" />
+                    <field name="wazo_user_id" invisible="1" />
+                </div>
+            </xpath>
+        </field>
+    </record>
+</odoo>

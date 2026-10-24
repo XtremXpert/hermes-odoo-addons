@@ -1,3 +1,4 @@
 id,name,model_id,group_id/id,operation,domain
 access_wazo_voipms_trunk_user,wazo.voipms.trunk user,wazo.voipms.trunk,wazo_tenant.group_wazo_user,r,
 access_wazo_voipms_trunk_manager,wazo.voipms.trunk manager,wazo.voipms.trunk,wazo_tenant.group_wazo_manager,crud,
+access_wazo_setup_wizard_manager,wazo.setup.wizard manager,wazo.setup.wizard,wazo_tenant.group_wazo_manager,crud,

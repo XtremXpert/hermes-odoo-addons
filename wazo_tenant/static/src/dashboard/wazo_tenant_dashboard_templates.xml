@@ -21,6 +21,21 @@
                 Chargement…
             </div>
 
+            <!-- Empty state: the first-setup wizard. -->
+            <div t-if="this.onboarding and this.onboarding.needed"
+                 class="alert alert-info d-flex align-items-center justify-content-between mb-4">
+                <div>
+                    <h5 class="mb-1">La téléphonie n'est pas encore configurée.</h5>
+                    <div class="text-muted">
+                        L'assistant crée le premier trunk, le premier usager
+                        et le premier groupe d'appel — guidé, étape par étape.
+                    </div>
+                </div>
+                <button
+                    class="btn btn-primary"
+                    t-on-click="() => this.openWizard()"
+                >Démarrer l'assistant</button>
+            </div>
             <t t-else="">
                 <!-- ── Cartes d'indicateurs ─────────────────────────────── -->
                 <div class="row g-3 mb-4">

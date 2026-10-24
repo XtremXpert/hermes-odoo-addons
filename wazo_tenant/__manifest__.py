@@ -13,6 +13,7 @@
         "views/wazo_user_views.xml",
         "views/wazo_ring_group_views.xml",
         "views/wazo_objects_views.xml",
+        "views/res_users_wazo_views.xml",
         "wizards/wazo_context_inventory_views.xml",
         "views/wazo_cdr_views.xml",
         "views/res_config_settings_views.xml",

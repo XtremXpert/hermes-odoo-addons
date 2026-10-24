@@ -13,6 +13,7 @@
         "views/mailcow_mailbox_views.xml",
         "wizards/mailcow_app_password_wizard_views.xml",
         "views/mailcow_alias_views.xml",
+        "views/res_users_mailcow_views.xml",
         "views/res_config_settings_views.xml",
         "views/mailcow_menus.xml",
         "views/mailcow_sync_views.xml",

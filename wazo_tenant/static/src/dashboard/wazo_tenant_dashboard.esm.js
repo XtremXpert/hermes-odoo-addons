@@ -53,6 +53,15 @@ export class WazoTenantDashboard extends Component {
         return this.state.data?.groups || null;
     }
 
+    get onboarding() {
+        return this.state.data?.onboarding || null;
+    }
+
+    /** Open the first-setup wizard (wazo_voipms). */
+    async openWizard() {
+        this.action.doAction("wazo_voipms.action_wazo_setup_wizard");
+    }
+
     get calls() {
         return this.state.data?.calls || null;
     }

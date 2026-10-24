@@ -5,3 +5,5 @@ from . import mailcow_domain
 from . import mailcow_mailbox
 from . import mailcow_alias
 from . import res_config_settings
+
+from . import res_users_account

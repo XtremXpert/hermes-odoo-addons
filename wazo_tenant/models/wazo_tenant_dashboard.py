@@ -101,7 +101,17 @@ class WazoTenantDashboard(models.AbstractModel):
             for cdr in recents
         ]
 
+        # Nothing configured? Offer the first-setup wizard
+        # (wazo_voipms): first trunk, first user, first ring group — guided.
+        Trunk = self.env.get("wazo.voipms.trunk")
+        no_trunk = Trunk is None or not Trunk.search_count([])
+        onboarding = {
+            "needed": not users and not groups and no_trunk,
+            "action": "wazo_voipms.action_wazo_setup_wizard" if Trunk else False,
+        }
+
         return {
+            "onboarding": onboarding,
             "users": {
                 "items": user_items,
                 "total": len(users),
