@@ -872,7 +872,11 @@ export {STATES};
 const wazoSoftphoneService = {
     dependencies: ["orm", "notification", "bus_service"],
     start(env, services) {
-        return new WazoSoftphoneService(env, services);
+        const service = new WazoSoftphoneService(env, services);
+        // Eagerly fetch the per-user config so isConfigured is settled by
+        // the time any UI (systray, click-to-call) looks at it.
+        service.loadConfig();
+        return service;
     },
 };
 

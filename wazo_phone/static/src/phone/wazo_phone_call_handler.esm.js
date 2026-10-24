@@ -19,8 +19,9 @@ export const wazoPhoneCallHandler = {
      * @returns {Boolean}
      */
     isApplicable(env) {
-        const service = env.services.wazo_softphone;
-        return Boolean(service && service.isConfigured);
+        // The service alone decides: config may still be loading on first
+        // click, so execute() awaits it rather than being gated here.
+        return Boolean(env.services.wazo_softphone);
     },
 
     /**
@@ -34,6 +35,14 @@ export const wazoPhoneCallHandler = {
         const service = env.services.wazo_softphone;
         const number = cleanPhoneNumber(params.phoneNumber || "");
         if (!service || !number) {
+            return false;
+        }
+        if (!service.config) {
+            await service.loadConfig();
+        }
+        if (!service.isConfigured) {
+            // No Wazo account for this user: hand the call to the system
+            // ``tel:`` link as usual.
             return false;
         }
         service.showSoftphone();
