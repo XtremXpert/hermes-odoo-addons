@@ -298,10 +298,11 @@ class WazoVoipmsTrunk(models.Model):
         if client is not None:
             options.append(["context", self._resolve_incall_context(client)])
         return {
-            # Mesuré : VoIP.ms présente l'appel entrant comme
-            # l'utilisateur « voipms » — la section porte CE nom, et le
-            # secret du sous-compte fait l'authentification.
-            "name": "voipms",
+            # Un endpoint IAX par trunk : confd exige l'unicité du nom
+            # globalement (tous tenants) — le nom du sous-compte VoIP.ms
+            # est le seul libellé garanti unique par trunk. L'authentif-
+            # ication entrante se fait par secret + host, pas par nom.
+            "name": self.voipms_username,
             "type": "friend",
             "host": host,
             "options": options,
