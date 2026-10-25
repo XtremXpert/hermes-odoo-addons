@@ -27,11 +27,15 @@ est annulée par la suite : en cas d'erreur en cours de flux, le
 message d'erreur précise l'étape échouée.
 """
 
+import logging
+
 from odoo import fields
 from odoo import models
 from odoo.exceptions import UserError
 
 from ..services.wazo_client import WazoAPIError
+
+_logger = logging.getLogger(__name__)
 
 
 class WazoUser(models.Model):
@@ -220,6 +224,29 @@ class WazoUser(models.Model):
             )
             # 5. Associer l'utilisateur à la ligne (plugin ``user_line``).
             client.conf("PUT", "/users/%s/lines/%s" % (user["id"], line["id"]))
+            # L'endpoint PJSIP reçoit son nom d'AOR généré (ex. ``yoo0d0tp``) :
+            # l'enregistrement SIP identifie l'endpoint par l'URI du REGISTER
+            # **et** le digest par ``auth_section_options.username`` — les deux
+            # doivent être ce nom, sinon asterisk refuse le REGISTER.
+            try:
+                endpoint = client.conf(
+                    "GET", "/endpoints/sip/%s" % line["endpoint_sip"]["uuid"]
+                )
+                client.conf(
+                    "PUT",
+                    "/endpoints/sip/%s" % line["endpoint_sip"]["uuid"],
+                    body={
+                        "auth_section_options": [
+                            ["username", endpoint["name"]],
+                            ["password", sip_password],
+                        ],
+                    },
+                )
+            except (KeyError, TypeError, WazoAPIError):
+                _logger.warning(
+                    "wazo.user %s: impossible d'aligner l'auth SIP de l'endpoint",
+                    self.id,
+                )
             # 6-7. Messagerie vocale + association.
             voicemail = client.conf(
                 "POST",

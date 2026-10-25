@@ -876,6 +876,10 @@ const wazoSoftphoneService = {
         // Eagerly fetch the per-user config so isConfigured is settled by
         // the time any UI (systray, click-to-call) looks at it.
         service.loadConfig();
+        // Start the multi-tab arbiter right away: without it no tab ever
+        // becomes leader, shouldForward stays true, and callOut forwards
+        // commands into a channel nobody listens on.
+        service.connect();
         return service;
     },
 };
