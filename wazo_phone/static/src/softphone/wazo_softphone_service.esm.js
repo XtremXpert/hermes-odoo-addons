@@ -818,6 +818,34 @@ export class WazoSoftphoneService {
      *
      * @param {?Object} payload ``{num, name}``
      */
+    async mute() {
+        this.muted = await this._engineCmd("mute");
+    }
+
+    async unmute() {
+        this.muted = !(await this._engineCmd("unmute"));
+    }
+
+    /** Parque l'appel dans le lot parking du tenant (transfert vers son exten). */
+    async park() {
+        const lots = await this.orm.searchRead(
+            "wazo.parking", [], ["extension"], {limit: 1}
+        );
+        const target = lots.length && lots[0].extension ? lots[0].extension : "*70";
+        return this.transfer(target);
+    }
+
+    async _engineCmd(name) {
+        if (!this.engine || typeof this.engine[name] !== "function") {
+            return false;
+        }
+        try {
+            return await this.engine[name]();
+        } catch {
+            return false;
+        }
+    }
+
     /** Ferme le panneau post-appel. */
     dismissPostCall() {
         this.postCall = null;

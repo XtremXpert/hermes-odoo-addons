@@ -91,6 +91,23 @@
                         </button>
                     </form>
 
+                    <!-- Clavier : compose le numéro avant l'appel. -->
+                    <div
+                        t-if="!(this.isInCall or this.isOutbound or this.isRinging)"
+                        class="d-grid gap-1 mb-2"
+                        style="grid-template-columns: repeat(3, 1fr);"
+                    >
+                        <t t-foreach="this.dtmfKeys" t-as="key" t-key="key">
+                            <button
+                                type="button"
+                                class="btn btn-outline-secondary"
+                                t-on-click="() => this.onDialKey(key)"
+                            >
+                                <t t-out="key" />
+                            </button>
+                        </t>
+                    </div>
+
                     <!-- Contrôles d'appel. -->
                     <div class="d-flex gap-2 flex-wrap">
                         <button
@@ -120,6 +137,26 @@
                             />
                             <t t-if="this.isHeld">Reprendre</t>
                             <t t-else="">Mettre en attente</t>
+                        </button>
+                        <button
+                            t-if="this.isInCall"
+                            class="btn btn-secondary"
+                            t-on-click="this.onMuteToggle"
+                        >
+                            <i
+                                class="oi me-1"
+                                t-att-data-icon="this.service.muted ? 'mic_off' : 'mic'"
+                            />
+                            <t t-if="this.service.muted">Rétablir</t>
+                            <t t-else="">Muet</t>
+                        </button>
+                        <button
+                            t-if="this.isInCall"
+                            class="btn btn-info"
+                            t-on-click="this.onPark"
+                        >
+                            <i class="oi me-1" data-icon="local_parking" />
+                            Parquer
                         </button>
                     </div>
 

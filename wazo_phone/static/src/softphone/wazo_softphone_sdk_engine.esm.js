@@ -269,6 +269,15 @@ export class WazoSdkEngine {
      * @param {String} target
      * @returns {Promise<boolean>}
      */
+
+    async mute() {
+        return this._sessionCommand("mute");
+    }
+
+    async unmute() {
+        return this._sessionCommand("unmute");
+    }
+
     async transfer(target) {
         if (!this.client || !this.session || !target) {
             return false;

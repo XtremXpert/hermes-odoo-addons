@@ -202,6 +202,15 @@ export class SipJsEngine {
      * @param {String} target
      * @returns {Promise<boolean>}
      */
+
+    async mute() {
+        return this._sessionCommand("mute");
+    }
+
+    async unmute() {
+        return this._sessionCommand("unmute");
+    }
+
     async transfer(target) {
         const SIP = this.sip;
         const session = this.session;

@@ -136,6 +136,23 @@ export class WazoSoftphone extends Component {
         await this.service.hangup();
     }
 
+    /** Touche du clavier hors-appel : ajoute le chiffre au numéro. */
+    onDialKey(key) {
+        this.state.target = (this.state.target || "") + key;
+    }
+
+    async onMuteToggle() {
+        if (this.service.muted) {
+            await this.service.unmute();
+        } else {
+            await this.service.mute();
+        }
+    }
+
+    async onPark() {
+        await this.service.park();
+    }
+
     /** Note post-appel : la dépose sur la fiche du contact identifié. */
     async onPostCallSave(ev) {
         const postCall = this.service.postCall;
