@@ -488,24 +488,30 @@ class WazoServerTenant(models.Model):
         for t in self.search([]):
             if t.id == self.id or t.state != "created":
                 continue
-            for fin in (t.user_range_end, t.group_range_end,
-                        t.queue_range_end, t.conference_range_end):
+            for fin in (
+                t.user_range_end,
+                t.group_range_end,
+                t.queue_range_end,
+                t.conference_range_end,
+            ):
                 try:
                     debut = max(debut, int(fin or 0) + 1)
                 except ValueError:
                     continue
         debut = ((debut + self._BLOC - 1) // self._BLOC) * self._BLOC
         fin = debut + self._BLOC - 1
-        self.write({
-            "user_range_start": str(debut),
-            "user_range_end": str(debut + 699),
-            "group_range_start": str(debut + 700),
-            "group_range_end": str(debut + 799),
-            "queue_range_start": str(debut + 800),
-            "queue_range_end": str(debut + 899),
-            "conference_range_start": str(debut + 900),
-            "conference_range_end": str(fin),
-        })
+        self.write(
+            {
+                "user_range_start": str(debut),
+                "user_range_end": str(debut + 699),
+                "group_range_start": str(debut + 700),
+                "group_range_end": str(debut + 799),
+                "queue_range_start": str(debut + 800),
+                "queue_range_end": str(debut + 899),
+                "conference_range_start": str(debut + 900),
+                "conference_range_end": str(fin),
+            }
+        )
 
     def action_create_on_wazo(self):
         """Crée le tenant de bout en bout : tenant, contexte, accès, jeton.
@@ -564,6 +570,7 @@ class WazoServerTenant(models.Model):
                         "/contexts",
                         body={
                             "label": self.context_name,
+                            "type": "internal",
                             "user_ranges": [
                                 {"start": self.user_range_start, "end": self.user_range_end}
                             ],
@@ -585,6 +592,13 @@ class WazoServerTenant(models.Model):
                 )
             self.context_id = contexte.get("id") or 0
             self.remote_context_name = contexte.get("name") or self.context_name
+
+            # 2b. Les contextes téléphonie du tenant : `from-extern` (incall)
+            #     reçoit les DIDs, `to-extern` (outcall) porte les motifs de
+            #     sortie. Et le contexte interne **inclut** le sortant —
+            #     mesuré : sans lui un numéro externe ne matche rien et
+            #     l'INVITE meurt en 404 une seconde après le 100 Trying.
+            self._contextes_telephonie(client_tenant, contexte.get("id"))
 
             # 3. L'administrateur du tenant : créé **dans** le tenant (paramètre
             #    et en-tête), puis doté de la politique d'administration.
@@ -666,6 +680,42 @@ class WazoServerTenant(models.Model):
             if item.get("username") == self.admin_username:
                 return item
         return None
+
+    def _contextes_telephonie(self, client_tenant, contexte_interne_id):
+        """`from-extern` et `to-extern` existent, et l'interne les rejoint.
+
+        Les trunks/DIDs résolvent ces contextes par libellé à leur tour :
+        les créer ici évite que la première synchro téléphonie les rate.
+        L'inclusion du sortant par l'interne est **indispensable** au
+        routage externe — ``PUT /contexts/{id}/contexts`` remplace la
+        liste, les inclusions existantes sont donc relues avant.
+        """
+        reponse = client_tenant.conf("GET", "/contexts") or {}
+        items = reponse.get("items") or []
+        par_libelle = {item.get("label"): item for item in items}
+        interne = next((item for item in items if item.get("type") == "internal"), None)
+        sortant = par_libelle.get("to-extern")
+        if "from-extern" not in par_libelle:
+            client_tenant.conf("POST", "/contexts", body={"label": "from-extern", "type": "incall"})
+        if sortant is None:
+            sortant = (
+                client_tenant.conf(
+                    "POST", "/contexts", body={"label": "to-extern", "type": "outcall"}
+                )
+                or {}
+            )
+        interne_id = (interne or {}).get("id") or contexte_interne_id
+        if not interne_id or not sortant.get("id"):
+            return
+        detail = client_tenant.conf("GET", "/contexts/%s" % interne_id) or {}
+        inclus = [c["id"] for c in detail.get("contexts") or []]
+        if sortant["id"] in inclus:
+            return
+        client_tenant.conf(
+            "PUT",
+            "/contexts/%s/contexts" % interne_id,
+            body={"contexts": [{"id": i} for i in [*inclus, sortant["id"]]]},
+        )
 
     def _politique_admin(self, client):
         """UUID de la politique d'administration, résolu depuis son slug.

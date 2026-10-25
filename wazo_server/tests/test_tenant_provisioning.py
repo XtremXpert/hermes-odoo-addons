@@ -125,7 +125,11 @@ class WazoServerTestBase(TransactionCase):
                         "name": "ctx-alpha-internal-abcdef",
                         "label": body.get("label"),
                     }
-                if path == "/contexts/7" and method == "DELETE":
+                if path.startswith("/contexts/") and method == "GET":
+                    return {"id": int(path.rsplit("/", 1)[-1]), "contexts": []}
+                if path.startswith("/contexts/") and path.endswith("/contexts") and method == "PUT":
+                    return None
+                if path.startswith("/contexts/") and method == "DELETE":
                     return None
                 if path == "/users" and method == "GET":
                     return {
@@ -181,6 +185,11 @@ class TestTenantCreation(WazoServerTestBase):
                 ("auth", "GET", "/tenants"),  # la racine
                 ("auth", "POST", "/tenants"),  # le tenant
                 ("confd", "POST", "/contexts"),  # son contexte et ses plages
+                ("confd", "GET", "/contexts"),  # lecture pour les contextes tél.
+                ("confd", "POST", "/contexts"),  # from-extern
+                ("confd", "POST", "/contexts"),  # to-extern
+                ("confd", "GET", "/contexts/7"),  # inclusions actuelles
+                ("confd", "PUT", "/contexts/7/contexts"),  # interne→sortant
                 ("auth", "POST", "/users"),  # son administrateur
                 ("auth", "GET", "/policies"),  # la politique d'administration
                 ("auth", "PUT", "/users/%s/policies/%s" % (UTILISATEUR, POLITIQUE)),
@@ -372,8 +381,11 @@ class TestTenantResume(WazoServerTestBase):
         appels, _, repondre = self._faux_serveur(contextes_distants=[self.CONTEXTE_EXISTANT])
         with self._patch(repondre):
             self.assertTrue(tenant.action_create_on_wazo())
-        sequence = [(service, method, path) for service, method, path, _, _ in appels]
-        self.assertNotIn(("confd", "POST", "/contexts"), sequence)
+        creations = [
+            appel[3].get("label") for appel in appels
+            if appel[0] == "confd" and appel[1] == "POST" and appel[2] == "/contexts"
+        ]
+        self.assertNotIn("ctx-alpha-internal", creations)
         self.assertEqual(tenant.context_id, 9)
         self.assertEqual(tenant.remote_context_name, "ctx-alpha-internal-zzz")
 

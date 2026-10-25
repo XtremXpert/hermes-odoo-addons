@@ -56,8 +56,7 @@ class WazoVoipmsTrunk(models.Model):
     )
     caller_id = fields.Char(
         string="Indicatif d'appelant sortant",
-        help="Numéro présenté au RTC (E.164, ex. 14184803381). Doit être un "
-        "DID du compte VoIP.ms.",
+        help="Numéro présenté au RTC (E.164, ex. 14184803381). Doit être un DID du compte VoIP.ms.",
     )
     outbound_prefix = fields.Char(
         string="Préfixe de sortie",
@@ -113,9 +112,7 @@ class WazoVoipmsTrunk(models.Model):
     def _check_outbound_prefix(self):
         for trunk in self:
             if trunk.outbound_prefix and not re.fullmatch(r"[0-9]+", trunk.outbound_prefix):
-                raise ValidationError(
-                    self.env._("Le préfixe de sortie doit être numérique.")
-                )
+                raise ValidationError(self.env._("Le préfixe de sortie doit être numérique."))
 
     # ------------------------------------------------------------------
     # Côté Wazo
@@ -129,17 +126,19 @@ class WazoVoipmsTrunk(models.Model):
         resolved through ``wazo.server.tenant`` when that module is around
         (it is not on tenant instances — the global param already fits).
         """
-        from odoo.addons.wazo_tenant.services.wazo_client import WazoClient
+        # Import via le module du mixin — les tests y substituent
+        # ``WazoClient`` par leur faux serveur routé.
+        from odoo.addons.wazo_tenant.models import wazo_extension_mixin
 
-        return WazoClient(self.env, tenant_id=self._wazo_tenant_uuid())
+        return wazo_extension_mixin.WazoClient(
+            self.env, tenant_id=self._wazo_tenant_uuid()
+        )
 
     def _wazo_tenant_uuid(self):
         if self.tenant_slug:
             Tenant = self.env.get("wazo.server.tenant")
             if Tenant is not None:
-                tenant = Tenant.sudo().search(
-                    [("slug", "=", self.tenant_slug)], limit=1
-                )
+                tenant = Tenant.sudo().search([("slug", "=", self.tenant_slug)], limit=1)
                 if tenant and tenant.remote_uuid:
                     return tenant.remote_uuid
         return self.env["wazo.user"]._wazo_tenant_uuid()
@@ -163,9 +162,7 @@ class WazoVoipmsTrunk(models.Model):
                 if extension.get("id") == extension_id:
                     return outcall["id"]
         try:
-            outcall = client.conf(
-                "POST", "/outcalls", body={"name": "out-%s" % self.name}
-            )
+            outcall = client.conf("POST", "/outcalls", body={"name": "out-%s" % self.name})
         except WazoAPIError as error:
             # Reprise : un outcall orphelin d'une tentative échouée est
             # repris par son nom (« Outcall already exists » sinon —
@@ -192,11 +189,39 @@ class WazoVoipmsTrunk(models.Model):
         items = response.get("items") or [] if isinstance(response, dict) else []
         for item in items:
             if item.get("label") == self._outcall_context():
+                self._ensure_outcall_include(client, items, item["id"])
                 return item["name"]
         created = client.conf(
             "POST", "/contexts", body={"name": self._outcall_context(), "type": "outcall"}
         )
+        self._ensure_outcall_include(client, items, created["id"])
         return created["name"]
+
+    def _ensure_outcall_include(self, client, contexts, outcall_id):
+        """Le contexte interne du tenant inclut le contexte sortant.
+
+        Sans l'inclusion, un numéro externe ne matche aucun motif du
+        contexte interne et asterisk répond 404 après l'auth — mesuré :
+        l'INVITE mourrait une seconde après le 100 Trying. ``PUT
+        /contexts/{id}/contexts`` remplace la liste : les inclusions
+        existantes sont relues, puis l'outcall ajouté sans les perdre.
+        """
+        internal = next((item for item in contexts if item.get("type") == "internal"), None)
+        if internal is None:
+            response = client.conf("GET", "/contexts")
+            items = response.get("items") or [] if isinstance(response, dict) else []
+            internal = next((item for item in items if item.get("type") == "internal"), None)
+        if internal is None:
+            return
+        detail = client.conf("GET", "/contexts/%s" % internal["id"]) or {}
+        existing = [c["id"] for c in detail.get("contexts") or []]
+        if outcall_id in existing:
+            return
+        client.conf(
+            "PUT",
+            "/contexts/%s/contexts" % internal["id"],
+            body={"contexts": [{"id": i} for i in [*existing, outcall_id]]},
+        )
 
     def _identify_options(self):
         """Options d'``identify`` : les IP du POP.
@@ -209,9 +234,7 @@ class WazoVoipmsTrunk(models.Model):
         import socket
 
         try:
-            infos = socket.getaddrinfo(
-                self.pop_host, 5060, socket.AF_INET, socket.SOCK_DGRAM
-            )
+            infos = socket.getaddrinfo(self.pop_host, 5060, socket.AF_INET, socket.SOCK_DGRAM)
         except OSError:
             return []
         ips = sorted({info[4][0] for info in infos})
@@ -268,9 +291,7 @@ class WazoVoipmsTrunk(models.Model):
         for item in items:
             if item.get("label") == "from-extern":
                 return item["name"]
-        created = client.conf(
-            "POST", "/contexts", body={"label": "from-extern", "type": "incall"}
-        )
+        created = client.conf("POST", "/contexts", body={"label": "from-extern", "type": "incall"})
         return created["name"]
 
     def _iax_endpoint_payload(self, client=None):
@@ -385,9 +406,7 @@ class WazoVoipmsTrunk(models.Model):
                     "d'utilisateur : renseignez-le à la main depuis le portail."
                 )
             )
-        self.sudo().write(
-            {"voipms_username": full_username, "voipms_password": sip_password}
-        )
+        self.sudo().write({"voipms_username": full_username, "voipms_password": sip_password})
 
     # ------------------------------------------------------------------
     # Actions
@@ -429,12 +448,8 @@ class WazoVoipmsTrunk(models.Model):
                 if not trunk_id:
                     trunk = client.conf("POST", "/trunks", body={})
                     trunk_id = trunk["id"]
-                client.conf(
-                    "PUT", "/trunks/%s/endpoints/iax/%s" % (trunk_id, endpoint_iax_id)
-                )
-                client.conf(
-                    "PUT", "/trunks/%s/registers/iax/%s" % (trunk_id, register_iax_id)
-                )
+                client.conf("PUT", "/trunks/%s/endpoints/iax/%s" % (trunk_id, endpoint_iax_id))
+                client.conf("PUT", "/trunks/%s/registers/iax/%s" % (trunk_id, register_iax_id))
             else:
                 # SIP : endpoint trunk + registration sortante.
                 if not endpoint_uuid:
@@ -445,9 +460,7 @@ class WazoVoipmsTrunk(models.Model):
                 if not trunk_id:
                     trunk = client.conf("POST", "/trunks", body={})
                     trunk_id = trunk["id"]
-                    client.conf(
-                        "PUT", "/trunks/%s/endpoints/sip/%s" % (trunk_id, endpoint_uuid)
-                    )
+                    client.conf("PUT", "/trunks/%s/endpoints/sip/%s" % (trunk_id, endpoint_uuid))
             # Extension (motif de sortie) d'abord : résolue ou créée à
             # la volée — le libellé « to-extern » ne désigne pas le
             # contexte dans les requêtes.
@@ -476,11 +489,7 @@ class WazoVoipmsTrunk(models.Model):
                             "exten": "_%s." % self.outbound_prefix,
                         },
                     )
-                    items = (
-                        response.get("items") or []
-                        if isinstance(response, dict)
-                        else response
-                    )
+                    items = response.get("items") or [] if isinstance(response, dict) else response
                     for item in items:
                         if item.get("exten") == "_%s." % self.outbound_prefix:
                             extension = item
@@ -553,9 +562,7 @@ class WazoVoipmsTrunk(models.Model):
         """Lit l'état de l'enregistrement SIP côté VoIP.ms."""
         self.ensure_one()
         client = self._voipms_client()
-        response = client._request(
-            "getRegistrationStatus", {"account": self.voipms_username}
-        )
+        response = client._request("getRegistrationStatus", {"account": self.voipms_username})
         self.sudo().write({"registered": (response or {}).get("registered") == "yes"})
         return True
 
@@ -614,9 +621,7 @@ class WazoVoipmsTrunk(models.Model):
             if self.remote_trunk_id:
                 _ignore_404("DELETE", "/trunks/%s" % self.remote_trunk_id)
             if self.remote_endpoint_uuid:
-                _ignore_404(
-                    "DELETE", "/endpoints/sip/%s" % self.remote_endpoint_uuid
-                )
+                _ignore_404("DELETE", "/endpoints/sip/%s" % self.remote_endpoint_uuid)
             if self.remote_register_iax_id:
                 _ignore_404("DELETE", "/registers/iax/%s" % self.remote_register_iax_id)
             if self.remote_endpoint_iax_id:
