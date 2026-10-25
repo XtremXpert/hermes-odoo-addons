@@ -1,0 +1,13 @@
+// Le panneau flotte en bas à droite, au-dessus du contenu — sans
+// positionnement l'overlay rend le gabarit hors de la vue (mesuré :
+// 313×177 visibles mais derrière le contenu, en bas de page).
+.o_wazo_softphone {
+    position: fixed;
+    right: 1rem;
+    bottom: 1rem;
+    z-index: $zindex-modal;
+    background: $o-view-background-color;
+    max-height: 80vh;
+    overflow-y: auto;
+    width: 340px;
+}

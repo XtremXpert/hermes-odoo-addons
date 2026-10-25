@@ -30,6 +30,7 @@
             ("after", "web/static/src/module_loader.js", "wazo_phone/static/src/dashboard/*.js"),
             ("after", "web/static/src/module_loader.js", "wazo_phone/static/src/phone/*.js"),
             "wazo_phone/static/src/softphone/wazo_softphone_templates.xml",
+            "wazo_phone/static/src/softphone/wazo_softphone.scss",
             "wazo_phone/static/src/dashboard/wazo_dashboard_templates.xml",
         ],
         "wazo_phone.assets_sip": [
