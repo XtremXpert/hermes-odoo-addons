@@ -148,15 +148,22 @@ class WazoVoipmsTrunk(models.Model):
         return "to-extern"
 
     def _resolve_outcall(self, client, extension_id):
-        """Id de l'outcall à utiliser : celui qui possède déjà le motif,
-        sinon le nôtre par son nom, sinon un nouveau.
+        """Id de l'outcall à utiliser : **le nôtre** par son nom,
+        sinon celui qui possède déjà le motif, sinon un nouveau.
 
-        Mesuré : l'association extension<->outcall est 1:1 — un second
-        trunk de même préfixe doit réutiliser l'outcall existant (qui,
-        lui, accepte plusieurs trunks), pas créer le sien.
+        Chaque trunk a besoin de sa propre outcall : une outcall
+        partagée trie ses trunks par index, et l'appel d'un tenant
+        partirait sur le compte VoIP.ms d'un autre — mesuré : le
+        5001 d'xtremxpert sortait par le trunk de Diverse-Cité.
+        Le repli par motif sert la reprise (extension créée avant
+        l'outcall à une tentative antérieure).
         """
         response = client.conf("GET", "/outcalls")
         items = response.get("items") or [] if isinstance(response, dict) else []
+        nom = "out-%s" % self.name
+        for outcall in items:
+            if outcall.get("name") == nom:
+                return outcall["id"]
         for outcall in items:
             for extension in outcall.get("extensions") or []:
                 if extension.get("id") == extension_id:
@@ -314,6 +321,9 @@ class WazoVoipmsTrunk(models.Model):
         except OSError:
             pass
         options = [
+            # Sans ``username``, l'appel sortant porte une autorité vide
+            # — VoIP.ms répond REJECT « No authority found » (cause 50).
+            ["username", self.voipms_username],
             ["secret", self.voipms_password],
         ]
         if client is not None:
