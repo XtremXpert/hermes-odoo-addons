@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <record id="wazo_tenant_list" model="ir.ui.view">
+        <field name="name">wazo.tenant.list</field>
+        <field name="model">wazo.tenant</field>
+        <field name="arch" type="xml">
+            <list string="Tenants Wazo">
+                <field name="name" />
+                <field name="slug" />
+                <field name="remote_uuid" />
+                <field name="is_configured" />
+                <field name="last_seen_at" />
+            </list>
+        </field>
+    </record>
+
+    <record id="wazo_tenant_form" model="ir.ui.view">
+        <field name="name">wazo.tenant.form</field>
+        <field name="model">wazo.tenant</field>
+        <field name="arch" type="xml">
+            <form string="Tenant Wazo">
+                <sheet>
+                    <group>
+                        <field name="name" readonly="1" />
+                        <field name="slug" readonly="1" />
+                        <field name="remote_uuid" readonly="1" />
+                        <field name="is_configured" />
+                        <field name="last_seen_at" readonly="1" />
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_wazo_tenant" model="ir.actions.act_window">
+        <field name="name">Tenants Wazo</field>
+        <field name="res_model">wazo.tenant</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

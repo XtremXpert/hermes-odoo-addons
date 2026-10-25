@@ -17,6 +17,7 @@
         "wizards/wazo_context_inventory_views.xml",
         "views/wazo_cdr_views.xml",
         "views/res_config_settings_views.xml",
+        "views/wazo_tenant_views.xml",
         "views/wazo_menus.xml",
         "views/wazo_tenant_dashboard_views.xml",
     ],

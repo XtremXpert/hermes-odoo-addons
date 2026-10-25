@@ -19,3 +19,5 @@ access_wazo_voicemail_user,wazo.voicemail user,wazo.voicemail,wazo_tenant.group_
 access_wazo_voicemail_manager,wazo.voicemail manager,wazo.voicemail,wazo_tenant.group_wazo_manager,crud,
 access_wazo_parking_user,wazo.parking user,wazo.parking,wazo_tenant.group_wazo_user,r,
 access_wazo_parking_manager,wazo.parking manager,wazo.parking,wazo_tenant.group_wazo_manager,crud,
+access_wazo_tenant_user,wazo.tenant user,wazo.tenant,wazo_tenant.group_wazo_user,r,
+access_wazo_tenant_manager,wazo.tenant manager,wazo.tenant,wazo_tenant.group_wazo_manager,crud,

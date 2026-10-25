@@ -21,6 +21,15 @@ class ResConfigSettings(models.TransientModel):
         config_parameter="wazo.tenant_id",
         help="Laisser vide pour un serveur mono-tenant.",
     )
+    wazo_tenant_fk = fields.Many2one(
+        "wazo.tenant",
+        string="Tenant Wazo",
+        compute="_compute_wazo_tenant_fk",
+        inverse="_inverse_wazo_tenant_fk",
+        store=False,
+        help="Tenant que l'instance adresse. Un seul connu : il est retenu "
+        "d'office — plusieurs : c'est le choix à faire ici.",
+    )
     wazo_line_context = fields.Char(
         string="Contexte des lignes",
         config_parameter="wazo.line_context",
@@ -38,6 +47,31 @@ class ResConfigSettings(models.TransientModel):
         help="ex : fr_CA, en_US (défaut : fr_CA).",
     )
     wazo_connection_ok = fields.Boolean(default=False)
+
+    def _compute_wazo_tenant_fk(self):
+        """Le tenant configuré : la fiche dont l'UUID porte le paramètre."""
+        param = self.env["ir.config_parameter"].sudo().get_str("wazo.tenant_id") or ""
+        for settings in self:
+            settings.wazo_tenant_fk = (
+                self.env["wazo.tenant"].search([("remote_uuid", "=", param)], limit=1)
+                if param
+                else False
+            )
+
+    def _inverse_wazo_tenant_fk(self):
+        """Retient le tenant choisi — l'UUID, qui seul survit aux fiches."""
+        param = self.env["ir.config_parameter"].sudo()
+        for settings in self:
+            param.set_param(
+                "wazo.tenant_id",
+                settings.wazo_tenant_fk.remote_uuid or False,
+            )
+
+    def action_sync_wazo_tenants(self):
+        """Rafraîchit la liste des tenants visibles du jeton."""
+        self.ensure_one()
+        self.execute()
+        return self.env["wazo.tenant"].action_sync_from_wazo()
 
     def action_test_wazo_connection(self):
         """Vérifie la connexion avec un appel en lecture seule."""

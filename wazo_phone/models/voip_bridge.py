@@ -22,7 +22,6 @@ import logging
 from odoo import api
 from odoo import fields
 from odoo import models
-from odoo.addons.wazo_tenant.services.wazo_client import WazoAPIError
 
 _logger = logging.getLogger(__name__)
 
@@ -34,22 +33,8 @@ VOIP_PROVIDER_NAME = "Wazo"
 #: d'Enterprise pour un softphone WebRTC dans le navigateur.
 ASTERISK_WS_PATH = "/api/asterisk/ws"
 
+
 #: Options d'endpoint PJSIP rendant l'endpoint WebRTC-capable.
-#: Réplique les options d'endpoint du template SIP « webrtc » de Wazo
-#: (tel que rendu pour l'endpoint de référence « webrtc1001 ») :
-#: codecs audio/vidéo du navigateur, ICE, négociation SDP (AVPF),
-#: chiffrement DTLS et média direct. Le transport ``wss`` est hérité
-#: de l'endpoint ; l'option ``allow`` active les codecs du navigateur.
-WEBRTC_ENDPOINT_OPTIONS = [
-    ["allow", "opus,g722,alaw,ulaw,vp9,vp8,h264"],
-    ["ice_support", "yes"],
-    ["use_avpf", "yes"],
-    ["media_encryption", "dtls"],
-    ["dtls_verify", "no"],
-    ["direct_media", "yes"],
-]
-
-
 class ResConfigSettings(models.TransientModel):
     # Le pont reste dans son propre fichier, à dessein : tout ce qui touche au
     # module « voip » est réuni ici, et se retire d'un bloc.
@@ -107,83 +92,6 @@ class WazoUserVoipBridge(models.Model):
     # ------------------------------------------------------------------
     # Helpers WebRTC (endpoint + URL WebSocket)
     # ------------------------------------------------------------------
-
-    @api.model
-    def _build_endpoint_sip_payload(self, context, extension, templates=None):
-        """Construit le payload ``endpoint_sip`` WebRTC-capable.
-
-        Voie native (spec P3 v3) : lorsque les templates SIP du tenant
-        sont connus (``global`` + ``webrtc``, voir
-        ``_get_sip_template_uuids``), l'endpoint s'y **réfère**. Les
-        options WebRTC (``webrtc=yes``, codecs, ICE/AVPF/DTLS, transport
-        ``wss``) viennent alors de Wazo lui-même, au lieu d'une réplique
-        locale qui dérive à chaque évolution de la plateforme — la
-        réplique ``WEBRTC_ENDPOINT_OPTIONS`` avait ainsi déjà perdu
-        ``webrtc=yes`` et contredisait ``direct_media``.
-
-        Le ``context``, lui, n'est porté par aucun des deux templates : il
-        reste explicite sur l'endpoint.
-
-        Sans template résolu (résolution impossible), on retombe sur la
-        réplique locale afin de ne jamais créer silencieusement un
-        endpoint non-WebRTC.
-
-        Facteuré ici afin que la logique soit testable et réutilisable par
-        le flux de synchronisation.
-        """
-        endpoint_sip = {
-            "auth_section_options": [
-                ["username", str(extension)],
-            ],
-            "endpoint_section_options": [
-                ["context", str(context)],
-            ],
-        }
-        # L'ordre est significatif : ``global`` d'abord, ``webrtc``
-        # ensuite (le second surcharge le premier).
-        sip_templates = [
-            {"uuid": uuid}
-            for uuid in (
-                (templates or {}).get("global"),
-                (templates or {}).get("webrtc"),
-            )
-            if uuid
-        ]
-        if sip_templates:
-            endpoint_sip["templates"] = sip_templates
-        else:
-            endpoint_sip["endpoint_section_options"] += [
-                list(option) for option in WEBRTC_ENDPOINT_OPTIONS
-            ]
-        return {"endpoint_sip": endpoint_sip}
-
-    @api.model
-    def _get_sip_template_uuids(self, client):
-        """Résout les UUID des templates SIP du tenant Wazo.
-
-        ``GET /tenants/<uuid>`` porte ``global_sip_template_uuid`` et
-        ``webrtc_sip_template_uuid``. Résolu en direct plutôt que mis en
-        cache : l'UUID change si le tenant est réinitialisé, et le coût
-        est un simple GET de configuration.
-
-        Défensif : retourne ``{}`` (donc repli sur les options locales) si
-        le tenant n'est pas configuré, si l'appel échoue, ou si la réponse
-        n'a pas la forme attendue. Une synchronisation ne doit jamais
-        échouer parce qu'un template n'a pas pu être résolu.
-        """
-        tenant_uuid = getattr(client, "tenant_id", False)
-        if not tenant_uuid:
-            return {}
-        try:
-            tenant = client.conf("GET", "/tenants/%s" % tenant_uuid)
-        except WazoAPIError:
-            return {}
-        if not isinstance(tenant, dict):
-            return {}
-        return {
-            "global": tenant.get("global_sip_template_uuid") or False,
-            "webrtc": tenant.get("webrtc_sip_template_uuid") or False,
-        }
 
     @api.model
     def _get_voip_ws_url(self):

@@ -29,6 +29,7 @@ message d'erreur précise l'étape échouée.
 
 import logging
 
+from odoo import api
 from odoo import fields
 from odoo import models
 from odoo.exceptions import UserError
@@ -36,6 +37,18 @@ from odoo.exceptions import UserError
 from ..services.wazo_client import WazoAPIError
 
 _logger = logging.getLogger(__name__)
+
+#: Options d'endpoint SIP du repli local quand les templates du tenant
+#: ne sont pas résolus : codec navigateur, ICE, chiffrement DTLS et
+#: média direct. Le transport ``wss`` est hérité de l'endpoint.
+WEBRTC_ENDPOINT_OPTIONS = [
+    ["allow", "opus,g722,alaw,ulaw,vp9,vp8,h264"],
+    ["ice_support", "yes"],
+    ["use_avpf", "yes"],
+    ["media_encryption", "dtls"],
+    ["dtls_verify", "no"],
+    ["direct_media", "yes"],
+]
 
 
 class WazoUser(models.Model):
@@ -84,12 +97,97 @@ class WazoUser(models.Model):
         help="Identifiant (UUID) du compte d'authentification SIP côté "
         "authd (service d'authentification Wazo).",
     )
+    remote_endpoint_name = fields.Char(
+        string="Nom de l'endpoint SIP (AOR)",
+        readonly=True,
+        copy=False,
+        help="Nom de l'endpoint SIP côté Wazo — l'AOR, donc le nom "
+        "d'authentification du REGISTER. Confondu avec l'extension une fois, "
+        "le REGISTER était refusé : il est consigné à part.",
+    )
     error_message = fields.Text(string="Dernier message d'erreur")
     active = fields.Boolean(default=True)
 
     # ------------------------------------------------------------------
     # Synchronisation vers Wazo
     # ------------------------------------------------------------------
+
+    @api.model
+    def _get_sip_template_uuids(self, client):
+        """Résout les UUID des templates SIP du tenant Wazo.
+
+        ``GET /tenants/<uuid>`` porte ``global_sip_template_uuid`` et
+        ``webrtc_sip_template_uuid``. Résolu en direct plutôt que mis en
+        cache : l'UUID change si le tenant est réinitialisé, et le coût
+        est un simple GET de configuration.
+
+        Défensif : retourne ``{}`` (donc repli sur les options locales) si
+        le tenant n'est pas configuré, si l'appel échoue, ou si la réponse
+        n'a pas la forme attendue. Une synchronisation ne doit jamais
+        échouer parce qu'un template n'a pas pu être résolu.
+        """
+        tenant_uuid = getattr(client, "tenant_id", False)
+        if not tenant_uuid:
+            return {}
+        try:
+            tenant = client.conf("GET", "/tenants/%s" % tenant_uuid)
+        except WazoAPIError:
+            return {}
+        if not isinstance(tenant, dict):
+            return {}
+        return {
+            "global": tenant.get("global_sip_template_uuid") or False,
+            "webrtc": tenant.get("webrtc_sip_template_uuid") or False,
+        }
+
+    @api.model
+    def _build_endpoint_sip_payload(self, context, extension, templates=None):
+        """Construit le payload ``endpoint_sip`` WebRTC-capable.
+
+        Voie native (spec P3 v3) : lorsque les templates SIP du tenant
+        sont connus (``global`` + ``webrtc``, voir
+        ``_get_sip_template_uuids``), l'endpoint s'y **réfère**. Les
+        options WebRTC (``webrtc=yes``, codecs, ICE/AVPF/DTLS, transport
+        ``wss``) viennent alors de Wazo lui-même, au lieu d'une réplique
+        locale qui dérive à chaque évolution de la plateforme — la
+        réplique ``WEBRTC_ENDPOINT_OPTIONS`` avait ainsi déjà perdu
+        ``webrtc=yes`` et contredisait ``direct_media``.
+
+        Le ``context``, lui, n'est porté par aucun des deux templates : il
+        reste explicite sur l'endpoint.
+
+        Sans template résolu (résolution impossible), on retombe sur la
+        réplique locale afin de ne jamais créer silencieusement un
+        endpoint non-WebRTC.
+
+        Factorisé ici afin que la logique soit testable et réutilisable par
+        le flux de synchronisation.
+        """
+        endpoint_sip = {
+            "auth_section_options": [
+                ["username", str(extension)],
+            ],
+            "endpoint_section_options": [
+                ["context", str(context)],
+            ],
+        }
+        # L'ordre est significatif : ``global`` d'abord, ``webrtc``
+        # ensuite (le second surcharge le premier).
+        sip_templates = [
+            {"uuid": uuid}
+            for uuid in (
+                (templates or {}).get("global"),
+                (templates or {}).get("webrtc"),
+            )
+            if uuid
+        ]
+        if sip_templates:
+            endpoint_sip["templates"] = sip_templates
+        else:
+            endpoint_sip["endpoint_section_options"] += [
+                list(option) for option in WEBRTC_ENDPOINT_OPTIONS
+            ]
+        return {"endpoint_sip": endpoint_sip}
 
     def _find_remote_line(self, client):
         """Retourne la ligne Wazo de l'utilisateur, ou ``None``.
@@ -229,9 +327,7 @@ class WazoUser(models.Model):
             # **et** le digest par ``auth_section_options.username`` — les deux
             # doivent être ce nom, sinon asterisk refuse le REGISTER.
             try:
-                endpoint = client.conf(
-                    "GET", "/endpoints/sip/%s" % line["endpoint_sip"]["uuid"]
-                )
+                endpoint = client.conf("GET", "/endpoints/sip/%s" % line["endpoint_sip"]["uuid"])
                 client.conf(
                     "PUT",
                     "/endpoints/sip/%s" % line["endpoint_sip"]["uuid"],

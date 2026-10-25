@@ -28,10 +28,20 @@
                         <setting string="Certificat TLS">
                             <field name="wazo_ssl_verify" />
                         </setting>
-                        <setting string="Tenant (optionnel)">
+                        <setting string="Tenant Wazo">
+                            <field name="wazo_tenant_fk" />
+                            <div>
+                                <button
+                                    name="action_sync_wazo_tenants"
+                                    type="object"
+                                    string="Synchroniser les tenants"
+                                    class="btn-secondary"
+                                />
+                            </div>
                             <field
                                 name="wazo_tenant_id"
                                 placeholder="UUID du tenant, vide si mono-tenant"
+                                invisible="wazo_tenant_fk != False"
                             />
                         </setting>
                         <setting string="Contexte des lignes">

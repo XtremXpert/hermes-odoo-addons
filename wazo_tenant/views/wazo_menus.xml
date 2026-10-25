@@ -55,6 +55,13 @@
         action="action_wazo_parking"
     />
     <menuitem
+        id="menu_wazo_tenants"
+        name="Tenants"
+        parent="menu_wazo_root"
+        action="action_wazo_tenant"
+        groups="wazo_tenant.group_wazo_manager"
+    />
+    <menuitem
         id="menu_wazo_cdrs"
         name="Journal d'appels"
         parent="menu_wazo_root"
