@@ -130,9 +130,7 @@ class WazoVoipmsTrunk(models.Model):
         # ``WazoClient`` par leur faux serveur routé.
         from odoo.addons.wazo_tenant.models import wazo_extension_mixin
 
-        return wazo_extension_mixin.WazoClient(
-            self.env, tenant_id=self._wazo_tenant_uuid()
-        )
+        return wazo_extension_mixin.WazoClient(self.env, tenant_id=self._wazo_tenant_uuid())
 
     def _wazo_tenant_uuid(self):
         if self.tenant_slug:
@@ -326,6 +324,10 @@ class WazoVoipmsTrunk(models.Model):
             ["username", self.voipms_username],
             ["secret", self.voipms_password],
         ]
+        if self.caller_id:
+            # VoIP.ms exige un DID du compte comme caller-ID sortant —
+            # sinon REJECT « congestion » (cause 34).
+            options.append(["callerid", '"%s" <%s>' % (self.caller_id, self.caller_id)])
         if client is not None:
             options.append(["context", self._resolve_incall_context(client)])
         return {
