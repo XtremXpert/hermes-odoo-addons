@@ -818,6 +818,11 @@ export class WazoSoftphoneService {
      *
      * @param {?Object} payload ``{num, name}``
      */
+    /** Ferme le panneau post-appel. */
+    dismissPostCall() {
+        this.postCall = null;
+    }
+
     _onBusIncomingCall(payload) {
         if (
             isDuplicateIncoming({
@@ -895,9 +900,3 @@ const wazoSoftphoneService = {
 };
 
 registry.category("services").add("wazo_softphone", wazoSoftphoneService);
-
-
-    /** Ferme le panneau post-appel. */
-    dismissPostCall() {
-        this.postCall = null;
-    }
