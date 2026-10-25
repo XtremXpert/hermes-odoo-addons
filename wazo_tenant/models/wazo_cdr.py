@@ -263,6 +263,24 @@ class WazoCdr(models.Model):
             "domain": [("partner_id", "=", partner.id)],
         }
 
+    @api.model
+    def _wazo_phone_channel(self):
+        """Le canal Discuss « Téléphonie » — créé à la première utilisation."""
+        channel = self.env["discuss.channel"].sudo().search([("name", "=", "Téléphonie")], limit=1)
+        if not channel:
+            channel = (
+                self.env["discuss.channel"]
+                .sudo()
+                .create(
+                    {
+                        "name": "Téléphonie",
+                        "channel_type": "channel",
+                        "description": "Journal téléphonique : appels, manqués, enregistrements.",
+                    }
+                )
+            )
+        return channel
+
     # ------------------------------------------------------------------
     # Enregistrement + transcription
     # ------------------------------------------------------------------
@@ -303,6 +321,12 @@ class WazoCdr(models.Model):
                 body=self.env._("Enregistrement de l'appel du %s.") % self.date_start,
                 attachment_ids=[attachment.id],
             )
+        # Et le canal « Téléphonie » — l'enregistrement écoute en ligne.
+        party = self.partner_id.display_name if self.partner_id else self.caller_num
+        self._wazo_phone_channel().message_post(
+            body=self.env._("Enregistrement de l'appel du %s — %s") % (self.date_start, party),
+            attachment_ids=[attachment.id],
+        )
         return attachment
 
     def action_transcribe(self):

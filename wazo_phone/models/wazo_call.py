@@ -121,6 +121,9 @@ class ResUsersWazoCall(models.Model):
             "partner_name": partner.display_name if partner else False,
             "activity_id": False,
         }
+        # Carte d'appel dans le canal « Téléphonie » — l'inbox Discuss devient
+        # le journal : durée, contact, et l'enregistrement y atterrira.
+        self._post_call_to_phone_channel(direction, num, answered, duration, partner, missed)
         if not missed:
             return result
         if partner:
@@ -165,6 +168,35 @@ class ResUsersWazoCall(models.Model):
             subtype_xmlid="mail.mt_note",
         )
         return partner.id
+
+    @api.model
+    def _post_call_to_phone_channel(self, direction, num, answered, duration, partner, missed):
+        """Carte d'appel postée dans le canal « Téléphonie ».
+
+        La fiche contact reçoit sa note séparément ; ici c'est le journal
+        visible — l'entrée dans l'inbox, avec le lien vers le contact.
+        """
+        try:
+            channel = self.env["wazo.cdr"]._wazo_phone_channel()
+        except Exception:  # noqa: BLE001 - canal indisponible ≠ appel cassé
+            return
+        sens = {"inbound": "entrant", "outbound": "sortant", "internal": "interne"}.get(
+            direction, direction
+        )
+        icon = "📞" if answered else "📵" if missed else "📞"
+        label = partner.display_name if partner else (num or "inconnu")
+        body = "%s <b>%s</b> — %s" % (icon, label, sens)
+        if answered and duration:
+            body += ", %s" % _format_seconds(duration)
+        if partner:
+            link = "/odoo/contacts/%s" % partner.id
+            body += ' <a href="%s" class="o_wazo_partner_link">fiche</a>' % link
+        channel.message_post(
+            body=body,
+            message_type="comment",
+            subtype_xmlid="mail.mt_comment",
+            author_id=self.env.user.partner_id.id,
+        )
 
     def _wazo_call_note(self, direction, num, answered, duration):
         """Le corps de la note consignée sur le contact."""
