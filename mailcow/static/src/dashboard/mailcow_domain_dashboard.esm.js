@@ -132,6 +132,10 @@ export class MailcowDomainDashboard extends Component {
     /** Les alertes a traiter, les plus graves d'abord. Les simples
         informations (fiches non synchronisees) vont a part : elles ne
         demandent pas d'action et noieraient le reste. */
+    get traffic() {
+        return this.state.donnees.traffic || {};
+    }
+
     get alertes() {
         return ordonnerAlertes(this.donnees.alertes).filter(
             (alerte) => alerte.gravite !== "information"

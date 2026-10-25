@@ -6,6 +6,7 @@ from odoo import fields
 from odoo import models
 from odoo.exceptions import UserError
 
+from ..services.mailcow_client import MailcowAPIError
 from ..services.mailcow_client import MailcowClient
 from ..services.mailcow_client import en_nombre
 from ..services.mailcow_client import refuser_la_disparition_totale
@@ -593,6 +594,61 @@ class MailcowDomain(models.Model):
             "boites": [_ligne_boite(boite) for boite in boites.sorted("email")],
             "alias": [_ligne_alias(un_alias) for un_alias in alias],
             "alertes": mesures["alertes"],
+            "traffic": self._traffic(),
+        }
+
+    def _traffic(self):
+        """File postfix, derniers messages et santé des services Mailcow.
+
+        Une panne de mailcow ne doit pas rendre le tableau vide : chaque
+        section est isolée, un échec affiche « non disponible ».
+        """
+        client = MailcowClient(self.env)
+        queue = []
+        try:
+            response = client._request("GET", "/get/mailq/all", None)
+            queue = response.get("data") if isinstance(response, dict) else response or []
+        except (MailcowAPIError, OSError, UserError):
+            queue = []
+        messages = []
+        try:
+            response = client._request("GET", "/get/logs/rspamd-history", None)
+            history = response.get("data") if isinstance(response, dict) else response or []
+            for row in list(history)[:15]:
+                messages.append(
+                    {
+                        "heure": str(row.get("time") or row.get("timestamp") or ""),
+                        "expediteur": str(row.get("from") or row.get("sender") or ""),
+                        "destinataire": str(row.get("rcpt") or row.get("to") or ""),
+                        "score": row.get("score"),
+                        "action": str(row.get("action") or ""),
+                        "sujet": str(row.get("subject") or ""),
+                    }
+                )
+        except (MailcowAPIError, OSError, UserError):
+            messages = []
+        services = []
+        try:
+            response = client._request("GET", "/get/status/containers", None)
+            containers = response.get("data") if isinstance(response, dict) else response or []
+            for container in containers:
+                services.append(
+                    {
+                        "nom": container.get("name") or container.get("container") or "",
+                        "etat": container.get("state") or container.get("status") or "",
+                        "depuis": str(container.get("uptime") or ""),
+                    }
+                )
+        except (MailcowAPIError, OSError, UserError):
+            services = []
+        return {
+            "file_postfix": len(queue),
+            "file_entrees": [
+                {"destinataire": str(e.get("rcpt") or ""), "raison": str(e.get("reason") or "")}
+                for e in queue[:10]
+            ],
+            "derniers_messages": messages,
+            "services": services,
         }
 
     def action_ouvrir_tableau_de_bord_domaine(self):
