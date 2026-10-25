@@ -19,6 +19,8 @@
                 <field name="answered" />
                 <field name="duration" sum="Total" />
                 <field name="partner_id" />
+                        <field name="recording_id" />
+                        <field name="transcript_state" />
             </list>
         </field>
     </record>
@@ -54,6 +56,23 @@
                             <field name="destination_name" />
                             <field name="partner_id" />
                         </group>
+                    </group>
+                    <group string="Enregistrement">
+                        <field name="recording_id" />
+                        <field name="transcript_state" />
+                        <field name="transcript" />
+                        <button
+                            name="action_fetch_recording"
+                            type="object"
+                            string="Rapatrier l'enregistrement"
+                            class="btn-secondary"
+                        />
+                        <button
+                            name="action_transcribe"
+                            type="object"
+                            string="Transcrire"
+                            class="btn-secondary"
+                        />
                     </group>
                 </sheet>
             </form>

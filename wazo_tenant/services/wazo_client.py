@@ -117,9 +117,9 @@ class WazoClient:
         """Requête vers wazo-confd (``/api/confd/1.1``)."""
         return self._request("confd", method, path, params=params, body=body)
 
-    def call_logd(self, method, path, params=None, body=None):
+    def call_logd(self, method, path, params=None, body=None, raw=False):
         """Requête vers wazo-call-logd (``/api/call-logd/1.0``)."""
-        return self._request("call-logd", method, path, params=params, body=body)
+        return self._request("call-logd", method, path, params=params, body=body, raw=raw)
 
     def auth(self, method, path, params=None, body=None):
         """Requête vers wazo-authd (``/api/auth/0.1``) — comptes SIP."""
@@ -223,8 +223,11 @@ class WazoClient:
             url += "?" + urllib.parse.urlencode(params)
         return url
 
-    def _request(self, service, method, path, params=None, body=None, basic=None):
+    def _request(self, service, method, path, params=None, body=None, basic=None, raw=False):
         """Appel HTTP à l'API Wazo.
+
+        ``raw`` rend les octets tels quels — pour les téléchargements
+        (enregistrements d'appels, sons) qui ne sont pas du JSON.
 
         ``basic`` est un couple ``(identifiant, mot de passe)`` : l'appel est
         alors authentifié en **Basic** et non par jeton, et l'en-tête
@@ -261,10 +264,8 @@ class WazoClient:
             context.check_hostname = False
             context.verify_mode = ssl.CERT_NONE
         try:
-            with urllib.request.urlopen(
-                request, timeout=TIMEOUT, context=context
-            ) as response:
-                raw = response.read()
+            with urllib.request.urlopen(request, timeout=TIMEOUT, context=context) as response:
+                raw_bytes = response.read()
         except urllib.error.HTTPError as error:
             detail = ""
             try:
@@ -281,10 +282,12 @@ class WazoClient:
             raise WazoAPIError(
                 "Serveur Wazo injoignable sur %s (%s)." % (self.url, error)
             ) from error
-        if not raw:
+        if raw:
+            return raw_bytes
+        if not raw_bytes:
             return None
         try:
-            return json.loads(raw)
+            return json.loads(raw_bytes)
         except ValueError as error:
             raise WazoAPIError(
                 "Réponse JSON illisible de l'API Wazo pour %s %s." % (method, path)

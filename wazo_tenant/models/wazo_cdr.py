@@ -68,6 +68,32 @@ class WazoCdr(models.Model):
         index=True,
         help="Contact Odoo identifié à partir des numéros de l'appel.",
     )
+    recording_id = fields.Many2one(
+        "ir.attachment",
+        string="Enregistrement",
+        readonly=True,
+        copy=False,
+        ondelete="set null",
+        help="Fichier audio de l'appel, rapatrié de wazo-call-logd.",
+    )
+    transcript = fields.Text(
+        string="Transcription",
+        readonly=True,
+        copy=False,
+        help="Texte de l'appel, produit par le service de transcription "
+        "configuré (``wazo.transcription_url``).",
+    )
+    transcript_state = fields.Selection(
+        selection=[
+            ("none", "Aucune"),
+            ("pending", "En cours"),
+            ("done", "Prête"),
+            ("error", "Échec"),
+        ],
+        string="Transcription",
+        default="none",
+        readonly=True,
+    )
 
     # ------------------------------------------------------------------
     # Synchronisation
@@ -236,3 +262,100 @@ class WazoCdr(models.Model):
             "view_mode": "list,form",
             "domain": [("partner_id", "=", partner.id)],
         }
+
+    # ------------------------------------------------------------------
+    # Enregistrement + transcription
+    # ------------------------------------------------------------------
+
+    def action_fetch_recording(self):
+        """Rapatrie l'enregistrement de l'appel depuis wazo-call-logd.
+
+        Le CDR porte ``recordings`` quand l'appel a été enregistré
+        (options ``call_record_*`` de l'utilisateur Wazo). Le fichier est
+        joint au CDR et à la fiche du contact identifié.
+        """
+        self.ensure_one()
+        if self.recording_id:
+            return self.recording_id
+        client = WazoClient(self.env)
+        detail = client.call_logd("GET", "/cdr/%s" % self.wazo_cdr_id) or {}
+        recordings = detail.get("recordings") or []
+        if not recordings:
+            raise UserError(
+                self.env._("Aucun enregistrement pour cet appel (enregistrement désactivé ?).")
+            )
+        name = recordings[0].get("name") or recordings[0].get("filename")
+        audio = client.call_logd(
+            "GET", "/cdr/%s/recordings/%s" % (self.wazo_cdr_id, name), raw=True
+        )
+        attachment = self.env["ir.attachment"].create(
+            {
+                "name": "appel-%s-%s.wav" % (self.wazo_cdr_id, name),
+                "raw": audio,
+                "res_model": self._name,
+                "res_id": self.id,
+                "mimetype": "audio/wav",
+            }
+        )
+        self.write({"recording_id": attachment.id})
+        if self.partner_id:
+            self.partner_id.message_post(
+                body=self.env._("Enregistrement de l'appel du %s.") % self.date_start,
+                attachment_ids=[attachment.id],
+            )
+        return attachment
+
+    def action_transcribe(self):
+        """Transcrit l'enregistrement via le service configuré.
+
+        ``wazo.transcription_url`` : endpoint qui accepte le binaire audio
+        (POST multipart, champ ``file``) et rend ``{"text": …}``.
+        """
+        self.ensure_one()
+        url = self.env["ir.config_parameter"].sudo().get_str("wazo.transcription_url")
+        if not url:
+            raise UserError(
+                self.env._("Aucun service de transcription configuré (wazo.transcription_url).")
+            )
+        if not self.recording_id:
+            self.action_fetch_recording()
+        self.write({"transcript_state": "pending"})
+        try:
+            text = self._post_audio(self.recording_id, url)
+        except Exception as error:
+            self.write({"transcript_state": "error"})
+            raise UserError(str(error)) from error
+        self.write({"transcript": text, "transcript_state": "done"})
+        return True
+
+    def _post_audio(self, attachment, url):
+        """Envoie l'audio au service et rend le texte transcrit."""
+        import json
+        import urllib.request
+
+        token = self.env["ir.config_parameter"].sudo().get_str("wazo.transcription_token")
+        boundary = "----wazo-transcription"
+        body = (
+            b"--"
+            + boundary.encode()
+            + b'\r\nContent-Disposition: form-data; name="file"; filename="call.wav"\r\n'
+            + b"Content-Type: audio/wav\r\n\r\n"
+            + attachment.raw
+            + b"\r\n--"
+            + boundary.encode()
+            + b"--\r\n"
+        )
+        request = urllib.request.Request(
+            url,
+            data=body,
+            headers={
+                "Content-Type": "multipart/form-data; boundary=%s" % boundary,
+                **({"Authorization": "Bearer %s" % token} if token else {}),
+            },
+        )
+        with urllib.request.urlopen(request, timeout=120) as response:
+            payload = response.read()
+        try:
+            return json.loads(payload).get("text") or payload.decode("utf-8", "replace")
+        except ValueError:
+            return payload.decode("utf-8", "replace")

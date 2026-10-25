@@ -128,9 +128,7 @@ class ResUsersWazoCall(models.Model):
                 {
                     "res_model_id": self.env["ir.model"]._get("res.partner").id,
                     "res_id": partner.id,
-                    "activity_type_id": self.env.ref(
-                        "mail.mail_activity_data_call"
-                    ).id,
+                    "activity_type_id": self.env.ref("mail.mail_activity_data_call").id,
                     "summary": self.env._("Appel manqué de %s") % num,
                     "user_id": self.id,
                     "date_deadline": fields.Date.today(),
@@ -147,6 +145,26 @@ class ResUsersWazoCall(models.Model):
             },
         )
         return result
+
+    def post_wazo_call_note(self, partner_id, note, num=None):
+        """Note post-appel écrite sur la fiche du contact.
+
+        Appelée par le panneau post-appel du softphone. Le contact est
+        requis — sans contact identifié la note irait dans le vide.
+        """
+        self.ensure_one()
+        partner = self.env["res.partner"].browse(int(partner_id))
+        if not partner.exists():
+            return False
+        text = self.env._("Note d'appel")
+        if num:
+            text = self.env._("Note d'appel (%s)") % num
+        partner.message_post(
+            body="%s : %s" % (text, note or ""),
+            message_type="comment",
+            subtype_xmlid="mail.mt_note",
+        )
+        return partner.id
 
     def _wazo_call_note(self, direction, num, answered, duration):
         """Le corps de la note consignée sur le contact."""
@@ -195,9 +213,7 @@ class WazoCdrDashboard(models.Model):
             "extension": extension,
             # Sans poste, « mes appels » est vide plutôt que tout le journal.
             "mine": (
-                self._dashboard_scope(since, extension)
-                if extension
-                else self._dashboard_empty()
+                self._dashboard_scope(since, extension) if extension else self._dashboard_empty()
             ),
         }
         if user.has_group("wazo_tenant.group_wazo_manager"):
@@ -300,9 +316,7 @@ class WazoCdrDashboard(models.Model):
         if not rows:
             return []
         # Poste → utilisateur Wazo (et contact) pour un affichage nommé.
-        users = self.env["wazo.user"].search(
-            [("extension", "in", [row[0] for row in rows])]
-        )
+        users = self.env["wazo.user"].search([("extension", "in", [row[0] for row in rows])])
         by_ext = {u.extension: u for u in users}
         agents = []
         for agent, total, duration, missed in rows:

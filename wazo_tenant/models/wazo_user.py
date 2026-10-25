@@ -318,6 +318,12 @@ class WazoUser(models.Model):
                 body={
                     "firstname": firstname,
                     "lastname": lastname,
+                    # Enregistrement des appels (call-logd les sert alors
+                    # côté CDR). Couvre les quatre directions mesurées.
+                    "call_record_outgoing_external_enabled": True,
+                    "call_record_incoming_from_external_enabled": True,
+                    "call_record_outgoing_internal_enabled": True,
+                    "call_record_incoming_internal_enabled": True,
                 },
             )
             # 5. Associer l'utilisateur à la ligne (plugin ``user_line``).

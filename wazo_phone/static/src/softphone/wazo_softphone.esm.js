@@ -16,7 +16,7 @@
  * déprécié et re-rendait le composant avec un contexte hérité, où les membres
  * posés dans ``setup()`` sont invisibles.
  */
-import {Component, onMounted, proxy, t, useProps} from "@odoo/owl";
+import {Component, onMounted, proxy, t, useProps, useRef} from "@odoo/owl";
 import {_t} from "@web/core/l10n/translation";
 import {useService} from "@web/core/utils/hooks";
 
@@ -30,6 +30,9 @@ export class WazoSoftphone extends Component {
 
     setup() {
         this.service = useService("wazo_softphone");
+        this.orm = useService("orm");
+        this.notification = useService("notification");
+        this.postCallNote = useRef("postCallNote");
         this.state = proxy({
             target: this.props.target || "",
             dtmfTones: "",
@@ -132,6 +135,25 @@ export class WazoSoftphone extends Component {
 
     async onHangup() {
         await this.service.hangup();
+    }
+
+    /** Note post-appel : la dépose sur la fiche du contact identifié. */
+    async onPostCallSave() {
+        const postCall = this.service.postCall;
+        const note = this.postCallNote && this.postCallNote.el.value.trim();
+        if (!postCall || !note) {
+            return;
+        }
+        await this.orm.call("res.users", "post_wazo_call_note", [
+            [],
+            postCall.partnerId,
+            note,
+            postCall.num,
+        ]);
+        this.service.dismissPostCall();
+        this.notification.add(_t("Note consignée sur %(partner)s", {
+            partner: postCall.partnerName,
+        }), {type: "success"});
     }
 
     onTargetInput(ev) {

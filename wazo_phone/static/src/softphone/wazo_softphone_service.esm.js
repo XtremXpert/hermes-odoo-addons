@@ -414,6 +414,7 @@ export class WazoSoftphoneService {
             return;
         }
         // Suivi de l'appel pour le bouclage (note sur le contact à la fin).
+        this.postCall = null;
         this.status.currentCall = buildCallInfo({direction: "outbound", num: target});
         this._setState(STATES.OUTBOUND, _t("Appel en cours vers %(target)s", {target}));
         await this.engine.call(target);
@@ -797,6 +798,15 @@ export class WazoSoftphoneService {
                     {type: "info"}
                 );
             }
+            // Panneau post-appel : note, rappel, fiche contact.
+            this.postCall = result && result.partner_id
+                ? {
+                      partnerId: result.partner_id,
+                      partnerName: result.partner_name,
+                      num: payload.num,
+                      duration: payload.duration,
+                  }
+                : null;
         } catch {
             // Le bouclage est un confort : un échec ne doit jamais bloquer
             // la fin d'appel ni afficher d'erreur incompréhensible.
@@ -885,3 +895,9 @@ const wazoSoftphoneService = {
 };
 
 registry.category("services").add("wazo_softphone", wazoSoftphoneService);
+
+
+    /** Ferme le panneau post-appel. */
+    dismissPostCall() {
+        this.postCall = null;
+    }
