@@ -236,6 +236,16 @@ export class MailcowDomainDashboard extends Component {
         });
     }
 
+    /** Creer un objet du domaine : boite ou alias, pre-rempli. */
+    creer(modele) {
+        this.action.doAction({
+            type: "ir.actions.act_window",
+            res_model: modele,
+            views: [[false, "form"]],
+            context: { default_domain_id: this.identite.id },
+        });
+    }
+
     ouvrirAlerte(alerte) {
         this.action.doAction({
             type: "ir.actions.act_window",

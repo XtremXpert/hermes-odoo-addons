@@ -561,6 +561,7 @@ class MailcowDomain(models.Model):
             # get_str, pas get_param : c'est l'accesseur de cette version.
             "mailcow_url": self.env["ir.config_parameter"].get_str("mailcow.base_url", default=""),
             "identite": {
+                "id": self.id,
                 "actif": self.active,
                 "synced": self.synced,
                 "description": self.description or "",

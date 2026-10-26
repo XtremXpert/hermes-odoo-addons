@@ -91,6 +91,18 @@
                 >
                     Rafraîchir maintenant
                 </button>
+                <button
+                    class="btn btn-sm btn-primary ms-2"
+                    t-on-click="() => this.creer('mailcow.mailbox')"
+                >
+                    Nouvelle boîte
+                </button>
+                <button
+                    class="btn btn-sm btn-secondary ms-1"
+                    t-on-click="() => this.creer('mailcow.alias')"
+                >
+                    Nouvel alias
+                </button>
             </div>
 
             <p
