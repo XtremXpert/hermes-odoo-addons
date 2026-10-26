@@ -614,7 +614,7 @@ class MailcowDomain(models.Model):
         try:
             response = client._request("GET", "/get/logs/rspamd-history", None)
             history = response.get("data") if isinstance(response, dict) else response or []
-            for row in list(history)[:15]:
+            for row in list(history)[:200]:
                 messages.append(
                     {
                         "heure": str(row.get("time") or row.get("timestamp") or ""),
@@ -641,13 +641,25 @@ class MailcowDomain(models.Model):
                 )
         except (MailcowAPIError, OSError, UserError):
             services = []
+        # Un aperçu « log postfix » du domaine : tout message dont l'expéditeur
+        # ou un destinataire porte le domaine. Le domaine qui ferme le courriel
+        # compte autant que celui qui l'ouvre.
+        suffixe = "@%s" % self.name
+        journal_domaine = [
+            m
+            for m in messages
+            if m["expediteur"].endswith(suffixe)
+            or suffixe in m["destinataire"]
+            or any(suffixe in d for d in m["destinataire"].split(","))
+        ][:15]
         return {
             "file_postfix": len(queue),
             "file_entrees": [
                 {"destinataire": str(e.get("rcpt") or ""), "raison": str(e.get("reason") or "")}
                 for e in queue[:10]
             ],
-            "derniers_messages": messages,
+            "derniers_messages": messages[:15],
+            "journal_domaine": journal_domaine,
             "services": services,
         }
 

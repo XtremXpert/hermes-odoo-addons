@@ -468,6 +468,35 @@
                     </div>
                 </div>
 
+                <!-- Courrier du domaine : les messages transits filtres sur le domaine. -->
+                <div class="row g-2 mt-2">
+                    <div class="col-12">
+                        <div class="border rounded p-2">
+                            <div class="text-muted small">
+                                Courrier récent du domaine
+                            </div>
+                            <div class="small mt-1" style="max-height: 20em; overflow-y: auto;">
+                                <t t-foreach="this.traffic.journal_domaine" t-as="message" t-key="message.heure + message.expediteur">
+                                    <div class="d-flex justify-content-between border-bottom py-1">
+                                        <span class="text-muted" t-out="message.heure" />
+                                        <span class="text-truncate mx-2" t-out="message.expediteur" />
+                                        <span class="text-muted">→</span>
+                                        <span class="text-truncate mx-2" t-out="message.destinataire" />
+                                        <span
+                                            t-attf-class="{{message.score &gt; 5 ? 'text-warning' : 'text-success'}}"
+                                            t-out="message.score"
+                                        />
+                                        <span class="text-muted small text-truncate" t-out="message.sujet" />
+                                    </div>
+                                </t>
+                                <div t-if="!this.traffic.journal_domaine.length" class="text-muted">
+                                    aucun courrier récent pour ce domaine
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <details t-if="this.identite.dkim_enregistrement" class="mt-3">
                     <summary
                         class="text-muted"

@@ -133,7 +133,14 @@ export class MailcowDomainDashboard extends Component {
         informations (fiches non synchronisees) vont a part : elles ne
         demandent pas d'action et noieraient le reste. */
     get traffic() {
-        return this.state.donnees.traffic || {};
+        return {
+            file_postfix: 0,
+            file_entrees: [],
+            derniers_messages: [],
+            journal_domaine: [],
+            services: [],
+            ...(this.state.donnees.traffic || {}),
+        };
     }
 
     get alertes() {
