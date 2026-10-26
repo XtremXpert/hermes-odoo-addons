@@ -5,3 +5,4 @@ access_imap_folder_user,imap.folder user,imap.folder,imap_client.group_imap_user
 access_imap_folder_manager,imap.folder manager,imap.folder,imap_client.group_imap_manager,crud,
 access_imap_message_user,imap.message user,imap.message,imap_client.group_imap_user,r,
 access_imap_message_manager,imap.message manager,imap.message,imap_client.group_imap_manager,crud,
+access_imap_reply_user,imap.reply user,imap.reply,imap_client.group_imap_user,crud,

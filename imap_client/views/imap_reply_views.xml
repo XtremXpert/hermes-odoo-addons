@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <record id="imap_reply_view_form" model="ir.ui.view">
+        <field name="model">imap.reply</field>
+        <field name="arch" type="xml">
+            <form string="Répondre">
+                <group>
+                    <field name="message_id" invisible="1"/>
+                    <field name="to_addr"/>
+                    <field name="subject"/>
+                </group>
+                <field name="body"/>
+                <footer>
+                    <button name="action_envoyer" type="object" string="Envoyer"
+                            class="btn-primary"/>
+                    <button string="Annuler" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+    <record id="action_imap_reply" model="ir.actions.act_window">
+        <field name="name">Répondre</field>
+        <field name="res_model">imap.reply</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

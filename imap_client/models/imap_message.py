@@ -83,6 +83,21 @@ class ImapMessage(models.Model):
                 connexion.quitter()
             message.write({"seen": True})
 
+    def action_repondre(self):
+        """Ouvrir l'assistant de réponse pré-rempli."""
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "res_model": "imap.reply",
+            "view_mode": "form",
+            "target": "new",
+            "context": {
+                "default_message_id": self.id,
+                "default_to_addr": self.from_addr,
+                "default_subject": "Re: %s" % (self.subject or "").lstrip("Re: "),
+            },
+        }
+
     def action_lire(self):
         """Charger le corps puis le lire."""
         for message in self:

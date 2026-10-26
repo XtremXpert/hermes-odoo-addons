@@ -18,6 +18,7 @@
         <field name="arch" type="xml">
             <form string="Message">
                 <header>
+                    <button name="action_repondre" type="object" string="Répondre"/>
                     <button name="action_lire" type="object" string="Lire"
                             invisible="seen"/>
                     <button name="action_marquer_lu" type="object" string="Marquer lu"
