@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <record id="proxmox_storage_view_list" model="ir.ui.view">
+        <field name="model">proxmox.storage</field>
+        <field name="arch" type="xml">
+            <list string="Stockages">
+                <field name="name"/>
+                <field name="node"/>
+                <field name="storage_type"/>
+                <field name="shared"/>
+                <field name="used"/>
+                <field name="avail"/>
+                <field name="total"/>
+            </list>
+        </field>
+    </record>
+    <record id="action_proxmox_storage" model="ir.actions.act_window">
+        <field name="name">Stockages</field>
+        <field name="res_model">proxmox.storage</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

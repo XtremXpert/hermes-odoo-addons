@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <!-- Lecture et synchronisation : voir les fiches, aligner le local. -->
+    <record id="group_proxmox_sync" model="res.groups">
+        <field name="name">Proxmox — Lecture et synchronisation</field>
+        <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+    </record>
+    <!-- Utilisateur : agir sur les machines (démarrer, arrêter, redémarrer). -->
+    <record id="group_proxmox_user" model="res.groups">
+        <field name="name">Proxmox — Utilisateur</field>
+        <field name="implied_ids" eval="[(4, ref('group_proxmox_sync'))]"/>
+    </record>
+    <!-- Gestionnaire : tout le reste (perimètre, purge). -->
+    <record id="group_proxmox_manager" model="res.groups">
+        <field name="name">Proxmox — Gestionnaire</field>
+        <field name="implied_ids" eval="[(4, ref('group_proxmox_user'))]"/>
+    </record>
+</odoo>

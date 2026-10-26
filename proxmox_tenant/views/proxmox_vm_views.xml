@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <record id="proxmox_vm_view_list" model="ir.ui.view">
+        <field name="model">proxmox.vm</field>
+        <field name="arch" type="xml">
+            <list string="Machines">
+                <field name="vmid"/>
+                <field name="name"/>
+                <field name="node"/>
+                <field name="machine_type"/>
+                <field name="status"/>
+                <field name="pool_name"/>
+                <field name="cpus"/>
+                <field name="mem_max"/>
+                <field name="uptime"/>
+            </list>
+        </field>
+    </record>
+    <record id="proxmox_vm_view_form" model="ir.ui.view">
+        <field name="model">proxmox.vm</field>
+        <field name="arch" type="xml">
+            <form string="Machine">
+                <header>
+                    <button name="action_start" type="object" string="Démarrer"
+                            invisible="status == 'running'"/>
+                    <button name="action_shutdown" type="object" string="Éteindre"
+                            invisible="status != 'running'"/>
+                    <button name="action_reboot" type="object" string="Redémarrer"
+                            invisible="status != 'running'"/>
+                    <button name="action_stop" type="object" string="Arrêt forcé"
+                            confirm="Couper la machine immédiatement ?"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="vmid"/>
+                            <field name="name"/>
+                            <field name="machine_type"/>
+                            <field name="status"/>
+                        </group>
+                        <group>
+                            <field name="node"/>
+                            <field name="pool_name"/>
+                            <field name="uptime"/>
+                        </group>
+                    </group>
+                    <group string="Ressources">
+                        <group>
+                            <field name="cpus"/>
+                            <field name="mem_used"/>
+                            <field name="mem_max"/>
+                        </group>
+                        <group>
+                            <field name="disk_used"/>
+                            <field name="disk_max"/>
+                        </group>
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+    <record id="action_proxmox_vm" model="ir.actions.act_window">
+        <field name="name">Machines</field>
+        <field name="res_model">proxmox.vm</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

@@ -1,0 +1,13 @@
+id,name,model_id,group_id/id,operation,domain
+access_proxmox_node_sync,proxmox.node sync,proxmox.node,proxmox_tenant.group_proxmox_sync,r,
+access_proxmox_node_user,proxmox.node user,proxmox.node,proxmox_tenant.group_proxmox_user,cru,
+access_proxmox_node_manager,proxmox.node manager,proxmox.node,proxmox_tenant.group_proxmox_manager,crud,
+access_proxmox_vm_sync,proxmox.vm sync,proxmox.vm,proxmox_tenant.group_proxmox_sync,r,
+access_proxmox_vm_user,proxmox.vm user,proxmox.vm,proxmox_tenant.group_proxmox_user,cru,
+access_proxmox_vm_manager,proxmox.vm manager,proxmox.vm,proxmox_tenant.group_proxmox_manager,crud,
+access_proxmox_pool_sync,proxmox.pool sync,proxmox.pool,proxmox_tenant.group_proxmox_sync,r,
+access_proxmox_pool_user,proxmox.pool user,proxmox.pool,proxmox_tenant.group_proxmox_user,cru,
+access_proxmox_pool_manager,proxmox.pool manager,proxmox.pool,proxmox_tenant.group_proxmox_manager,crud,
+access_proxmox_storage_sync,proxmox.storage sync,proxmox.storage,proxmox_tenant.group_proxmox_sync,r,
+access_proxmox_storage_user,proxmox.storage user,proxmox.storage,proxmox_tenant.group_proxmox_user,cru,
+access_proxmox_storage_manager,proxmox.storage manager,proxmox.storage,proxmox_tenant.group_proxmox_manager,crud,
