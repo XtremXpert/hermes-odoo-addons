@@ -488,9 +488,49 @@
                                         />
                                         <span class="text-muted small text-truncate" t-out="message.sujet" />
                                     </div>
+                                    <div t-if="message.symboles" class="text-muted fst-italic small mb-1" t-out="message.symboles" />
                                 </t>
                                 <div t-if="!this.traffic.journal_domaine.length" class="text-muted">
                                     aucun courrier récent pour ce domaine
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quarantaine et statistiques globales. -->
+                <div class="row g-2 mt-2">
+                    <div class="col-md-8">
+                        <div class="border rounded p-2 h-100">
+                            <div class="text-muted small">Quarantaine du domaine</div>
+                            <div class="small mt-1" style="max-height: 14em; overflow-y: auto;">
+                                <t t-foreach="this.traffic.quarantaine" t-as="quarantaine" t-key="quarantaine.id">
+                                    <div class="d-flex justify-content-between border-bottom py-1">
+                                        <span class="text-muted" t-out="quarantaine.heure" />
+                                        <span class="text-truncate mx-2" t-out="quarantaine.expediteur" />
+                                        <span class="text-truncate mx-2" t-out="quarantaine.destinataire" />
+                                        <span class="text-warning" t-out="quarantaine.score" />
+                                        <span class="text-muted small text-truncate" t-out="quarantaine.sujet" />
+                                    </div>
+                                </t>
+                                <div t-if="!this.traffic.quarantaine.length" class="text-muted">
+                                    rien en quarantaine
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="border rounded p-2 h-100">
+                            <div class="text-muted small">Statistiques de filtrage</div>
+                            <div class="small mt-1">
+                                <t t-foreach="Object.entries(this.traffic.stats_globales)" t-as="entree" t-key="entree[0]">
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted" t-out="entree[0]" />
+                                        <span t-out="entree[1]" />
+                                    </div>
+                                </t>
+                                <div t-if="!Object.keys(this.traffic.stats_globales).length" class="text-muted">
+                                    non disponible
                                 </div>
                             </div>
                         </div>

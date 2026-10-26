@@ -623,6 +623,9 @@ class MailcowDomain(models.Model):
                         "score": row.get("score"),
                         "action": str(row.get("action") or ""),
                         "sujet": str(row.get("subject") or ""),
+                        # Rspamd rapporte chaque symbole ayant marque le
+                        # message : c'est ce qui explique un score eleve.
+                        "symboles": str(row.get("symbols") or row.get("sym") or ""),
                     }
                 )
         except (MailcowAPIError, OSError, UserError):
@@ -652,6 +655,40 @@ class MailcowDomain(models.Model):
             or suffixe in m["destinataire"]
             or any(suffixe in d for d in m["destinataire"].split(","))
         ][:15]
+        # La quarantaine du domaine : les messages que rspamd a retenus.
+        quarantaine = []
+        try:
+            response = client._request("GET", "/get/quarantine/all", None)
+            items = response.get("data") if isinstance(response, dict) else response or []
+            for item in items:
+                rcpt = str(item.get("rcpt") or item.get("to") or "")
+                expediteur = str(item.get("from") or item.get("sender") or "")
+                if suffixe not in rcpt and not expediteur.endswith(suffixe):
+                    continue
+                quarantaine.append(
+                    {
+                        "id": item.get("id") or item.get("qid"),
+                        "heure": str(item.get("created") or item.get("time") or ""),
+                        "expediteur": expediteur,
+                        "destinataire": rcpt,
+                        "sujet": str(item.get("subject") or ""),
+                        "score": item.get("score"),
+                    }
+                )
+        except (MailcowAPIError, OSError, UserError):
+            quarantaine = []
+        # Les statistiques globales de filtrage, quel que soit l'endpoint
+        # que la version de Mailcow expose.
+        stats = {}
+        for chemin in ("/get/logs/rspamd-stats", "/get/rspamd/stats"):
+            try:
+                response = client._request("GET", chemin, None)
+                donnees = response.get("data") if isinstance(response, dict) else response
+                if isinstance(donnees, dict) and donnees:
+                    stats = {str(k): v for k, v in donnees.items() if not isinstance(v, dict)}
+                    break
+            except (MailcowAPIError, OSError, UserError):
+                continue
         return {
             "file_postfix": len(queue),
             "file_entrees": [
@@ -660,6 +697,8 @@ class MailcowDomain(models.Model):
             ],
             "derniers_messages": messages[:15],
             "journal_domaine": journal_domaine,
+            "quarantaine": quarantaine[:15],
+            "stats_globales": stats,
             "services": services,
         }
 

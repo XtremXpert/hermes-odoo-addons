@@ -138,6 +138,8 @@ export class MailcowDomainDashboard extends Component {
             file_entrees: [],
             derniers_messages: [],
             journal_domaine: [],
+            quarantaine: [],
+            stats_globales: {},
             services: [],
             ...(this.state.donnees.traffic || {}),
         };
