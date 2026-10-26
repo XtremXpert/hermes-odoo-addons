@@ -1,8 +1,20 @@
 # Part of the mailcow_tenant Odoo module. See LICENSE for details.
+import logging
+
 from odoo import api
 from odoo import fields
 from odoo import models
 from odoo.exceptions import AccessError
+from odoo.exceptions import UserError
+
+from ..services.mailcow_client import MailcowAPIError
+
+_logger = logging.getLogger(__name__)
+
+# Ne pas interroger le serveur plus souvent qu'une fois par minute : les
+# listes se rechargent souvent, et Mailcow n'a pas besoin d'être relu à
+# chaque frappe d'une touche de tri.
+RAFRAICHISSEMENT_MIN_S = 60
 
 
 class MailcowSyncMixin(models.AbstractModel):
@@ -89,6 +101,45 @@ class MailcowSyncMixin(models.AbstractModel):
         même objet sert de point d'entrée. Les droits sont ceux de l'aperçu.
         """
         return self.env[self._name].action_preview_sync_from_mailcow()
+
+    @api.model
+    def _rafraichir_si_obsolete(self):
+        """Synchroniser le local depuis le serveur si la copie est vieille.
+
+        Appelée à l'ouverture de chaque vue : plutôt que de relire Mailcow à
+        chaque chargement, une horodatage par modèle borne la fréquence à
+        ``RAFRAICHISSEMENT_MIN_S``. Une erreur du serveur ne doit pas casser
+        l'écran — le dernier état connu s'affiche et l'échec est noté.
+        """
+        icp = self.env["ir.config_parameter"].sudo()
+        cle = "mailcow.%s.last_refresh" % self._name
+        brut = icp.get_str(cle, "")
+        if brut:
+            ecoule = (
+                fields.Datetime.now() - fields.Datetime.to_datetime(brut)
+            ).total_seconds()
+            if ecoule < RAFRAICHISSEMENT_MIN_S:
+                return
+        try:
+            self.env[self._name].sudo()._sync_all_from_mailcow()
+            icp.set_str(cle, fields.Datetime.to_string(fields.Datetime.now()))
+        except (UserError, MailcowAPIError) as erreur:
+            _logger.warning("Sync %s au chargement de vue : %s", self._name, erreur)
+
+    def web_search_read(
+        self, domain, specification, offset=0, limit=None, order=None, count_limit=None
+    ):
+        # L'ouverture d'une liste rafraîchit le local si la copie est vieille :
+        # plus besoin de « Tout synchroniser » à la main.
+        self._rafraichir_si_obsolete()
+        return super().web_search_read(
+            domain,
+            specification,
+            offset=offset,
+            limit=limit,
+            order=order,
+            count_limit=count_limit,
+        )
 
     @api.model
     def _domaines_autorises(self):
