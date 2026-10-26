@@ -11,3 +11,6 @@ access_proxmox_pool_manager,proxmox.pool manager,proxmox.pool,proxmox_tenant.gro
 access_proxmox_storage_sync,proxmox.storage sync,proxmox.storage,proxmox_tenant.group_proxmox_sync,r,
 access_proxmox_storage_user,proxmox.storage user,proxmox.storage,proxmox_tenant.group_proxmox_user,cru,
 access_proxmox_storage_manager,proxmox.storage manager,proxmox.storage,proxmox_tenant.group_proxmox_manager,crud,
+access_proxmox_server_sync,proxmox.server sync,proxmox.server,proxmox_tenant.group_proxmox_sync,r,
+access_proxmox_server_user,proxmox.server user,proxmox.server,proxmox_tenant.group_proxmox_user,cru,
+access_proxmox_server_manager,proxmox.server manager,proxmox.server,proxmox_tenant.group_proxmox_manager,crud,

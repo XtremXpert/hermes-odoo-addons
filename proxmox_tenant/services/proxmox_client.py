@@ -32,11 +32,13 @@ class ProxmoxAPIError(Exception):
 class ProxmoxClient:
     """Le portier des appels a l'API Proxmox de l'instance."""
 
-    def __init__(self, env, base_url=None, api_token=None):
+    def __init__(self, env, base_url=None, api_token=None, verify_ssl=None):
         icp = env["ir.config_parameter"].sudo()
         self.base_url = (base_url or icp.get_str("proxmox.base_url", "")).rstrip("/")
         self.api_token = api_token or icp.get_str("proxmox.api_token", "")
-        self.verify_ssl = icp.get_str("proxmox.verify_ssl", "1") not in ("0", "", "false")
+        if verify_ssl is None:
+            verify_ssl = icp.get_str("proxmox.verify_ssl", "1") not in ("0", "", "false")
+        self.verify_ssl = verify_ssl
         if not self.base_url or not self.api_token:
             raise UserError(
                 _(

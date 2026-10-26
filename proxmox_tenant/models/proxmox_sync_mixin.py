@@ -41,31 +41,20 @@ class ProxmoxSyncMixin(models.AbstractModel):
             fiche.message_post(body=corps, subtype_xmlid="mail.mt_note")
 
     @api.model
-    def _pools_autorises(self):
-        """Le périmètre des pools du tenant, ou None si le cluster entier.
-
-        ``proxmox.allowed_pools`` porte une liste séparée par des virgules :
-        ``diverse`` pour un tenant, vide chez l'opérateur — qui voit tout le
-        cluster. Une instance tenant ne doit jamais rapatrier les machines
-        d'un autre pool.
-        """
-        brut = self.env["ir.config_parameter"].sudo().get_str("proxmox.allowed_pools", "")
-        autorises = {p.strip() for p in brut.split(",") if p.strip()}
-        return autorises or None
-
-    @api.model
     def _rafraichir_si_obsolete(self):
-        """Synchroniser le local depuis le serveur si la copie est vieille.
+        """Synchroniser le local depuis les serveurs si la copie est vieille.
 
         Appelée à l'ouverture de chaque vue : l'horodatage par modèle borne
-        la fréquence à ``RAFRAICHISSEMENT_MIN_S``. Une erreur du serveur ne
+        la fréquence à ``RAFRAICHISSEMENT_MIN_S``. Une erreur d'un serveur ne
         casse pas l'écran — le dernier état connu s'affiche.
         """
         icp = self.env["ir.config_parameter"].sudo()
         cle = "proxmox.%s.last_refresh" % self._name
         brut = icp.get_str(cle, "")
         if brut:
-            ecoule = (fields.Datetime.now() - fields.Datetime.to_datetime(brut)).total_seconds()
+            ecoule = (
+                fields.Datetime.now() - fields.Datetime.to_datetime(brut)
+            ).total_seconds()
             if ecoule < RAFRAICHISSEMENT_MIN_S:
                 return
         try:

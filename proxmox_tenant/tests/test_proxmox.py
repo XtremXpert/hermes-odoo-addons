@@ -10,7 +10,7 @@ def _cliente_simule(reponses):
     """Un ProxmoxClient factice : les réponses par chemin d'API."""
 
     class ClientSimule:
-        def __init__(self, env):
+        def __init__(self, env, **kw):
             pass
 
         def _request(self, method, path, data=None):
@@ -77,17 +77,17 @@ class TestProxmoxSync(TransactionCase):
 
     def setUp(self):
         super().setUp()
-        icp = self.env["ir.config_parameter"].sudo()
-        icp.set_str("proxmox.base_url", "https://pve.test:8006")
-        icp.set_str("proxmox.api_token", "root@pam!odoo=aa-11")
+        self.serveur = self.env["proxmox.server"].create(
+            {"name": "pve1", "url": "https://pve.test:8006",
+             "api_token": "root@pam!odoo=aa-11"}
+        )
 
     def test_les_vms_du_perimetre_seulement(self):
         """Un pool autorisé borne ce que la sync rapatrie."""
-        icp = self.env["ir.config_parameter"].sudo()
-        icp.set_str("proxmox.allowed_pools", "diverse")
+        self.serveur.allowed_pools = "diverse"
         reponses = {("GET", "/cluster/resources?type=vm"): RESSOURCES}
         with patch(
-            "odoo.addons.proxmox_tenant.models.proxmox_vm.ProxmoxClient",
+            "odoo.addons.proxmox_tenant.models.proxmox_server.ProxmoxClient",
             _cliente_simule(reponses),
         ):
             self.env["proxmox.vm"]._sync_all_from_proxmox()
@@ -100,7 +100,7 @@ class TestProxmoxSync(TransactionCase):
         """Un paramètre vide = opérateur : tout le cluster est visible."""
         reponses = {("GET", "/cluster/resources?type=vm"): RESSOURCES}
         with patch(
-            "odoo.addons.proxmox_tenant.models.proxmox_vm.ProxmoxClient",
+            "odoo.addons.proxmox_tenant.models.proxmox_server.ProxmoxClient",
             _cliente_simule(reponses),
         ):
             self.env["proxmox.vm"]._sync_all_from_proxmox()
@@ -108,19 +108,18 @@ class TestProxmoxSync(TransactionCase):
 
     def test_noeuds_et_pools(self):
         """Noeuds et pools se rapatrient avec le même contrat."""
-        icp = self.env["ir.config_parameter"].sudo()
-        icp.set_str("proxmox.allowed_pools", "diverse")
+        self.serveur.allowed_pools = "diverse"
         reponses = {
             ("GET", "/cluster/resources?type=node"): NOEUDS,
             ("GET", "/pools"): POOLS,
         }
         with (
             patch(
-                "odoo.addons.proxmox_tenant.models.proxmox_node.ProxmoxClient",
+                "odoo.addons.proxmox_tenant.models.proxmox_server.ProxmoxClient",
                 _cliente_simule(reponses),
             ),
             patch(
-                "odoo.addons.proxmox_tenant.models.proxmox_pool.ProxmoxClient",
+                "odoo.addons.proxmox_tenant.models.proxmox_server.ProxmoxClient",
                 _cliente_simule(reponses),
             ),
         ):
@@ -139,6 +138,7 @@ class TestProxmoxSync(TransactionCase):
                 "node": "pve1",
                 "machine_type": "qemu",
                 "status": "stopped",
+                "server_id": self.serveur.id,
             }
         )
         appels = []
@@ -149,8 +149,8 @@ class TestProxmoxSync(TransactionCase):
                 return []
 
         with patch(
-            "odoo.addons.proxmox_tenant.models.proxmox_vm.ProxmoxClient",
-            lambda env: Client(),
+            "odoo.addons.proxmox_tenant.models.proxmox_server.ProxmoxClient",
+            lambda *args, **kwargs: Client(),
         ):
             machine.action_start()
         self.assertEqual(appels, [("POST", "/nodes/pve1/qemu/100/status/start")])

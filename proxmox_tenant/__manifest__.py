@@ -10,11 +10,11 @@
     "data": [
         "security/proxmox_groups.xml",
         "security/ir.access.csv",
+        "views/proxmox_server_views.xml",
         "views/proxmox_node_views.xml",
         "views/proxmox_vm_views.xml",
         "views/proxmox_pool_views.xml",
         "views/proxmox_storage_views.xml",
-        "views/res_config_settings_views.xml",
         "views/proxmox_menus.xml",
     ],
     "application": True,
