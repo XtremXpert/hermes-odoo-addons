@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <record id="imap_account_view_list" model="ir.ui.view">
+        <field name="model">imap.account</field>
+        <field name="arch" type="xml">
+            <list string="Comptes">
+                <field name="name"/>
+                <field name="host"/>
+                <field name="user"/>
+                <field name="last_synced_on"/>
+            </list>
+        </field>
+    </record>
+    <record id="imap_account_view_form" model="ir.ui.view">
+        <field name="model">imap.account</field>
+        <field name="arch" type="xml">
+            <form string="Compte">
+                <header>
+                    <button name="action_tester" type="object" string="Tester"/>
+                    <button name="action_sync" type="object" string="Synchroniser"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="host"/>
+                            <field name="port"/>
+                        </group>
+                        <group>
+                            <field name="use_ssl"/>
+                            <field name="user"/>
+                            <field name="password" password="True"/>
+                            <field name="post_to_partner"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Dossiers">
+                            <field name="folder_ids">
+                                <list>
+                                    <field name="name"/>
+                                    <field name="unread"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+    <record id="action_imap_account" model="ir.actions.act_window">
+        <field name="name">Comptes</field>
+        <field name="res_model">imap.account</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

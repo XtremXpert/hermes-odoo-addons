@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <menuitem
+        id="imap_root_menu"
+        name="Courriels"
+        sequence="45"
+        groups="imap_client.group_imap_user"
+    />
+    <menuitem
+        id="imap_message_menu"
+        name="Boîte"
+        parent="imap_root_menu"
+        action="action_imap_message"
+        sequence="10"
+    />
+    <menuitem
+        id="imap_folder_menu"
+        name="Dossiers"
+        parent="imap_root_menu"
+        action="action_imap_folder"
+        sequence="20"
+    />
+    <menuitem
+        id="imap_account_menu"
+        name="Comptes"
+        parent="imap_root_menu"
+        action="action_imap_account"
+        sequence="30"
+        groups="imap_client.group_imap_manager"
+    />
+</odoo>

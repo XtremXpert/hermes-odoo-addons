@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <record id="imap_message_view_list" model="ir.ui.view">
+        <field name="model">imap.message</field>
+        <field name="arch" type="xml">
+            <list string="Messages" decoration-bf="not seen">
+                <field name="from_addr"/>
+                <field name="subject"/>
+                <field name="to_addr"/>
+                <field name="date"/>
+                <field name="seen"/>
+                <field name="partner_id"/>
+            </list>
+        </field>
+    </record>
+    <record id="imap_message_view_form" model="ir.ui.view">
+        <field name="model">imap.message</field>
+        <field name="arch" type="xml">
+            <form string="Message">
+                <header>
+                    <button name="action_lire" type="object" string="Lire"
+                            invisible="seen"/>
+                    <button name="action_marquer_lu" type="object" string="Marquer lu"
+                            invisible="seen"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="from_addr"/>
+                            <field name="to_addr"/>
+                            <field name="date"/>
+                        </group>
+                        <group>
+                            <field name="folder_id"/>
+                            <field name="seen"/>
+                            <field name="partner_id"/>
+                        </group>
+                    </group>
+                    <field name="subject" class="oe_inline text-lg fw-bold"/>
+                    <separator string="Corps"/>
+                    <field name="body"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="action_imap_message" model="ir.actions.act_window">
+        <field name="name">Messages</field>
+        <field name="res_model">imap.message</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>
