@@ -27,6 +27,12 @@ class MailcowMailbox(models.Model):
         index=True,
     )
     name = fields.Char(string="Nom complet")
+    partner_id = fields.Many2one(
+        "res.partner",
+        string="Partenaire",
+        help="Le contact Odoo auquel cette boîte appartient.",
+        index=True,
+    )
     description = fields.Char()
     quota_mb = fields.Integer(string="Quota (Mo)", default=0, help="0 = illimité")
     active = fields.Boolean(string="Actif", default=True)

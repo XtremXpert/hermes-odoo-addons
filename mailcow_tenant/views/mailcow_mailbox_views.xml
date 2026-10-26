@@ -43,6 +43,7 @@
                 <field name="local_part" />
                 <field name="domain_id" />
                 <field name="name" optional="show" />
+                <field name="partner_id" optional="show" />
                 <field name="quota_mb" string="Quota (Mo)" optional="show" />
                 <field name="quota_used_mb" string="Utilisé (Mo)" optional="show" />
                 <field name="percent_in_use" string="Occupation" optional="show" />
@@ -137,6 +138,7 @@
                     <group>
                         <group string="Boîte mail">
                             <field name="name" />
+                            <field name="partner_id" />
                             <field name="description" />
                             <field name="active" />
                         </group>
