@@ -680,6 +680,7 @@ class MailcowDomain(models.Model):
         response = client._request("GET", "/get/domain/all", None)
         entries = response.get("data") if isinstance(response, dict) else response
         refuser_la_disparition_totale(self.env, entries, "mailcow.domain", "domaine")
+        autorises = self._domaines_autorises()
         remote_ids = set()
         for entry in entries:
             if not isinstance(entry, dict):
@@ -688,6 +689,10 @@ class MailcowDomain(models.Model):
             # et s'y fier fait ignorer chaque entrée en silence.
             nom = entry.get("domain_name") or entry.get("domain")
             if not nom:
+                continue
+            # Un tenant ne synchronise que ses domaines : les autres restent
+            # hors de sa portée, même si la clé serveur les voit.
+            if autorises is not None and nom not in autorises:
                 continue
             remote_ids.add(nom)
             # Les fiches archivees comptent : une suppression archive la fiche

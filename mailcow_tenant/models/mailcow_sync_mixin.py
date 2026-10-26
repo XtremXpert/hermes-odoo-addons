@@ -91,6 +91,19 @@ class MailcowSyncMixin(models.AbstractModel):
         return self.env[self._name].action_preview_sync_from_mailcow()
 
     @api.model
+    def _domaines_autorises(self):
+        """Le périmètre des domaines du tenant, ou None si le serveur entier.
+
+        ``mailcow.allowed_domains`` porte une liste séparée par des virgules :
+        ``diverse-cite.com`` pour un tenant, vide chez l'opérateur — qui voit
+        tout le serveur. Une instance tenant ne doit jamais rapatrier les
+        domaines des autres.
+        """
+        brut = self.env["ir.config_parameter"].sudo().get_str("mailcow.allowed_domains", "")
+        autorises = {d.strip() for d in brut.split(",") if d.strip()}
+        return autorises or None
+
+    @api.model
     def _ecarts(self, fiche, valeurs):
         """Les champs dont le serveur s'écarte de la fiche locale."""
         ecarts = []

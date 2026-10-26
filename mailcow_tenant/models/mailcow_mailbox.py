@@ -288,8 +288,12 @@ class MailcowMailbox(models.Model):
         entries = response.get("data") if isinstance(response, dict) else response
         refuser_la_disparition_totale(self.env, entries, "mailcow.mailbox", "boîte mail")
         remote_keys = set()
+        autorises = self._domaines_autorises()
         for entry in entries:
             if not isinstance(entry, dict) or not entry.get("domain"):
+                continue
+            # Un tenant ne rapatrie que les boîtes de ses domaines.
+            if autorises is not None and entry["domain"] not in autorises:
                 continue
             # Mailcow renvoie « local_part » et « username » ; « mail_user »
             # n'existe pas, et s'y fier fait ignorer chaque entrée en silence.
