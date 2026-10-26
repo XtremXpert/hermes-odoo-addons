@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <menuitem
+        id="proxmox_tenant_menu"
+        name="Tenants"
+        parent="proxmox_tenant.proxmox_root_menu"
+        action="action_proxmox_tenant"
+        sequence="3"
+        groups="proxmox_server.group_proxmox_platform"
+    />
+</odoo>

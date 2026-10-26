@@ -36,7 +36,7 @@ class ProxmoxServer(models.Model):
     active = fields.Boolean(default=True)
 
     _proxmox_server_url_uniq = models.Constraint(
-        "unique(url)", "Ce serveur est déjà déclaré."
+        "unique(url, allowed_pools)", "Cette fiche serveur existe déjà."
     )
 
     def _client(self):
