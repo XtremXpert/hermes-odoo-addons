@@ -35,27 +35,55 @@
                             string="Provisionner" class="btn-primary"
                             invisible="state == 'synced'" />
                     <button name="action_check_registration" type="object"
-                            string="Vérifier l'enregistrement"
+                            string="Vérifier la connexion"
                             invisible="state != 'synced'" />
                     <button name="action_unprovision" type="object"
-                            string="Déprovisionner" class="btn-secondary"
+                            string="Retirer" class="btn-secondary"
                             invisible="state != 'synced'"
-                            confirm="Retirer le trunk de Wazo ?" />
+                            confirm="Retirer le trunk du serveur ? Les numéros qui en dépendent cesseront de sonner." />
                     <button name="action_retry" type="object"
                             string="Réessayer" invisible="state != 'error'" />
                     <field name="state" widget="statusbar" />
                 </header>
                 <sheet>
+                    <!-- Bannière d'etat : en une ligne, ce que le trunk fait. -->
+                    <div class="alert alert-success" role="status"
+                         invisible="state != 'synced' or not registered">
+                        <strong>Le trunk appelle.</strong>
+                        Il est connecté à votre serveur téléphonique — les appels
+                        sortants passent. Routez un numéro dessus pour recevoir
+                        des appels.
+                    </div>
+                    <div class="alert alert-warning" role="status"
+                         invisible="state != 'synced' or registered">
+                        <strong>Connecté, pas encore enregistré.</strong>
+                        Le trunk est configuré mais l'enregistrement n'est pas
+                        confirmé — lancez « Vérifier la connexion ».
+                    </div>
+                    <div class="alert alert-info" role="status"
+                         invisible="state != 'draft'">
+                        <strong>Nouveau trunk.</strong>
+                        Renseignez le sous-compte VoIP.ms puis lancez
+                        « Provisionner » — le serveur téléphonique se
+                        configure tout seul.
+                    </div>
+                    <div class="alert alert-danger" role="status"
+                         invisible="state != 'error'">
+                        <strong>Une étape a échoué.</strong>
+                        L'erreur est lisible plus bas — corrigez puis
+                        « Réessayer ».
+                    </div>
                     <div class="oe_title"><h1><field name="name" /></h1></div>
                     <group>
-                        <group string="VoIP.ms">
+                        <group string="Compte VoIP.ms">
+                            <field name="tenant_slug" />
                             <field name="protocol" />
                             <field name="pop_host" />
                             <field name="voipms_username" />
                             <field name="voipms_password" password="True" />
                             <field name="caller_id" />
                         </group>
-                        <group string="Wazo">
+                        <group string="Serveur téléphonique">
                             <field name="outbound_prefix" />
                             <field name="registered" readonly="1" />
                             <field name="error_message" readonly="1"
