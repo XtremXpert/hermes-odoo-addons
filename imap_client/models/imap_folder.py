@@ -10,7 +10,6 @@ LIMITE_SYNC = 50
 
 class ImapFolder(models.Model):
     _name = "imap.folder"
-    _inherit = ["mail.thread"]
     _description = "Dossier IMAP"
     _order = "account_id, name"
 

@@ -22,7 +22,8 @@ class IMAPConnexion:
         for ligne in lignes:
             # '(\\HasNoChildren) "." "INBOX"' -> 'INBOX'
             brut = ligne.decode() if isinstance(ligne, bytes) else ligne
-            noms.append(brut.rsplit(' "', 1)[-1].rstrip('"'))
+            # "(\\HasNoChildren) \"/\" INBOX" : le nom est le dernier atome.
+            noms.append(brut.rstrip().rsplit(' ', 1)[-1].strip('"'))
         return noms
 
     def entetes(self, dossier, limite=50):

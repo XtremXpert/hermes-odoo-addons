@@ -7,7 +7,6 @@ from odoo import models
 
 class ImapMessage(models.Model):
     _name = "imap.message"
-    _inherit = ["mail.thread"]
     _description = "Message IMAP"
     _order = "date desc"
 

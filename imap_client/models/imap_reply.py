@@ -46,8 +46,9 @@ class ImapReply(models.TransientModel):
             }
         )
         corps.send()
-        origin.message_post(
-            body=self.env._("Réponse envoyée à %s.", self.to_addr),
-            subtype_xmlid="mail.mt_note",
-        )
+        if origin.partner_id:
+            origin.partner_id.message_post(
+                body=self.env._("Réponse envoyée à %s.", self.to_addr),
+                subtype_xmlid="mail.mt_note",
+            )
         return {"type": "ir.actions.act_window_close"}
