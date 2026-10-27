@@ -926,29 +926,32 @@ export class WazoSoftphoneService {
         if (ctx.state === "suspended") {
             ctx.resume().catch(() => {});
         }
-        const osc = ctx.createOscillator();
+        // Classic phone ring: dual tone (440+480 Hz) pulsing twice every 4 s.
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
         const gain = ctx.createGain();
-        osc.type = "sine";
-        osc.frequency.value = 440;
+        osc1.type = osc2.type = "sine";
+        osc1.frequency.value = 440;
+        osc2.frequency.value = 480;
         gain.gain.value = 0;
-        osc.connect(gain);
+        osc1.connect(gain);
+        osc2.connect(gain);
         gain.connect(ctx.destination);
-        osc.start();
-        // Ring cadence: 1.4 s on, 3 s off, alternating 440/480 Hz.
-        this._ringInterval = setInterval(() => {
+        osc1.start();
+        osc2.start();
+        const pulse = () => {
             const t = ctx.currentTime;
-            gain.gain.cancelScheduledValues(t);
-            gain.gain.setValueAtTime(0, t);
-            gain.gain.linearRampToValueAtTime(0.12, t + 0.05);
-            osc.frequency.setValueAtTime(440, t);
-            osc.frequency.setValueAtTime(480, t + 0.4);
-            gain.gain.setValueAtTime(0.12, t + 1.3);
-            gain.gain.linearRampToValueAtTime(0, t + 1.4);
-        }, 4400);
-        const t = ctx.currentTime;
-        gain.gain.linearRampToValueAtTime(0.12, t + 0.05);
+            for (const off of [0, 0.4]) {
+                gain.gain.setValueAtTime(0, t + off);
+                gain.gain.linearRampToValueAtTime(0.15, t + off + 0.02);
+                gain.gain.setValueAtTime(0.15, t + off + 0.25);
+                gain.gain.linearRampToValueAtTime(0, t + off + 0.3);
+            }
+        };
+        pulse();
+        this._ringInterval = setInterval(pulse, 4000);
         this._ringCtx = ctx;
-        this._ringNodes = {osc, gain};
+        this._ringNodes = {osc1, osc2, gain};
     }
 
     _stopRingtone() {
@@ -957,8 +960,9 @@ export class WazoSoftphoneService {
             this._ringInterval = null;
         }
         if (this._ringCtx) {
-            const {osc} = this._ringNodes;
-            osc.stop();
+            const {osc1, osc2} = this._ringNodes;
+            osc1.stop();
+            osc2.stop();
             this._ringCtx.close();
             this._ringCtx = null;
             this._ringNodes = null;
