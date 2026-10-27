@@ -709,6 +709,13 @@ export class WazoSoftphoneService {
         if (!state || !state.state) {
             return;
         }
+        // Keep the ringer in sync on remote tabs: ringing starts it, any
+        // other state (in_call, ended, idle) stops it.
+        if (state.state === STATES.RINGING) {
+            this._startRingtone();
+        } else {
+            this._stopRingtone();
+        }
         this.status.state = state.state;
         this.status.message = state.message || "";
         if (state.state === STATES.RINGING) {
