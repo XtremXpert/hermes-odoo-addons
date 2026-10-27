@@ -887,7 +887,58 @@ export class WazoSoftphoneService {
      * @param {String} state
      * @param {String} message
      */
+    _startRingtone() {
+        if (this._ringCtx) {
+            return;
+        }
+        // Web Audio ring: two-tone warble, no asset file needed.
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = 440;
+        gain.gain.value = 0;
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        // Ring cadence: 1.4 s on, 3 s off, alternating 440/480 Hz.
+        this._ringInterval = setInterval(() => {
+            const t = ctx.currentTime;
+            gain.gain.cancelScheduledValues(t);
+            gain.gain.setValueAtTime(0, t);
+            gain.gain.linearRampToValueAtTime(0.12, t + 0.05);
+            osc.frequency.setValueAtTime(440, t);
+            osc.frequency.setValueAtTime(480, t + 0.4);
+            gain.gain.setValueAtTime(0.12, t + 1.3);
+            gain.gain.linearRampToValueAtTime(0, t + 1.4);
+        }, 4400);
+        const t = ctx.currentTime;
+        gain.gain.linearRampToValueAtTime(0.12, t + 0.05);
+        this._ringCtx = ctx;
+        this._ringNodes = {osc, gain};
+    }
+
+    _stopRingtone() {
+        if (this._ringInterval) {
+            clearInterval(this._ringInterval);
+            this._ringInterval = null;
+        }
+        if (this._ringCtx) {
+            const {osc} = this._ringNodes;
+            osc.stop();
+            this._ringCtx.close();
+            this._ringCtx = null;
+            this._ringNodes = null;
+        }
+    }
+
     _setState(state, message) {
+        // Incoming-call ringtone: loop while ringing, stop on any other state.
+        if (state === STATES.RINGING) {
+            this._startRingtone();
+        } else {
+            this._stopRingtone();
+        }
         this.status.state = state;
         this.status.message = message || "";
         this.bus.trigger("state_changed", {state, message});
@@ -928,3 +979,4 @@ const wazoSoftphoneService = {
 };
 
 registry.category("services").add("wazo_softphone", wazoSoftphoneService);
+
