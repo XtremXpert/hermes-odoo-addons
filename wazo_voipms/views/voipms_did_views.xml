@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <odoo>
+    <!-- Ajout du tenant proprietaire dans la liste des DIDs. -->
+    <record id="voipms_did_list_tenant" model="ir.ui.view">
+        <field name="name">voipms.did.list.tenant</field>
+        <field name="model">voipms.did</field>
+        <field name="inherit_id" ref="voipms_sms.voipms_did_view_list"/>
+        <field name="arch" type="xml">
+            <field name="label" position="after">
+                <field name="tenant_slug"/>
+            </field>
+        </field>
+    </record>
     <record id="voipms_did_form_wazo" model="ir.ui.view">
         <field name="name">voipms.did.form.wazo</field>
         <field name="model">voipms.did</field>
