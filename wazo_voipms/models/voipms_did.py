@@ -67,6 +67,23 @@ class VoIPMSDid(models.Model):
     wazo_incall_extension_id = fields.Integer(
         string="ID extension incall", readonly=True
     )
+    def _remplir_tenant(self):
+        """Le DID herite du tenant de son trunk — jamais saisi a la main."""
+        for did in self:
+            if did.trunk_id and not did.tenant_slug:
+                did.tenant_slug = did.trunk_id.tenant_slug
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        enregistrements = super().create(vals_list)
+        enregistrements._remplir_tenant()
+        return enregistrements
+
+    def write(self, vals):
+        resultat = super().write(vals)
+        self._remplir_tenant()
+        return resultat
+
     wazo_route_state = fields.Selection(
         selection=[
             ("none", "Non routé"),
