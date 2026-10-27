@@ -980,8 +980,12 @@ export class WazoSoftphoneService {
 
     _stopRingtone() {
         if (this._ringAudio) {
-            this._ringAudio.pause();
+            const a = this._ringAudio;
             this._ringAudio = null;
+            a.pause();
+            // load() aborts a still-pending play() — pause() alone can race
+            // and the ring keeps playing after the call is answered.
+            a.load();
         }
         if (this._ringInterval) {
             clearInterval(this._ringInterval);
