@@ -77,6 +77,18 @@ class ResUsersWazoCall(models.Model):
         )
         return True
 
+    def notify_wazo_call_ended(self):
+        """Diffuse la fin d'appel aux autres sessions de l'utilisateur.
+
+        Une session notifiée par ``wazo_phone.incoming_call`` (autre
+        navigateur, autre appareil) n'a pas de couche SIP : rien ne lui
+        signale que l'appel a été pris ailleurs. L'onglet propriétaire
+        appelle cette méthode quand l'appel se termine pour couper leurs
+        sonneries.
+        """
+        self.ensure_one()
+        self.env.user._bus_send("wazo_phone.call_ended", {})
+
     def finalize_wazo_call(self, info=None):
         """Consigne la fin d'un appel.
 

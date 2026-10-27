@@ -163,6 +163,11 @@ export class WazoSoftphoneService {
             this.busService.subscribe("wazo_phone.missed_call", (payload) =>
                 this._onBusMissedCall(payload)
             );
+            // Call ended elsewhere (or answered on the SIP owner): sessions
+            // notified via the bus have no SIP layer to cancel — stop here.
+            this.busService.subscribe("wazo_phone.call_ended", () =>
+                this._stopRingtone()
+            );
         }
         window.addEventListener("beforeunload", () => {
             this.isUnloading = true;
@@ -620,9 +625,11 @@ export class WazoSoftphoneService {
                     this.status.currentCall.answered = true;
                 }
                 this._setState(STATES.IN_CALL, _t("En appel"));
+                this._notifyCallEndedToBackend();
                 break;
             case "ended":
                 this._onCallTerminated();
+                this._notifyCallEndedToBackend();
                 break;
             case "transport_lost":
                 if (!this.isUnloading) {
@@ -753,6 +760,12 @@ export class WazoSoftphoneService {
             return false;
         }
         return isEngineLoaded(name, this._scope());
+    }
+
+    _notifyCallEndedToBackend() {
+        // Same pattern as _notifyIncomingToBackend: best-effort, no await —
+        // local behaviour must never depend on the backend.
+        this.orm.call("res.users", "notify_wazo_call_ended", [[]]).catch(() => {});
     }
 
     _onCallTerminated() {
