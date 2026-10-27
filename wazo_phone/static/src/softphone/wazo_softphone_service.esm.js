@@ -912,6 +912,23 @@ export class WazoSoftphoneService {
     }
 
     _startRingtoneUnsafe() {
+        if (this._ringAudio) {
+            return;
+        }
+        // Real phone bell: generated ring.wav played on loop. The audio
+        // element is unlocked by the first user click (see connect()).
+        this._ringAudio = new Audio("/wazo_phone/static/src/audio/ring.wav");
+        this._ringAudio.loop = true;
+        const played = this._ringAudio.play();
+        if (played && played.then) {
+            played.catch(() => {
+                this._ringAudio = null;
+                this._startWebAudioRing();
+            });
+        }
+    }
+
+    _startWebAudioRing() {
         if (this._ringCtx) {
             this._ringCtx.resume().catch(() => {});
             return;
@@ -955,6 +972,10 @@ export class WazoSoftphoneService {
     }
 
     _stopRingtone() {
+        if (this._ringAudio) {
+            this._ringAudio.pause();
+            this._ringAudio = null;
+        }
         if (this._ringInterval) {
             clearInterval(this._ringInterval);
             this._ringInterval = null;
