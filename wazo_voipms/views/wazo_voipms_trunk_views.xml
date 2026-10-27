@@ -12,6 +12,8 @@
         <field name="arch" type="xml">
             <list>
                 <field name="name" />
+                <field name="tenant_slug" />
+                <field name="protocol" />
                 <field name="pop_host" />
                 <field name="voipms_username" />
                 <field name="registered" widget="boolean_toggle" readonly="1" />

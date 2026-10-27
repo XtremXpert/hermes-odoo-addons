@@ -103,7 +103,12 @@ class WazoVoipmsTrunk(models.Model):
     remote_trunk_id = fields.Integer(string="ID trunk Wazo")
     remote_outcall_id = fields.Integer(string="ID outcall Wazo")
     remote_outcall_extension_id = fields.Integer(string="ID motif outcall Wazo")
-    registered = fields.Boolean(string="Enregistrement SIP actif", readonly=True)
+    registered = fields.Boolean(string="Enregistré", readonly=True)
+    registered_label = fields.Selection(
+        [("sip", "SIP"), ("iax2", "IAX2")],
+        string="Protocole du statut",
+        compute="_compute_registered_label",
+    )
     active = fields.Boolean(default=True)
 
     _name_uniq = models.Constraint("unique(name)", "Ce nom de trunk existe déjà.")
@@ -570,9 +575,29 @@ class WazoVoipmsTrunk(models.Model):
         )
         return True
 
+    @api.depends("protocol")
+    def _compute_registered_label(self):
+        for trunk in self:
+            trunk.registered_label = trunk.protocol or "sip"
+
     def action_check_registration(self):
-        """Lit l'état de l'enregistrement SIP côté VoIP.ms."""
+        """Lit l'état d'enregistrement : SIP côté VoIP.ms, IAX2 côté Wazo."""
         self.ensure_one()
+        if self.protocol == "iax2":
+            client = self._wazo_client()
+            reponse = client._request(
+                "confd", "GET", f"/registers/iax/{self.remote_register_iax_id}"
+            )
+            corps = (reponse or {}).get("json", reponse) or {}
+            etat = corps.get("state") or corps.get("registered")
+            actif = etat in ("registered", "yes", "True", True)
+            self.sudo().write(
+                {
+                    "registered": bool(actif),
+                    "error_message": "" if actif else f"IAX: {etat}",
+                }
+            )
+            return True
         client = self._voipms_client()
         response = client._request("getRegistrationStatus", {"account": self.voipms_username})
         self.sudo().write({"registered": (response or {}).get("registered") == "yes"})
