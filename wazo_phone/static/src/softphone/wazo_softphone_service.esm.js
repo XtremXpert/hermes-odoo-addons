@@ -926,6 +926,9 @@ export class WazoSoftphoneService {
         // element is unlocked by the first user click (see connect()).
         this._ringAudio = new Audio("/wazo_phone/static/src/audio/ring.wav");
         this._ringAudio.loop = true;
+        // Safety: a notification-driven ring (call answered on another device)
+        // never receives an "ended" event — auto-stop after 60 s.
+        this._ringTimeout = setTimeout(() => this._stopRingtone(), 60000);
         const played = this._ringAudio.play();
         if (played && played.then) {
             played.catch(() => {
@@ -979,6 +982,10 @@ export class WazoSoftphoneService {
     }
 
     _stopRingtone() {
+        if (this._ringTimeout) {
+            clearTimeout(this._ringTimeout);
+            this._ringTimeout = null;
+        }
         if (this._ringAudio) {
             const a = this._ringAudio;
             this._ringAudio = null;
