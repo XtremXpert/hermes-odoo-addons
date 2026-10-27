@@ -14,7 +14,7 @@
             t-on-click="this.onClick"
             data-hotkey="Alt+Shift+S"
         >
-            <i class="oi fs-5" t-att-data-icon="this.icon" />
+            <i class="oi fs-5" t-att-data-icon="this.icon" t-att-class="{'o_wazo_ringing': this.service.state === 'ringing'}" />
             <span t-if="this.service.state === 'ringing'" class="ms-1">
                 <t t-out="this.caller" />
             </span>

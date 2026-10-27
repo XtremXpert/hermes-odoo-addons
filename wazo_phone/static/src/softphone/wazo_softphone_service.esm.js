@@ -327,6 +327,14 @@ export class WazoSoftphoneService {
         // qu'à sa libération (fermeture de l'onglet, ou reprise du rôle).
         // L'attendre bloquerait un onglet télécommande indéfiniment.
         this.arbiter.start();
+        // Unlock the audio context on the first user gesture: browsers refuse
+        // autoplay sound until the user has interacted with the page once.
+        document.addEventListener("click", () => {
+            if (!this._audioCtx) {
+                this._audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            this._audioCtx.resume();
+        }, {once: true});
         // La désignation est asynchrone côté navigateur (l'octroi du verrou
         // est remis à une tâche). Si, une boucle d'événements plus tard, on
         // n'est toujours pas propriétaire, c'est qu'un autre onglet l'est :
@@ -889,10 +897,15 @@ export class WazoSoftphoneService {
      */
     _startRingtone() {
         if (this._ringCtx) {
+            this._ringCtx.resume();
             return;
         }
         // Web Audio ring: two-tone warble, no asset file needed.
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const ctx = this._audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        this._audioCtx = ctx;
+        if (ctx.state === "suspended") {
+            ctx.resume();
+        }
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.type = "sine";

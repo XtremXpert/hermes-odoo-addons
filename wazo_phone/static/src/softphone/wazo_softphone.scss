@@ -11,3 +11,26 @@
     overflow-y: auto;
     width: 340px;
 }
+
+// Blink the systray icon while ringing so an incoming call catches the eye.
+.o_wazo_ringing {
+    animation: wazo-ring-blink 0.9s ease-in-out infinite;
+    color: #e01e24;
+}
+
+@keyframes wazo-ring-blink {
+    0%, 100% {
+        opacity: 1;
+        transform: rotate(0deg);
+    }
+    25% {
+        transform: rotate(15deg);
+    }
+    50% {
+        opacity: 0.25;
+        transform: rotate(-15deg);
+    }
+    75% {
+        transform: rotate(15deg);
+    }
+}
