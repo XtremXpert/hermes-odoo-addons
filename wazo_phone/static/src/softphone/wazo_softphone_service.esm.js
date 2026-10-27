@@ -330,10 +330,18 @@ export class WazoSoftphoneService {
         // Unlock the audio context on the first user gesture: browsers refuse
         // autoplay sound until the user has interacted with the page once.
         document.addEventListener("click", () => {
-            if (!this._audioCtx) {
-                this._audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            try {
+                const AC = window.AudioContext || window.webkitAudioContext;
+                if (!AC) {
+                    return;
+                }
+                if (!this._audioCtx) {
+                    this._audioCtx = new AC();
+                }
+                this._audioCtx.resume().catch(() => {});
+            } catch (e) {
+                // Audio unavailable (headless, blocked) — ringtone is optional.
             }
-            this._audioCtx.resume();
         }, {once: true});
         // La désignation est asynchrone côté navigateur (l'octroi du verrou
         // est remis à une tâche). Si, une boucle d'événements plus tard, on
@@ -896,15 +904,27 @@ export class WazoSoftphoneService {
      * @param {String} message
      */
     _startRingtone() {
+        try {
+            this._startRingtoneUnsafe();
+        } catch (e) {
+            // Never let an audio failure break the call flow.
+        }
+    }
+
+    _startRingtoneUnsafe() {
         if (this._ringCtx) {
-            this._ringCtx.resume();
+            this._ringCtx.resume().catch(() => {});
+            return;
+        }
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) {
             return;
         }
         // Web Audio ring: two-tone warble, no asset file needed.
-        const ctx = this._audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        const ctx = this._audioCtx || new AC();
         this._audioCtx = ctx;
         if (ctx.state === "suspended") {
-            ctx.resume();
+            ctx.resume().catch(() => {});
         }
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
