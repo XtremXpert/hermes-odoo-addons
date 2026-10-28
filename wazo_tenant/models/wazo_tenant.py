@@ -108,4 +108,4 @@ class WazoTenant(models.Model):
             else:
                 # Décoché : plus de tenant configuré — vide, pas orphelin.
                 if param.get_str("wazo.tenant_id") == fiche.remote_uuid:
-                    param.set_param("wazo.tenant_id", False)
+                    param.set_str("wazo.tenant_id", False)

@@ -62,7 +62,7 @@ class ResConfigSettings(models.TransientModel):
         """Retient le tenant choisi — l'UUID, qui seul survit aux fiches."""
         param = self.env["ir.config_parameter"].sudo()
         for settings in self:
-            param.set_param(
+            param.set_str(
                 "wazo.tenant_id",
                 settings.wazo_tenant_fk.remote_uuid or False,
             )
