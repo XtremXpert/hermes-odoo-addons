@@ -19,28 +19,35 @@ from odoo.tools.json import json_default
 from ..agent_html import agent_html
 from ..agent_html import values_table
 
-TECHNICAL = (
+# Models N1 never reaches, even for reads: internals, credentials, and the
+# agent's own administration objects (those stay N3-only by contract).
+FORBIDDEN = (
     "ir.",
     "base.",
     "auth.",
-    "mail.",
-    "discuss.",
     "bus.",
     "web.",
     "hermes.",
     "k8s.",
     "automation.",
     "queue.",
-    "res.users",
     "res.groups",
     "res.config",
-    "res.company",
     "res.bank",
     "res.partner.bank",
     "payment.",
     "fetchmail.",
     "iap.",
     "sms.",
+)
+# Readable when the employee may read them, but never writable through N1:
+# assistance means following the requester's rights, not editing Discuss,
+# users or company settings on their behalf.
+TECHNICAL = (
+    "mail.",
+    "discuss.",
+    "res.users",
+    "res.company",
 )
 SENSITIVE = re.compile(
     r"password|passwd|secret|token|credential|private_key|api_key|python|code_compute|signup|oauth|totp|session",
@@ -60,6 +67,10 @@ SCALARS = {
     "datetime",
     "selection",
     "many2one",
+    "binary",
+    "reference",
+    "properties",
+    "json",
 }
 CONTROL = {
     "id",
@@ -97,8 +108,13 @@ class Business(models.Model):
         "mail.message", required=False, readonly=True, ondelete="restrict"
     )
 
-    def _business(self, model, actor):
-        if not isinstance(model, str) or model.startswith(TECHNICAL) or model not in self.env:
+    def _business(self, model, actor, writable=False):
+        if (
+            not isinstance(model, str)
+            or model.startswith(FORBIDDEN)
+            or (writable and model.startswith(TECHNICAL))
+            or model not in self.env
+        ):
             raise AccessError(self.env._("Objet technique ou absent ; administration N3 requise."))
         target = self.env[model].with_user(actor)
         if target._transient or target._abstract or not target._auto:
@@ -153,12 +169,17 @@ class Business(models.Model):
         actor, _ = self._business_actor(channel_id, message_id, partner_id)
         if model:
             target = self._business(model, actor)
+            readonly = model.startswith(TECHNICAL)
             return {
                 "model": model,
                 "fields": self._business_fields(target),
-                "editable": self._business_fields(target, writable=True),
-                "operations": ["read", "create", "write", "unlink"],
-                "actions": ["archive", "unarchive"] if "active" in target._fields else [],
+                "editable": {} if readonly else self._business_fields(target, writable=True),
+                "operations": ["read"] if readonly else ["read", "create", "write", "unlink"],
+                "actions": (
+                    []
+                    if readonly or "active" not in target._fields
+                    else ["archive", "unarchive"]
+                ),
                 "note": (
                     "Droits ORM du demandeur. "
                     "Relations : liaison à des objets existants uniquement."
@@ -318,7 +339,7 @@ class Business(models.Model):
         expected=None,
     ):
         actor, source = self._business_actor(channel_id, message_id, partner_id)
-        target_model = self._business(model, actor)
+        target_model = self._business(model, actor, writable=True)
         editable = self._business_fields(target_model, writable=True)
         if (
             not isinstance(values, dict)
@@ -446,7 +467,7 @@ class Business(models.Model):
     ):
         """Ordinary lifecycle actions, never arbitrary model method execution."""
         actor, source = self._business_actor(channel_id, message_id, partner_id)
-        target_model = self._business(model, actor)
+        target_model = self._business(model, actor, writable=True)
         if action not in ("archive", "unarchive", "unlink"):
             raise UserError(self.env._("Action inconnue ; consulter explorer."))
         if type(record_id) is not int or record_id <= 0:

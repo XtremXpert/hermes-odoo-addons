@@ -134,9 +134,12 @@ class TestAudit(TransactionCase):
         }
 
     def test_business_discovery_rejects_technical_models(self):
-        for model in ["res.users", "ir.config_parameter", "hermes.n3.operation"]:
+        for model in ["ir.config_parameter", "hermes.n3.operation"]:
             with self.assertRaises(AccessError):
                 self.service.explorer(model=model, **self.business_source())
+        # res.users is readable now: N1 follows the requester's read rights.
+        info = self.service.explorer(model="res.users", **self.business_source())
+        self.assertEqual(info["editable"], {})
         info = self.service.explorer(model="res.partner", **self.business_source())
         self.assertIn("city", info["editable"])
         self.assertIn("active", info["editable"])
@@ -317,7 +320,7 @@ class TestAudit(TransactionCase):
         for action in ("sudo", "message_post", "action_reset_password", "write"):
             with self.assertRaises(UserError):
                 self.service.agir_metier(**dict(args, action=action))
-        for model in ("k8s.odoo.instance", "res.users", "ir.config_parameter"):
+        for model in ("k8s.odoo.instance", "ir.config_parameter"):
             with self.assertRaises(AccessError):
                 self.service.explorer(model=model, **self.business_source())
         self.assertTrue(self.contact.active)
