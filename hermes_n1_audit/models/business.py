@@ -132,15 +132,21 @@ class Business(models.Model):
             field = target._fields[name]
             if field.type not in SCALARS or SENSITIVE.search(name):
                 continue
-            if field.type in ("many2one", "many2many", "one2many") and (
-                field.comodel_name.startswith(TECHNICAL)
-                and not (
+            # Relations: never expose FORBIDDEN comodels; for writable
+            # exposure TECHNICAL comodels are hidden too, except the
+            # res.users reference used for assignment.
+            if field.type in ("many2one", "many2many", "one2many"):
+                user_reference = (
                     field.comodel_name in REFERENCE_ONLY
                     and field.type in ("many2one", "many2many")
                     and name in ("user_id", "user_ids")
                 )
-            ):
-                continue
+                if field.comodel_name.startswith(FORBIDDEN) or (
+                    writable
+                    and field.comodel_name.startswith(TECHNICAL)
+                    and not user_reference
+                ):
+                    continue
             if writable:
                 # Odoo stores website page markup on the delegated ir.ui.view.
                 # Expose only the page-facing inverse field, never generic
