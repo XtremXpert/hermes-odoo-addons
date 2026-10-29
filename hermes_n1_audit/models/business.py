@@ -74,6 +74,7 @@ SCALARS = {
 }
 CONTROL = {
     "id",
+
     "state",
     "company_id",
     "company_ids",
@@ -85,6 +86,18 @@ CONTROL = {
 # Assignment may reference an existing internal user; it never edits that user.
 REFERENCE_ONLY = {"res.users"}
 ACTION_LABELS = {"archive": "archivage", "unarchive": "désarchivage", "unlink": "suppression"}
+PSEUDO_TOKEN = re.compile(r"\b[A-Z]{2,6}-\d{1,6}\b")
+
+
+def values_match(before, expected):
+    # Reads return Presidio-anonymized values, so a field whose expected value
+    # carries a pseudo token can never be verified — skip strict equality for it.
+    for key, value in expected.items():
+        if isinstance(value, str) and PSEUDO_TOKEN.search(value):
+            continue
+        if before.get(key) != value:
+            return False
+    return True
 
 
 def json_value(value):
@@ -411,7 +424,8 @@ class Business(models.Model):
                     )
                 before = json_value(target.read(sorted(values), load=None)[0])
                 before.pop("id", None)
-                if before != {k: False if v is None else v for k, v in expected.items()}:
+                expected_norm = {k: False if v is None else v for k, v in expected.items()}
+                if not values_match(before, expected_norm):
                     raise UserError(self.env._("Valeurs modifiées ; relire avant de corriger."))
                 target.with_context(mail_notify_noemail=True, mail_notify_force_send=False).write(
                     values
@@ -514,7 +528,7 @@ class Business(models.Model):
             target.invalidate_recordset()
             before = json_value(target.read(sorted(expected), load=None)[0])
             before.pop("id", None)
-            if before != expected:
+            if not values_match(before, expected):
                 raise UserError(self.env._("Objet modifié ; relire avant cette action."))
             if action == "unlink":
                 target.unlink()
