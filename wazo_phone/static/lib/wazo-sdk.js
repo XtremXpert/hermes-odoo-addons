@@ -53189,7 +53189,7 @@ and limitations under the License.
                     this.audioOutputVolume = 1;
                     this.audioRingVolume = 1;
                     this.incomingSessions = [];
-                    this.ringingEnabled = true;
+                    this.ringingEnabled = false; // Odoo rings itself
                     this.shouldSendReinvite = false;
                     this.fallbackToFirstSipSession = true;
                     this.bindClientEvents();
@@ -54067,7 +54067,7 @@ and limitations under the License.
                 }
                 enableRinging() {
                     WebRTCPhone_logger.info('WebRTC enable ringing');
-                    this.ringingEnabled = true;
+                    this.ringingEnabled = false; // Odoo rings itself
                 }
                 disableRinging() {
                     WebRTCPhone_logger.info('WebRTC disable ringing');
