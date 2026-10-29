@@ -380,6 +380,13 @@ export class WazoSdkEngine {
             this._emit("registration_failed", {error})
         );
         on("INVITE", (session) => {
+            // The phone object may not exist at startup — disable the SDK's
+            // own ringtone again here, where it certainly does.
+            try {
+                client.phone?.disableRinging?.();
+            } catch (error) {
+                console.warn("wazo_phone: disableRinging a échoué", error);
+            }
             this._adoptSession(session);
             this._emit("incoming", this._callerInfo(session));
         });
