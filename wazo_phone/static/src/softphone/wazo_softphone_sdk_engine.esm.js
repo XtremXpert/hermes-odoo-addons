@@ -155,6 +155,13 @@ export class WazoSdkEngine {
             return false;
         }
         this.client = client;
+        // The SDK rings by itself and never stops when the call is answered
+        // on another device — the service owns the ring instead.
+        try {
+            client.phone?.disableRinging?.();
+        } catch (error) {
+            console.warn("wazo_phone: disableRinging a échoué", error);
+        }
         this._bind(client);
         try {
             await client.waitForRegister();
