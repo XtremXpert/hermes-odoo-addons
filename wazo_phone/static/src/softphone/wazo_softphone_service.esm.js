@@ -932,7 +932,7 @@ export class WazoSoftphoneService {
     }
 
     _startRingtoneUnsafe() {
-        if (this._ringAudio) {
+        if (this._ringAudio || this._ringCtx) {
             return;
         }
         // Real phone bell: generated ring.wav played on loop. The audio
@@ -942,12 +942,24 @@ export class WazoSoftphoneService {
         // Safety: a notification-driven ring (call answered on another device)
         // never receives an "ended" event — auto-stop after 60 s.
         this._ringTimeout = setTimeout(() => this._stopRingtone(), 60000);
-        const played = this._ringAudio.play();
-        if (played && played.then) {
-            played.catch(() => {
-                this._ringAudio = null;
-                this._startWebAudioRing();
-            });
+        const audio = this._ringAudio;
+        const fallback = () => {
+            // pause()/load() can reject play() after the call was answered.
+            // A previous call must never restart or replace the current ring.
+            if (this._ringAudio !== audio) {
+                return;
+            }
+            this._ringAudio = null;
+            audio.pause();
+            this._startWebAudioRing();
+        };
+        try {
+            const played = audio.play();
+            if (played && played.catch) {
+                played.catch(fallback);
+            }
+        } catch {
+            fallback();
         }
     }
 
@@ -1015,7 +1027,11 @@ export class WazoSoftphoneService {
             const {osc1, osc2} = this._ringNodes;
             osc1.stop();
             osc2.stop();
-            this._ringCtx.close();
+            const ctx = this._ringCtx;
+            if (this._audioCtx === ctx) {
+                this._audioCtx = null;
+            }
+            ctx.close().catch(() => {});
             this._ringCtx = null;
             this._ringNodes = null;
         }

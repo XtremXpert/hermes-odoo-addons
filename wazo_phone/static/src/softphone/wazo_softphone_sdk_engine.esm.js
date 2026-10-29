@@ -92,9 +92,6 @@ export function sdkConfigFrom(config) {
     const cfg = config || {};
     const server = parseWssUrl(cfg.ws_url) || {host: cfg.domain, port: 443};
     return {
-        // The SDK rings by itself on every INVITE and never reliably stops
-        // when the call is answered elsewhere — the service owns the ring.
-        ringingEnabled: false,
         displayName: cfg.display_name || cfg.auth_user || "",
         host: server.host,
         port: server.port,
