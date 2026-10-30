@@ -1031,9 +1031,7 @@ export class WazoSoftphoneService {
             if (this._audioCtx === ctx) {
                 this._audioCtx = null;
             }
-            ctx.close().catch(() => {
-                // Closing audio must not interrupt call cleanup.
-            });
+            ctx.close().catch(() => {});
             this._ringCtx = null;
             this._ringNodes = null;
         }

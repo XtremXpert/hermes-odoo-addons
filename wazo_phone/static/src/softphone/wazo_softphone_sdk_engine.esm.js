@@ -389,6 +389,9 @@ export class WazoSdkEngine {
         });
         // ``ACCEPTED`` = appel établi. ``CONNECTED``/``DISCONNECTED`` sont
         // des événements de TRANSPORT, pas d'appel.
+        for (const name of ("ON_CALL_CANCELED", "ON_CALL_ENDED", "ON_CALL_FAILED", "ON_CALL_ENDING")) {
+            on(name, () => this._emit("ended"));
+        }
         on("ACCEPTED", (session) => {
             if (!this.session && session) {
                 this._adoptSession(session);
