@@ -4,9 +4,10 @@ import {test} from "node:test";
 import {runInNewContext} from "node:vm";
 
 // Run the actual audio methods without bootstrapping the Odoo web client.
-const source = readFileSync(new URL(
-    "../src/softphone/wazo_softphone_service.esm.js", import.meta.url
-), "utf8");
+const source = readFileSync(
+    new URL("../src/softphone/wazo_softphone_service.esm.js", import.meta.url),
+    "utf8"
+);
 const methods = source.slice(
     source.indexOf("    _startRingtone() {"),
     source.indexOf("    _setState(state, message) {")
@@ -32,7 +33,9 @@ function setup() {
             this.paused = true;
             this.reject(new Error("play interrupted"));
         }
-        load() {}
+        load() {
+            /* No media resource in this mock. */
+        }
     }
     class AudioContext {
         constructor() {
@@ -43,32 +46,62 @@ function setup() {
         }
         createOscillator() {
             const node = {
-                frequency: {}, connect() {}, start() {},
+                frequency: {},
+                connect() {
+                    /* No audio graph in this mock. */
+                },
+                start() {
+                    /* Playback is tracked by the owning context. */
+                },
                 stopped: false,
-                stop() { this.stopped = true; },
+                stop() {
+                    this.stopped = true;
+                },
             };
             this.nodes.push(node);
             return node;
         }
         createGain() {
-            return {connect() {}, gain: {
-                setValueAtTime() {}, linearRampToValueAtTime() {},
-            }};
+            return {
+                connect() {
+                    /* No audio graph in this mock. */
+                },
+                gain: {
+                    setValueAtTime() {
+                        /* No gain automation in this mock. */
+                    },
+                    linearRampToValueAtTime() {
+                        /* No gain automation in this mock. */
+                    },
+                },
+            };
         }
-        close() { this.state = "closed"; return Promise.resolve(); }
-        resume() { return Promise.resolve(); }
+        close() {
+            this.state = "closed";
+            return Promise.resolve();
+        }
+        resume() {
+            return Promise.resolve();
+        }
     }
-    const schedule = (fn) => { timers.set(++nextTimer, fn); return nextTimer; };
+    const schedule = (fn) => {
+        timers.set(++nextTimer, fn);
+        return nextTimer;
+    };
     const Service = runInNewContext(`(class {${methods}})`, {
-        Audio, window: {AudioContext},
-        setTimeout: schedule, setInterval: schedule,
+        Audio,
+        window: {AudioContext},
+        setTimeout: schedule,
+        setInterval: schedule,
         clearTimeout: (id) => timers.delete(id),
         clearInterval: (id) => timers.delete(id),
     });
     return {service: new Service(), audios, contexts, timers};
 }
 
-const flush = async () => { await Promise.resolve(); };
+const flush = async () => {
+    await Promise.resolve();
+};
 
 test("repeated incoming notifications play only one audio", () => {
     const {service, audios} = setup();
