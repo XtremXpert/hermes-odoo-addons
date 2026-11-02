@@ -43,8 +43,9 @@ class WazoTenantDashboard(models.AbstractModel):
         Group = self.env["wazo.ring.group"]
         Cdr = self.env["wazo.cdr"]
 
-        users = User.search([], order="name")
-        groups = Group.search([], order="name")
+        # Tableau de bord : la lecture porte volontairement sur tout le parc.
+        users = User.search([], order="name")  # pylint: disable=no-search-all
+        groups = Group.search([], order="name")  # pylint: disable=no-search-all
 
         # Usagers : compteurs par état de synchronisation.
         user_states = {state: 0 for state, _ in User._fields["wazo_state"].selection}

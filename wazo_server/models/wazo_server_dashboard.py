@@ -80,9 +80,10 @@ class WazoServerDashboard(models.AbstractModel):
         Trunk = self.env["wazo.voipms.trunk"].sudo()
         Did = self.env["voipms.did"].sudo()
 
-        tenants = Tenant.search([], order="name")
-        trunks = Trunk.search([], order="name")
-        dids = Did.search([], order="number")
+        # Tableau de bord : la lecture porte volontairement sur tout le parc.
+        tenants = Tenant.search([], order="name")  # pylint: disable=no-search-all
+        trunks = Trunk.search([], order="name")  # pylint: disable=no-search-all
+        dids = Did.search([], order="number")  # pylint: disable=no-search-all
 
         # Tenants : compteurs par état + alerte sur les jetons expirants.
         tenant_states = {state: 0 for state, _ in Tenant._fields["state"].selection}

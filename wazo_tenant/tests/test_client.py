@@ -142,8 +142,6 @@ class TestWazoClientSSL(TransactionCase):
     l'autorise serait une tolérance cachée."""
 
     def _urlopen_kwargs(self, ssl_verify):
-        import io
-
         icp = self.env["ir.config_parameter"].sudo()
         icp.set_str("wazo.url", "https://wazo.example.com")
         icp.set_str("wazo.api_key", "key")

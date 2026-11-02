@@ -333,18 +333,34 @@ class WazoUser(models.Model):
             # **et** le digest par ``auth_section_options.username`` — les deux
             # doivent être ce nom, sinon asterisk refuse le REGISTER.
             try:
-                endpoint = client.conf("GET", "/endpoints/sip/%s" % line["endpoint_sip"]["uuid"])
-                client.conf(
-                    "PUT",
-                    "/endpoints/sip/%s" % line["endpoint_sip"]["uuid"],
-                    body={
-                        "auth_section_options": [
-                            ["username", endpoint["name"]],
-                            ["password", sip_password],
-                        ],
-                    },
+                endpoint_uuid = line["endpoint_sip"]["uuid"]
+                endpoint = client.conf("GET", "/endpoints/sip/%s" % endpoint_uuid)
+                endpoint_name = endpoint.get("name") if isinstance(endpoint, dict) else None
+                if not endpoint_name:
+                    # Réponse sans nom d'AOR : endpoint absent ou partiel.
+                    # Rien à aligner, et ce n'est pas une erreur de configuration.
+                    _logger.info(
+                        "wazo.user %s: endpoint SIP %s sans nom, alignement ignoré",
+                        self.id,
+                        endpoint_uuid,
+                    )
+                else:
+                    client.conf(
+                        "PUT",
+                        "/endpoints/sip/%s" % endpoint_uuid,
+                        body={
+                            "auth_section_options": [
+                                ["username", endpoint_name],
+                                ["password", sip_password],
+                            ],
+                        },
+                    )
+            except (KeyError, TypeError):
+                _logger.info(
+                    "wazo.user %s: endpoint SIP incomplet, alignement ignoré",
+                    self.id,
                 )
-            except (KeyError, TypeError, WazoAPIError):
+            except WazoAPIError:
                 _logger.warning(
                     "wazo.user %s: impossible d'aligner l'auth SIP de l'endpoint",
                     self.id,

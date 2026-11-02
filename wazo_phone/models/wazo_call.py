@@ -20,6 +20,11 @@ tableau de bord) :
 Aucun appel Wazo n'est passé ici : tout se fait sur les données locales.
 """
 
+# Deux classes res.users dans ce module : signalements d'appel ici,
+# softphone navigateur dans softphone.py. Les fusionner couplerait
+# deux responsabilités et deux fichiers.
+# pylint: disable=consider-merging-classes-inherited
+
 import re
 from datetime import timedelta
 
@@ -51,7 +56,12 @@ def _format_seconds(seconds):
 
 
 class ResUsersWazoCall(models.Model):
-    """Signalements d'appel émis par l'onglet propriétaire de la session."""
+    """Signalements d'appel émis par l'onglet propriétaire de la session.
+
+    Deux classes ``res.users`` vivent dans ce module : celle-ci porte les
+    signalements d'appel, ``ResUsersWazoSoftphone`` le softphone navigateur.
+    Les fusionner couplerait deux responsabilités et deux fichiers.
+    """
 
     _inherit = "res.users"
 
@@ -144,7 +154,7 @@ class ResUsersWazoCall(models.Model):
                     "res_model_id": self.env["ir.model"]._get("res.partner").id,
                     "res_id": partner.id,
                     "activity_type_id": self.env.ref("mail.mail_activity_data_call").id,
-                    "summary": self.env._("Appel manqué de %s") % num,
+                    "summary": self.env._("Appel manqué de %(num)s", num=num),
                     "user_id": self.id,
                     "date_deadline": fields.Date.today(),
                 }
@@ -173,9 +183,9 @@ class ResUsersWazoCall(models.Model):
             return False
         text = self.env._("Note d'appel")
         if num:
-            text = self.env._("Note d'appel (%s)") % num
+            text = self.env._("Note d'appel (%(num)s)", num=num)
         partner.message_post(
-            body="%s : %s" % (text, note or ""),
+            body=self.env._("%(title)s : %(note)s", title=text, note=note or ""),
             message_type="comment",
             subtype_xmlid="mail.mt_note",
         )

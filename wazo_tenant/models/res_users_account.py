@@ -19,7 +19,9 @@ class ResUsersWazoAccount(models.Model):
         if self.wazo_user_id:
             raise UserError(
                 self.env._(
-                    "%s a déjà un compte Wazo (poste %s).", self.name, self.wazo_user_id.extension
+                    "%(name)s a déjà un compte Wazo (poste %(poste)s).",
+                    name=self.name,
+                    poste=self.wazo_user_id.extension,
                 )
             )
         User = self.env["wazo.user"].sudo()
@@ -35,7 +37,8 @@ class ResUsersWazoAccount(models.Model):
                     context,
                 )
             )
-        taken = set(User.search([]).mapped("extension"))
+        # Toutes les extensions sont nécessaires pour éviter un doublon.
+        taken = set(User.search([]).mapped("extension"))  # pylint: disable=no-search-all
         poste = None
         for item in ranges:
             for number in range(int(item["start"]), int(item["end"]) + 1):

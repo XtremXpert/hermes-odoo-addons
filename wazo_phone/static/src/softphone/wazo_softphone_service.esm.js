@@ -345,8 +345,8 @@ export class WazoSoftphoneService {
                     if (!this._audioCtx) {
                         this._audioCtx = new AC();
                     }
-                    this._audioCtx.resume().catch(() => {});
-                } catch (e) {
+                    this._audioCtx.resume().catch(() => undefined);
+                } catch {
                     // Audio unavailable (headless, blocked) — ringtone is optional.
                 }
             },
@@ -769,7 +769,9 @@ export class WazoSoftphoneService {
     _notifyCallEndedToBackend() {
         // Same pattern as _notifyIncomingToBackend: best-effort, no await —
         // local behaviour must never depend on the backend.
-        this.orm.call("res.users", "notify_wazo_call_ended", [[]]).catch(() => {});
+        this.orm
+            .call("res.users", "notify_wazo_call_ended", [[]])
+            .catch(() => undefined);
     }
 
     _onCallTerminated() {
@@ -806,7 +808,7 @@ export class WazoSoftphoneService {
                 [],
                 {num: info.from, name: info.name || ""},
             ])
-            .catch(() => {});
+            .catch(() => undefined);
     }
 
     /**
@@ -931,7 +933,7 @@ export class WazoSoftphoneService {
     _startRingtone() {
         try {
             this._startRingtoneUnsafe();
-        } catch (e) {
+        } catch {
             // Never let an audio failure break the call flow.
         }
     }
@@ -970,7 +972,7 @@ export class WazoSoftphoneService {
 
     _startWebAudioRing() {
         if (this._ringCtx) {
-            this._ringCtx.resume().catch(() => {});
+            this._ringCtx.resume().catch(() => undefined);
             return;
         }
         const AC = window.AudioContext || window.webkitAudioContext;
@@ -981,7 +983,7 @@ export class WazoSoftphoneService {
         const ctx = this._audioCtx || new AC();
         this._audioCtx = ctx;
         if (ctx.state === "suspended") {
-            ctx.resume().catch(() => {});
+            ctx.resume().catch(() => undefined);
         }
         // Classic phone ring: dual tone (440+480 Hz) pulsing twice every 4 s.
         const osc1 = ctx.createOscillator();

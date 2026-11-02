@@ -54,9 +54,9 @@ class ProxmoxTenant(models.Model):
             tenant.write({"remote_created": True})
             tenant.message_post(
                 body=self.env._(
-                    "Pool « %s » créé sur %s.",
-                    tenant.pool_name,
-                    tenant.server_id.name,
+                    "Pool « %(pool)s » créé sur %(serveur)s.",
+                    pool=tenant.pool_name,
+                    serveur=tenant.server_id.name,
                 ),
                 subtype_xmlid="mail.mt_note",
             )
@@ -86,9 +86,9 @@ class ProxmoxTenant(models.Model):
             tenant.write({"remote_created": False})
             tenant.message_post(
                 body=self.env._(
-                    "Pool « %s » supprimé de %s.",
-                    tenant.pool_name,
-                    tenant.server_id.name,
+                    "Pool « %(pool)s » supprimé de %(serveur)s.",
+                    pool=tenant.pool_name,
+                    serveur=tenant.server_id.name,
                 ),
                 subtype_xmlid="mail.mt_note",
             )
@@ -111,9 +111,9 @@ class ProxmoxTenant(models.Model):
         )
         self.message_post(
             body=self.env._(
-                "Fiche serveur du tenant créée : %s (périmètre : %s).",
-                serveur.name,
-                self.pool_name,
+                "Fiche serveur du tenant créée : %(serveur)s (périmètre : %(pool)s).",
+                serveur=serveur.name,
+                pool=self.pool_name,
             ),
             subtype_xmlid="mail.mt_note",
         )

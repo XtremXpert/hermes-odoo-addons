@@ -66,9 +66,14 @@ class VoIPMSDid(models.Model):
     wazo_incall_extension_id = fields.Integer(string="ID extension incall", readonly=True)
 
     def _remplir_tenant(self):
-        """Le DID herite du tenant de son trunk — jamais saisi a la main."""
+        """Le DID hérite du tenant de son trunk — jamais saisi à la main.
+
+        Le slug du trunk doit exister : sans lui, on écrivait une chaîne vide,
+        la condition restait vraie et chaque `write` en déclenchait un autre
+        (RecursionError constaté le 2026-11-02).
+        """
         for did in self:
-            if did.trunk_id and not did.tenant_slug:
+            if did.trunk_id.tenant_slug and not did.tenant_slug:
                 did.tenant_slug = did.trunk_id.tenant_slug
 
     @api.model_create_multi
@@ -79,7 +84,10 @@ class VoIPMSDid(models.Model):
 
     def write(self, vals):
         resultat = super().write(vals)
-        self._remplir_tenant()
+        # Ne pas rappeler le remplissage sur sa propre écriture : c'est ce
+        # qui bouclait.
+        if "tenant_slug" not in vals:
+            self._remplir_tenant()
         return resultat
 
     wazo_route_state = fields.Selection(
@@ -250,14 +258,14 @@ class VoIPMSDid(models.Model):
     # ------------------------------------------------------------------
 
     def action_route_to_wazo(self):
-        """Stampe l'appartenance : le DID prend le slug de son trunk."""
-        if self.trunk_id and self.trunk_id.tenant_slug:
-            self.sudo().write({"tenant_slug": self.trunk_id.tenant_slug})
         """Crée l'incall Wazo puis bascule le routage VoIP.ms en sip:.
 
         L'ordre est choisi pour ne jamais laisser le DID sans destination :
         le routage VoIP.ms n'est basculé qu'une fois l'incall en place.
         """
+        # L'appartenance : le DID prend le tenant de son trunk.
+        if self.trunk_id and self.trunk_id.tenant_slug:
+            self.sudo().write({"tenant_slug": self.trunk_id.tenant_slug})
         self.ensure_one()
         if self.wazo_route_state == "routed":
             raise UserError(self.env._("Le DID %s est déjà routé vers Wazo.", self.number))
@@ -335,7 +343,9 @@ class VoIPMSDid(models.Model):
                 {"did": self._voipms_did_number(), "routing": self._routing_value()},
             )
             if str(response.get("status")) != "success":
-                raise UserError(self.env._("VoIP.ms a refusé le routage : %s") % response)
+                raise UserError(
+                    self.env._("VoIP.ms a refusé le routage : %(reponse)s", reponse=response)
+                )
         except (WazoAPIError, VoIPMSAPIError, UserError) as error:
             self.sudo().write(
                 {
