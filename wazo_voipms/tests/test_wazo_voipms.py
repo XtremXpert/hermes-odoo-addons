@@ -178,6 +178,31 @@ class TestDidRouting(BridgeTestBase):
     def _make_did(self):
         return self.Did.create({"number": "4184803381"})
 
+    def test_write_with_a_trunk_without_slug_does_not_recurse(self):
+        """Un trunk sans slug ne doit pas faire boucler le remplissage.
+
+        Le 2026-11-02, ecrire une chaine vide laissait la condition vraie et
+        chaque write en declenchait un autre : RecursionError.
+        """
+        trunk = self.Trunk.create(
+            {
+                "name": "T-Sans-Slug",
+                "protocol": "iax2",
+                "state": "synced",
+                "voipms_username": "539175_tsansslug",
+                "voipms_password": "p",
+                "remote_endpoint_iax_id": 72,
+                "remote_register_iax_id": 82,
+                "remote_trunk_id": 23,
+                "remote_outcall_id": 34,
+                "remote_outcall_extension_id": 12,
+            }
+        )
+        did = self.Did.create({"number": "4184803382", "trunk_id": trunk.id})
+        self.assertFalse(did.tenant_slug)
+        did.write({"trunk_id": trunk.id})
+        self.assertFalse(did.tenant_slug)
+
     def test_route_to_user(self):
         user = self.WazoUser.create(
             {"name": "Alice", "wazo_state": "synced", "remote_user_id": "5"}
