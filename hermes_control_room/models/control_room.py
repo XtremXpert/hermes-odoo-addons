@@ -79,7 +79,8 @@ class ControlRoom(models.AbstractModel):
         for vm in stopped:
             alerts.append({"level": "info", "text": "VM arrêtée : %s (%s)" % (vm.name, vm.vmid)})
 
-        stamped = [r.last_synced_on for r in (nodes | vms) if r.last_synced_on]
+        stamped = [r.last_synced_on for r in nodes if r.last_synced_on]
+        stamped += [r.last_synced_on for r in vms if r.last_synced_on]
         memory_used = sum(nodes.mapped("mem_used"))
         memory_max = sum(nodes.mapped("mem_max"))
 
