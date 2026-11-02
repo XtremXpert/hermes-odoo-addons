@@ -343,7 +343,9 @@ class VoIPMSDid(models.Model):
                 {"did": self._voipms_did_number(), "routing": self._routing_value()},
             )
             if str(response.get("status")) != "success":
-                raise UserError(self.env._("VoIP.ms a refusé le routage : %s") % response)
+                raise UserError(
+                    self.env._("VoIP.ms a refusé le routage : %(reponse)s", reponse=response)
+                )
         except (WazoAPIError, VoIPMSAPIError, UserError) as error:
             self.sudo().write(
                 {

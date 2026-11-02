@@ -3,7 +3,7 @@
     "name": "Mailcow — tenant",
     "category": "Productivity",
     "summary": """Exploitation d'un serveur Mailcow : domaines, boîtes, alias""",
-    "version": "20.0.1.0.0",
+    "version": "20.0.2.1.0",
     "depends": ["base", "mail"],
     "data": [
         "security/mailcow_groups.xml",

@@ -318,13 +318,17 @@ class WazoCdr(models.Model):
         self.write({"recording_id": attachment.id})
         if self.partner_id:
             self.partner_id.message_post(
-                body=self.env._("Enregistrement de l'appel du %s.") % self.date_start,
+                body=self.env._("Enregistrement de l'appel du %(date)s.", date=self.date_start),
                 attachment_ids=[attachment.id],
             )
         # Et le canal « Téléphonie » — l'enregistrement écoute en ligne.
         party = self.partner_id.display_name if self.partner_id else self.caller_num
         self._wazo_phone_channel().message_post(
-            body=self.env._("Enregistrement de l'appel du %s — %s") % (self.date_start, party),
+            body=self.env._(
+                "Enregistrement de l'appel du %(date)s — %(party)s",
+                date=self.date_start,
+                party=party,
+            ),
             attachment_ids=[attachment.id],
         )
         return attachment

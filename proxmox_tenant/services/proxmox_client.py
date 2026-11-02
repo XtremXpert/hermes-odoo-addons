@@ -19,7 +19,6 @@ import ssl
 import urllib.error
 import urllib.request
 
-from odoo import _
 from odoo.exceptions import UserError
 
 TIMEOUT_S = 20
@@ -41,7 +40,7 @@ class ProxmoxClient:
         self.verify_ssl = verify_ssl
         if not self.base_url or not self.api_token:
             raise UserError(
-                _(
+                self.env._(
                     "Proxmox n'est pas configure : posez « proxmox.base_url » et "
                     "« proxmox.api_token » dans les parametres."
                 )

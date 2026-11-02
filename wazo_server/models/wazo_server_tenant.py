@@ -485,7 +485,7 @@ class WazoServerTenant(models.Model):
         (100), files (100), conférences (100).
         """
         debut = 1000
-        for t in self.search([]):
+        for t in self.search([]):  # pylint: disable=no-search-all
             if t.id == self.id or t.state != "created":
                 continue
             for fin in (

@@ -112,7 +112,7 @@ class TestWazoObjects(TransactionCase):
         self.assertEqual(ivr.wazo_state, "new")
 
     def test_voicemail_sync_refuses_associated_on_delete(self):
-        from odoo.addons.wazo_tenant.services.wazo_client import WazoAPIError
+        from ..services.wazo_client import WazoAPIError
 
         voicemail = self.env["wazo.voicemail"].create({"name": "Boîte accueil", "number": "5000"})
         _client, patcher = self._with_mock()

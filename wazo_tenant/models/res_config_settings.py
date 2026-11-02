@@ -3,8 +3,9 @@
 
 from odoo import fields
 from odoo import models
-from odoo.addons.wazo_tenant.services.wazo_client import WazoAPIError
-from odoo.addons.wazo_tenant.services.wazo_client import WazoClient
+
+from ..services.wazo_client import WazoAPIError
+from ..services.wazo_client import WazoClient
 
 
 class ResConfigSettings(models.TransientModel):

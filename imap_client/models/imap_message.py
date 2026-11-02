@@ -25,7 +25,7 @@ class ImapMessage(models.Model):
     subject = fields.Char(string="Sujet", readonly=True)
     from_addr = fields.Char(string="De", readonly=True)
     to_addr = fields.Char(string="À", readonly=True)
-    date = fields.Datetime(string="Date", readonly=True)
+    date = fields.Datetime(readonly=True)
     seen = fields.Boolean(string="Lu", readonly=True, default=False)
     in_reply_to = fields.Char(string="Réponse à", readonly=True)
     body = fields.Html(string="Corps", readonly=True)
@@ -64,7 +64,11 @@ class ImapMessage(models.Model):
             partner = self.env["res.partner"].search([("email", "ilike", adresse)], limit=1)
             if partner:
                 msg = partner.message_post(
-                    body=self.env._("Courriel entrant : %s — %s", self.from_addr, self.subject),
+                    body=self.env._(
+                        "Courriel entrant : %(sender)s — %(subject)s",
+                        sender=self.from_addr,
+                        subject=self.subject,
+                    ),
                     message_type="email",
                     subtype_xmlid="mail.mt_note",
                 )

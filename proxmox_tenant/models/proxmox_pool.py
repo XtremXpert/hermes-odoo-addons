@@ -21,7 +21,7 @@ class ProxmoxPool(models.Model):
         index=True,
     )
     name = fields.Char(string="Pool", required=True, readonly=True)
-    description = fields.Char(string="Description", readonly=True)
+    description = fields.Char(readonly=True)
     members = fields.Integer(string="Membres", readonly=True)
     active = fields.Boolean(default=True)
 

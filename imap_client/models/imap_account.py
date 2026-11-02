@@ -25,7 +25,7 @@ class ImapAccount(models.Model):
         index=True,
     )
     host = fields.Char(string="Serveur IMAP", required=True)
-    port = fields.Integer(string="Port", default=993)
+    port = fields.Integer(default=993)
     use_ssl = fields.Boolean(string="SSL", default=True)
     user = fields.Char(string="Utilisateur", required=True)
     password = fields.Char(

@@ -19,6 +19,7 @@ message sont consignés sur la fiche, et la reprise est idempotent grâce aux
 identifiants distants conservés.
 """
 
+import logging
 import re
 
 from odoo import api
@@ -29,6 +30,8 @@ from odoo.addons.voipms_sms.services.voipms_client import VoIPMSClient
 from odoo.addons.wazo_tenant.services.wazo_client import WazoAPIError
 from odoo.exceptions import UserError
 from odoo.exceptions import ValidationError
+
+_logger = logging.getLogger(__name__)
 
 
 class WazoVoipmsTrunk(models.Model):
@@ -322,7 +325,7 @@ class WazoVoipmsTrunk(models.Model):
             if len(ips) == 1:
                 host = ips.pop()
         except OSError:
-            pass
+            _logger.debug("resolution de %s impossible", self.pop_host)
         options = [
             # Sans ``username``, l'appel sortant porte une autorité vide
             # — VoIP.ms répond REJECT « No authority found » (cause 50).

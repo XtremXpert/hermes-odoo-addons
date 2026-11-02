@@ -4,7 +4,7 @@
     "version": "20.0.1.0.0",
     "category": "Services",
     "summary": "Cluster Proxmox VE : noeuds, machines, pools, stockage — perimetre par pool",
-    "author": "XtremXpert",
+    "author": "XtremXpert, Diverse-Cité",
     "license": "LGPL-3",
     "depends": ["base", "mail"],
     "data": [

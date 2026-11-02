@@ -12,8 +12,9 @@ des réglages laisse choisir lequel cette instance parle.
 
 from odoo import fields
 from odoo import models
-from odoo.addons.wazo_tenant.services.wazo_client import WazoAPIError
 from odoo.exceptions import UserError
+
+from ..services.wazo_client import WazoAPIError
 
 
 class WazoTenant(models.Model):
@@ -87,7 +88,7 @@ class WazoTenant(models.Model):
 
     def _client(self):
         """Client des réglages — la portée de la liste est celle du jeton."""
-        from odoo.addons.wazo_tenant.services.wazo_client import WazoClient
+        from ..services.wazo_client import WazoClient
 
         return WazoClient(self.env)
 

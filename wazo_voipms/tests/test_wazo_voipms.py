@@ -341,8 +341,6 @@ class TestDidDestinationObjects(BridgeTestBase):
         self.assertEqual(did._destination_payload(), {"type": "queue", "queue_id": 61})
 
     def test_destination_requires_synced_target(self):
-        from odoo.exceptions import UserError
-
         queue = self.env["wazo.queue"].create({"name": "Vide", "extension": "3000"})
         did = self.Did.create({"number": "4184803381"})
         did.write({"wazo_destination_type": "queue", "wazo_queue_id": queue.id})

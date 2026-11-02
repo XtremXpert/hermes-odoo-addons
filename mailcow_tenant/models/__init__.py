@@ -7,4 +7,3 @@ from . import mailcow_alias
 from . import res_config_settings
 
 from . import res_users_account
-from . import base_module_update
