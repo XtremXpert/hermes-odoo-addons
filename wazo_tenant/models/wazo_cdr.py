@@ -90,7 +90,7 @@ class WazoCdr(models.Model):
             ("done", "Prête"),
             ("error", "Échec"),
         ],
-        string="Transcription",
+        string="État de la transcription",
         default="none",
         readonly=True,
     )
