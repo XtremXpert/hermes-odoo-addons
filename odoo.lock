@@ -5,7 +5,7 @@
 odoo:
   source: https://github.com/odoo/odoo.git
   branche: 20.0
-  commit: 377226c20ff988cf7100e3a36d3dd8992e701fbb
+  commit: 7bab48ba5fdaa9e20744fda66a9627bfff88924a
 design-themes:
   source: git@github.com:odoo/design-themes.git
   branche: 20.0
