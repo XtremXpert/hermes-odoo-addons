@@ -74,13 +74,9 @@ class TestTrunk(BridgeTestBase):
         # Réponse mesurée en conditions réelles : « account » porte le nom
         # complet (numéro de compte + « _ » + nom), le mot de passe n'est
         # jamais rendu — il est généré et stocké localement.
-        voipms = self._voipms_mock(
-            {"status": "success", "id": 856700, "account": "123_x"}
-        )
+        voipms = self._voipms_mock({"status": "success", "id": 856700, "account": "123_x"})
         wazo = self._wazo_mock()
-        with patch(WAZO_CTOR, return_value=wazo), patch(
-            VOIPMS_CTOR_TRUNK, return_value=voipms
-        ):
+        with patch(WAZO_CTOR, return_value=wazo), patch(VOIPMS_CTOR_TRUNK, return_value=voipms):
             trunk.action_provision()
         self.assertEqual(trunk.state, "synced")
         self.assertEqual(trunk.voipms_username, "123_x")
@@ -95,22 +91,16 @@ class TestTrunk(BridgeTestBase):
         self.assertIn("/outcalls/33/extensions/11", paths)
 
     def test_provision_with_existing_subaccount_skips_create(self):
-        trunk = self.Trunk.create(
-            {"name": "T2", "voipms_username": "u1", "voipms_password": "p1"}
-        )
+        trunk = self.Trunk.create({"name": "T2", "voipms_username": "u1", "voipms_password": "p1"})
         voipms = self._voipms_mock()
         wazo = self._wazo_mock()
-        with patch(WAZO_CTOR, return_value=wazo), patch(
-            VOIPMS_CTOR_TRUNK, return_value=voipms
-        ):
+        with patch(WAZO_CTOR, return_value=wazo), patch(VOIPMS_CTOR_TRUNK, return_value=voipms):
             trunk.action_provision()
         voipms._request.assert_not_called()
         self.assertEqual(trunk.state, "synced")
 
     def test_wazo_failure_marks_error_and_keeps_ids(self):
-        trunk = self.Trunk.create(
-            {"name": "T3", "voipms_username": "u", "voipms_password": "p"}
-        )
+        trunk = self.Trunk.create({"name": "T3", "voipms_username": "u", "voipms_password": "p"})
         wazo = self._wazo_mock()
         calls = {"n": 0}
 
@@ -130,17 +120,13 @@ class TestTrunk(BridgeTestBase):
         self.assertEqual(trunk.remote_endpoint_uuid, "uuid-ep")
 
     def test_provision_twice_refused(self):
-        trunk = self.Trunk.create(
-            {"name": "T4", "voipms_username": "u", "voipms_password": "p"}
-        )
+        trunk = self.Trunk.create({"name": "T4", "voipms_username": "u", "voipms_password": "p"})
         trunk.state = "synced"
         with self.assertRaises(UserError):
             trunk.action_provision()
 
     def test_unprovision_deletes_in_safe_order(self):
-        trunk = self.Trunk.create(
-            {"name": "T5", "voipms_username": "u", "voipms_password": "p"}
-        )
+        trunk = self.Trunk.create({"name": "T5", "voipms_username": "u", "voipms_password": "p"})
         trunk.write(
             {
                 "state": "synced",
@@ -164,9 +150,7 @@ class TestTrunk(BridgeTestBase):
         )
         voipms = self._voipms_mock({"status": "success", "id": 2, "account": "539175_iaxtrunkiax"})
         wazo = self._wazo_mock()
-        with patch(WAZO_CTOR, return_value=wazo), patch(
-            VOIPMS_CTOR_TRUNK, return_value=voipms
-        ):
+        with patch(WAZO_CTOR, return_value=wazo), patch(VOIPMS_CTOR_TRUNK, return_value=voipms):
             trunk.action_provision()
         self.assertEqual(trunk.state, "synced")
         self.assertEqual(trunk.voipms_username, "539175_iaxtrunkiax")
@@ -194,6 +178,31 @@ class TestDidRouting(BridgeTestBase):
     def _make_did(self):
         return self.Did.create({"number": "4184803381"})
 
+    def test_write_with_a_trunk_without_slug_does_not_recurse(self):
+        """Un trunk sans slug ne doit pas faire boucler le remplissage.
+
+        Le 2026-11-02, ecrire une chaine vide laissait la condition vraie et
+        chaque write en declenchait un autre : RecursionError.
+        """
+        trunk = self.Trunk.create(
+            {
+                "name": "T-Sans-Slug",
+                "protocol": "iax2",
+                "state": "synced",
+                "voipms_username": "539175_tsansslug",
+                "voipms_password": "p",
+                "remote_endpoint_iax_id": 72,
+                "remote_register_iax_id": 82,
+                "remote_trunk_id": 23,
+                "remote_outcall_id": 34,
+                "remote_outcall_extension_id": 12,
+            }
+        )
+        did = self.Did.create({"number": "4184803382", "trunk_id": trunk.id})
+        self.assertFalse(did.tenant_slug)
+        did.write({"trunk_id": trunk.id})
+        self.assertFalse(did.tenant_slug)
+
     def test_route_to_user(self):
         user = self.WazoUser.create(
             {"name": "Alice", "wazo_state": "synced", "remote_user_id": "5"}
@@ -202,9 +211,7 @@ class TestDidRouting(BridgeTestBase):
         did.write({"wazo_destination_type": "user", "wazo_user_id": user.id})
         wazo = self._wazo_mock()
         voipms = self._voipms_mock()
-        with patch(WAZO_CTOR, return_value=wazo), patch(
-            VOIPMS_CTOR_DID, return_value=voipms
-        ):
+        with patch(WAZO_CTOR, return_value=wazo), patch(VOIPMS_CTOR_DID, return_value=voipms):
             did.action_route_to_wazo()
         self.assertEqual(did.wazo_route_state, "routed")
         self.assertEqual(did.wazo_incall_id, 44)
@@ -213,9 +220,7 @@ class TestDidRouting(BridgeTestBase):
         self.assertEqual(incall_body["destination"], {"type": "user", "user_id": 5})
         # Le poste du renvoi : créé à part, dans le contexte incall
         # résolu, puis associé.
-        ext_calls = [
-            c for c in wazo.conf.call_args_list if c.args[1] == "/extensions"
-        ]
+        ext_calls = [c for c in wazo.conf.call_args_list if c.args[1] == "/extensions"]
         self.assertTrue(ext_calls)
         ext_body = ext_calls[-1].kwargs.get("body") or {}
         # Mesuré : VoIP.ms livre le DID à dix chiffres — l'extension de
@@ -240,20 +245,25 @@ class TestDidRouting(BridgeTestBase):
         did.write({"wazo_destination_type": "user", "wazo_user_id": user.id})
         wazo = self._wazo_mock()
         voipms = self._voipms_mock()
-        with patch(WAZO_CTOR, return_value=wazo), patch(
-            VOIPMS_CTOR_DID, return_value=voipms
-        ):
+        with patch(WAZO_CTOR, return_value=wazo), patch(VOIPMS_CTOR_DID, return_value=voipms):
             did.action_route_to_wazo()
         self.assertEqual(did.wazo_route_state, "error")
         self.assertIn("pas synchronisé", did.wazo_route_error)
 
     def test_route_via_iax_trunk_routes_to_account(self):
         trunk = self.Trunk.create(
-            {"name": "T-Iax", "protocol": "iax2", "state": "synced",
-             "voipms_username": "539175_tiaxiax", "voipms_password": "p",
-             "remote_endpoint_iax_id": 71, "remote_register_iax_id": 81,
-             "remote_trunk_id": 22, "remote_outcall_id": 33,
-             "remote_outcall_extension_id": 11}
+            {
+                "name": "T-Iax",
+                "protocol": "iax2",
+                "state": "synced",
+                "voipms_username": "539175_tiaxiax",
+                "voipms_password": "p",
+                "remote_endpoint_iax_id": 71,
+                "remote_register_iax_id": 81,
+                "remote_trunk_id": 22,
+                "remote_outcall_id": 33,
+                "remote_outcall_extension_id": 11,
+            }
         )
         did = self.Did.create({"number": "4184803381"})
         user = self.WazoUser.create(
@@ -268,9 +278,7 @@ class TestDidRouting(BridgeTestBase):
         )
         wazo = self._wazo_mock()
         voipms = self._voipms_mock()
-        with patch(WAZO_CTOR, return_value=wazo), patch(
-            VOIPMS_CTOR_DID, return_value=voipms
-        ):
+        with patch(WAZO_CTOR, return_value=wazo), patch(VOIPMS_CTOR_DID, return_value=voipms):
             did.action_route_to_wazo()
         self.assertEqual(did.wazo_route_state, "routed")
         # Routage VoIP.ms vers le sous-compte, pas une URI sip:.
@@ -279,28 +287,21 @@ class TestDidRouting(BridgeTestBase):
         # Le register IAX reste NU : tout callback casse l'objet
         # (mesuré — « /exten » comme « ?context »), l'entrant route
         # par l'endpoint du trunk, pas par le register.
-        register_calls = [
-            c for c in wazo.conf.call_args_list if "/registers/iax" in c.args[1]
-        ]
+        register_calls = [c for c in wazo.conf.call_args_list if "/registers/iax" in c.args[1]]
         self.assertEqual(len(register_calls), 0)
 
     def test_route_via_unprovisioned_iax_trunk_refused(self):
         trunk = self.Trunk.create(
-            {"name": "T-Vide", "protocol": "iax2", "voipms_username": "u",
-             "voipms_password": "p"}
+            {"name": "T-Vide", "protocol": "iax2", "voipms_username": "u", "voipms_password": "p"}
         )
         did = self.Did.create({"number": "4184803381"})
         user = self.WazoUser.create(
             {"name": "Alice", "wazo_state": "synced", "remote_user_id": "5"}
         )
-        did.write(
-            {"wazo_destination_type": "user", "wazo_user_id": user.id, "trunk_id": trunk.id}
-        )
+        did.write({"wazo_destination_type": "user", "wazo_user_id": user.id, "trunk_id": trunk.id})
         wazo = self._wazo_mock()
         voipms = self._voipms_mock()
-        with patch(WAZO_CTOR, return_value=wazo), patch(
-            VOIPMS_CTOR_DID, return_value=voipms
-        ):
+        with patch(WAZO_CTOR, return_value=wazo), patch(VOIPMS_CTOR_DID, return_value=voipms):
             did.action_route_to_wazo()
         self.assertEqual(did.wazo_route_state, "error")
         self.assertIn("Provisionnez", did.wazo_route_error)
@@ -318,9 +319,7 @@ class TestDidRouting(BridgeTestBase):
         )
         wazo = self._wazo_mock()
         voipms = self._voipms_mock()
-        with patch(WAZO_CTOR, return_value=wazo), patch(
-            VOIPMS_CTOR_DID, return_value=voipms
-        ):
+        with patch(WAZO_CTOR, return_value=wazo), patch(VOIPMS_CTOR_DID, return_value=voipms):
             did.action_unroute_from_wazo()
         self.assertEqual(did.wazo_route_state, "none")
         self.assertFalse(did.wazo_incall_id)
@@ -335,22 +334,16 @@ class TestDidDestinationObjects(BridgeTestBase):
     synchronisée)."""
 
     def test_destination_payload_for_queue(self):
-        queue = self.env["wazo.queue"].create(
-            {"name": "Support", "extension": "3000"}
-        )
+        queue = self.env["wazo.queue"].create({"name": "Support", "extension": "3000"})
         queue.write({"wazo_state": "synced", "remote_queue_id": 61})
         did = self.Did.create({"number": "4184803381"})
         did.write({"wazo_destination_type": "queue", "wazo_queue_id": queue.id})
-        self.assertEqual(
-            did._destination_payload(), {"type": "queue", "queue_id": 61}
-        )
+        self.assertEqual(did._destination_payload(), {"type": "queue", "queue_id": 61})
 
     def test_destination_requires_synced_target(self):
         from odoo.exceptions import UserError
 
-        queue = self.env["wazo.queue"].create(
-            {"name": "Vide", "extension": "3000"}
-        )
+        queue = self.env["wazo.queue"].create({"name": "Vide", "extension": "3000"})
         did = self.Did.create({"number": "4184803381"})
         did.write({"wazo_destination_type": "queue", "wazo_queue_id": queue.id})
         with self.assertRaises(UserError):
