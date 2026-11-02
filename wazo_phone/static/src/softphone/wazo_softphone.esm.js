@@ -167,9 +167,12 @@ export class WazoSoftphone extends Component {
             postCall.num,
         ]);
         this.service.dismissPostCall();
-        this.notification.add(_t("Note consignée sur %(partner)s", {
-            partner: postCall.partnerName,
-        }), {type: "success"});
+        this.notification.add(
+            _t("Note consignée sur %(partner)s", {
+                partner: postCall.partnerName,
+            }),
+            {type: "success"}
+        );
     }
 
     onTargetInput(ev) {

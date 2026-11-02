@@ -22,9 +22,12 @@
                 <field name="name" />
                 <field name="extension" />
                 <field name="member_count" string="Membres" />
-                <field name="wazo_state" widget="badge"
-                       decoration-success="wazo_state == 'synced'"
-                       decoration-danger="wazo_state == 'error'" />
+                <field
+                    name="wazo_state"
+                    widget="badge"
+                    decoration-success="wazo_state == 'synced'"
+                    decoration-danger="wazo_state == 'error'"
+                />
             </list>
         </field>
     </record>
@@ -35,25 +38,45 @@
         <field name="arch" type="xml">
             <form>
                 <header>
-                    <button name="action_sync_wazo" type="object" string="Synchroniser"
-                            class="btn-primary" invisible="wazo_state == 'synced'" />
-                    <button name="action_retry_sync" type="object" string="Réessayer"
-                            invisible="wazo_state != 'error'" />
-                    <button name="action_delete_wazo" type="object" string="Retirer de Wazo"
-                            invisible="wazo_state == 'new'"
-                            confirm="Retirer la file et son poste de Wazo ?" />
+                    <button
+                        name="action_sync_wazo"
+                        type="object"
+                        string="Synchroniser"
+                        class="btn-primary"
+                        invisible="wazo_state == 'synced'"
+                    />
+                    <button
+                        name="action_retry_sync"
+                        type="object"
+                        string="Réessayer"
+                        invisible="wazo_state != 'error'"
+                    />
+                    <button
+                        name="action_delete_wazo"
+                        type="object"
+                        string="Retirer de Wazo"
+                        invisible="wazo_state == 'new'"
+                        confirm="Retirer la file et son poste de Wazo ?"
+                    />
                     <field name="wazo_state" widget="statusbar" />
                 </header>
                 <sheet>
-                    <div class="oe_title"><h1><field name="name" /></h1></div>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" />
+                        </h1>
+                    </div>
                     <group>
                         <group>
                             <field name="extension" />
                             <field name="member_ids" widget="many2many_tags" />
                         </group>
                         <group>
-                            <field name="error_message" readonly="1"
-                                   invisible="not error_message" />
+                            <field
+                                name="error_message"
+                                readonly="1"
+                                invisible="not error_message"
+                            />
                         </group>
                     </group>
                 </sheet>
@@ -77,9 +100,12 @@
                 <field name="name" />
                 <field name="extension" />
                 <field name="max_users" string="Plafond" />
-                <field name="wazo_state" widget="badge"
-                       decoration-success="wazo_state == 'synced'"
-                       decoration-danger="wazo_state == 'error'" />
+                <field
+                    name="wazo_state"
+                    widget="badge"
+                    decoration-success="wazo_state == 'synced'"
+                    decoration-danger="wazo_state == 'error'"
+                />
             </list>
         </field>
     </record>
@@ -90,17 +116,34 @@
         <field name="arch" type="xml">
             <form>
                 <header>
-                    <button name="action_sync_wazo" type="object" string="Synchroniser"
-                            class="btn-primary" invisible="wazo_state == 'synced'" />
-                    <button name="action_retry_sync" type="object" string="Réessayer"
-                            invisible="wazo_state != 'error'" />
-                    <button name="action_delete_wazo" type="object" string="Retirer de Wazo"
-                            invisible="wazo_state == 'new'"
-                            confirm="Retirer la salle et son poste de Wazo ?" />
+                    <button
+                        name="action_sync_wazo"
+                        type="object"
+                        string="Synchroniser"
+                        class="btn-primary"
+                        invisible="wazo_state == 'synced'"
+                    />
+                    <button
+                        name="action_retry_sync"
+                        type="object"
+                        string="Réessayer"
+                        invisible="wazo_state != 'error'"
+                    />
+                    <button
+                        name="action_delete_wazo"
+                        type="object"
+                        string="Retirer de Wazo"
+                        invisible="wazo_state == 'new'"
+                        confirm="Retirer la salle et son poste de Wazo ?"
+                    />
                     <field name="wazo_state" widget="statusbar" />
                 </header>
                 <sheet>
-                    <div class="oe_title"><h1><field name="name" /></h1></div>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" />
+                        </h1>
+                    </div>
                     <group>
                         <group>
                             <field name="extension" />
@@ -109,8 +152,11 @@
                         <group>
                             <field name="pin" password="True" />
                             <field name="admin_pin" password="True" />
-                            <field name="error_message" readonly="1"
-                                   invisible="not error_message" />
+                            <field
+                                name="error_message"
+                                readonly="1"
+                                invisible="not error_message"
+                            />
                         </group>
                     </group>
                 </sheet>
@@ -133,9 +179,12 @@
             <list>
                 <field name="name" />
                 <field name="timeout" string="Délai (s)" />
-                <field name="wazo_state" widget="badge"
-                       decoration-success="wazo_state == 'synced'"
-                       decoration-danger="wazo_state == 'error'" />
+                <field
+                    name="wazo_state"
+                    widget="badge"
+                    decoration-success="wazo_state == 'synced'"
+                    decoration-danger="wazo_state == 'error'"
+                />
             </list>
         </field>
     </record>
@@ -146,17 +195,34 @@
         <field name="arch" type="xml">
             <form>
                 <header>
-                    <button name="action_sync_wazo" type="object" string="Synchroniser"
-                            class="btn-primary" invisible="wazo_state == 'synced'" />
-                    <button name="action_retry_sync" type="object" string="Réessayer"
-                            invisible="wazo_state != 'error'" />
-                    <button name="action_delete_wazo" type="object" string="Retirer de Wazo"
-                            invisible="wazo_state == 'new'"
-                            confirm="Retirer le menu vocal de Wazo ?" />
+                    <button
+                        name="action_sync_wazo"
+                        type="object"
+                        string="Synchroniser"
+                        class="btn-primary"
+                        invisible="wazo_state == 'synced'"
+                    />
+                    <button
+                        name="action_retry_sync"
+                        type="object"
+                        string="Réessayer"
+                        invisible="wazo_state != 'error'"
+                    />
+                    <button
+                        name="action_delete_wazo"
+                        type="object"
+                        string="Retirer de Wazo"
+                        invisible="wazo_state == 'new'"
+                        confirm="Retirer le menu vocal de Wazo ?"
+                    />
                     <field name="wazo_state" widget="statusbar" />
                 </header>
                 <sheet>
-                    <div class="oe_title"><h1><field name="name" /></h1></div>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" />
+                        </h1>
+                    </div>
                     <group>
                         <group>
                             <field name="menu_sound" />
@@ -164,8 +230,11 @@
                             <field name="max_tries" />
                         </group>
                         <group>
-                            <field name="error_message" readonly="1"
-                                   invisible="not error_message" />
+                            <field
+                                name="error_message"
+                                readonly="1"
+                                invisible="not error_message"
+                            />
                         </group>
                     </group>
                     <div class="text-muted">
@@ -194,9 +263,12 @@
                 <field name="name" />
                 <field name="number" />
                 <field name="language" />
-                <field name="wazo_state" widget="badge"
-                       decoration-success="wazo_state == 'synced'"
-                       decoration-danger="wazo_state == 'error'" />
+                <field
+                    name="wazo_state"
+                    widget="badge"
+                    decoration-success="wazo_state == 'synced'"
+                    decoration-danger="wazo_state == 'error'"
+                />
             </list>
         </field>
     </record>
@@ -207,25 +279,45 @@
         <field name="arch" type="xml">
             <form>
                 <header>
-                    <button name="action_sync_wazo" type="object" string="Synchroniser"
-                            class="btn-primary" invisible="wazo_state == 'synced'" />
-                    <button name="action_retry_sync" type="object" string="Réessayer"
-                            invisible="wazo_state != 'error'" />
-                    <button name="action_delete_wazo" type="object" string="Retirer de Wazo"
-                            invisible="wazo_state == 'new'"
-                            confirm="Retirer la messagerie de Wazo ?" />
+                    <button
+                        name="action_sync_wazo"
+                        type="object"
+                        string="Synchroniser"
+                        class="btn-primary"
+                        invisible="wazo_state == 'synced'"
+                    />
+                    <button
+                        name="action_retry_sync"
+                        type="object"
+                        string="Réessayer"
+                        invisible="wazo_state != 'error'"
+                    />
+                    <button
+                        name="action_delete_wazo"
+                        type="object"
+                        string="Retirer de Wazo"
+                        invisible="wazo_state == 'new'"
+                        confirm="Retirer la messagerie de Wazo ?"
+                    />
                     <field name="wazo_state" widget="statusbar" />
                 </header>
                 <sheet>
-                    <div class="oe_title"><h1><field name="name" /></h1></div>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" />
+                        </h1>
+                    </div>
                     <group>
                         <group>
                             <field name="number" />
                             <field name="language" />
                         </group>
                         <group>
-                            <field name="error_message" readonly="1"
-                                   invisible="not error_message" />
+                            <field
+                                name="error_message"
+                                readonly="1"
+                                invisible="not error_message"
+                            />
                         </group>
                     </group>
                 </sheet>
@@ -250,9 +342,12 @@
                 <field name="extension" string="Poste" />
                 <field name="slots_start" string="Créneaux" />
                 <field name="slots_end" string="à" />
-                <field name="wazo_state" widget="badge"
-                       decoration-success="wazo_state == 'synced'"
-                       decoration-danger="wazo_state == 'error'" />
+                <field
+                    name="wazo_state"
+                    widget="badge"
+                    decoration-success="wazo_state == 'synced'"
+                    decoration-danger="wazo_state == 'error'"
+                />
             </list>
         </field>
     </record>
@@ -263,17 +358,34 @@
         <field name="arch" type="xml">
             <form>
                 <header>
-                    <button name="action_sync_wazo" type="object" string="Synchroniser"
-                            class="btn-primary" invisible="wazo_state == 'synced'" />
-                    <button name="action_retry_sync" type="object" string="Réessayer"
-                            invisible="wazo_state != 'error'" />
-                    <button name="action_delete_wazo" type="object" string="Retirer de Wazo"
-                            invisible="wazo_state == 'new'"
-                            confirm="Retirer le parc et son poste de Wazo ?" />
+                    <button
+                        name="action_sync_wazo"
+                        type="object"
+                        string="Synchroniser"
+                        class="btn-primary"
+                        invisible="wazo_state == 'synced'"
+                    />
+                    <button
+                        name="action_retry_sync"
+                        type="object"
+                        string="Réessayer"
+                        invisible="wazo_state != 'error'"
+                    />
+                    <button
+                        name="action_delete_wazo"
+                        type="object"
+                        string="Retirer de Wazo"
+                        invisible="wazo_state == 'new'"
+                        confirm="Retirer le parc et son poste de Wazo ?"
+                    />
                     <field name="wazo_state" widget="statusbar" />
                 </header>
                 <sheet>
-                    <div class="oe_title"><h1><field name="name" /></h1></div>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" />
+                        </h1>
+                    </div>
                     <group>
                         <group>
                             <field name="extension" />
@@ -282,8 +394,11 @@
                         </group>
                         <group>
                             <field name="park_timeout" />
-                            <field name="error_message" readonly="1"
-                                   invisible="not error_message" />
+                            <field
+                                name="error_message"
+                                readonly="1"
+                                invisible="not error_message"
+                            />
                         </group>
                     </group>
                 </sheet>

@@ -45,9 +45,7 @@ class WazoParking(models.Model):
         default="new",
         required=True,
     )
-    remote_parking_lot_id = fields.Integer(
-        string="ID parc Wazo", readonly=True, copy=False
-    )
+    remote_parking_lot_id = fields.Integer(string="ID parc Wazo", readonly=True, copy=False)
     remote_extension_id = fields.Integer(string="ID poste Wazo", readonly=True, copy=False)
     error_message = fields.Text(string="Dernier message d'erreur", readonly=True, copy=False)
     active = fields.Boolean(default=True)
@@ -60,14 +58,8 @@ class WazoParking(models.Model):
                     raise ValidationError(
                         self.env._("Les créneaux sont des numéros (ex. 701, 710).")
                     )
-            if (
-                parc.slots_start
-                and parc.slots_end
-                and int(parc.slots_end) < int(parc.slots_start)
-            ):
-                raise ValidationError(
-                    self.env._("Le dernier créneau suit le premier.")
-                )
+            if parc.slots_start and parc.slots_end and int(parc.slots_end) < int(parc.slots_start):
+                raise ValidationError(self.env._("Le dernier créneau suit le premier."))
 
     def _own_extension_owner_ids(self):
         return {"parking_lot": self.remote_parking_lot_id}
@@ -102,18 +94,14 @@ class WazoParking(models.Model):
                 return item["name"]
         # Type « internal » — mesuré dans le validateur confd : le poste
         # d'un parc doit vivre dans un contexte interne.
-        created = client.conf(
-            "POST", "/contexts", body={"label": "parking", "type": "internal"}
-        )
+        created = client.conf("POST", "/contexts", body={"label": "parking", "type": "internal"})
         return created["name"]
 
     def action_sync_wazo(self):
         """Crée (ou reprend) le parc et son poste sur Wazo."""
         self.ensure_one()
         if self.wazo_state == "synced":
-            raise UserError(
-                self.env._("Le parc %s est déjà synchronisé sur Wazo.", self.name)
-            )
+            raise UserError(self.env._("Le parc %s est déjà synchronisé sur Wazo.", self.name))
         client = self._master_client()
         context = self._resolve_parking_context(client)
         try:

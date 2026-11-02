@@ -5,15 +5,19 @@
         <field name="arch" type="xml">
             <form string="Répondre">
                 <group>
-                    <field name="message_id" invisible="1"/>
-                    <field name="to_addr"/>
-                    <field name="subject"/>
+                    <field name="message_id" invisible="1" />
+                    <field name="to_addr" />
+                    <field name="subject" />
                 </group>
-                <field name="body"/>
+                <field name="body" />
                 <footer>
-                    <button name="action_envoyer" type="object" string="Envoyer"
-                            class="btn-primary"/>
-                    <button string="Annuler" special="cancel"/>
+                    <button
+                        name="action_envoyer"
+                        type="object"
+                        string="Envoyer"
+                        class="btn-primary"
+                    />
+                    <button string="Annuler" special="cancel" />
                 </footer>
             </form>
         </field>

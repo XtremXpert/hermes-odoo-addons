@@ -266,9 +266,7 @@ class WazoExtensionMixin(models.AbstractModel):
             # Ids distants de CE record : une pièce jointe à soi n'est pas
             # un squattage, c'est une reprise (mesuré : « appartient déjà à
             # une file » — la sienne, laissée orpheline par un rollback).
-            siens = {
-                str(v) for v in self._own_extension_owner_ids().values() if v
-            }
+            siens = {str(v) for v in self._own_extension_owner_ids().values() if v}
             # 1. Rattaché à un objet (autre type, ou le même) : refus net et
             #    précis. Les libellés sont ceux de la ressource, donc justes
             #    pour les deux modèles.
@@ -352,9 +350,7 @@ class WazoExtensionMixin(models.AbstractModel):
             #    stationnement n'a pas de plage côté Wazo (mesuré : refus
             #    abusif « n'est dans aucune plage » sinon).
             plages_type = declarees.get(self._extension_type) or []
-            if self._extension_type in declarees and not in_ranges(
-                self.extension, plages_type
-            ):
+            if self._extension_type in declarees and not in_ranges(self.extension, plages_type):
                 raise UserError(
                     self.env._(
                         "Le poste %(poste)s n'est dans aucune plage déclarée pour les "

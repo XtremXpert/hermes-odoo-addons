@@ -52,9 +52,7 @@ class ProxmoxSyncMixin(models.AbstractModel):
         cle = "proxmox.%s.last_refresh" % self._name
         brut = icp.get_str(cle, "")
         if brut:
-            ecoule = (
-                fields.Datetime.now() - fields.Datetime.to_datetime(brut)
-            ).total_seconds()
+            ecoule = (fields.Datetime.now() - fields.Datetime.to_datetime(brut)).total_seconds()
             if ecoule < RAFRAICHISSEMENT_MIN_S:
                 return
         try:

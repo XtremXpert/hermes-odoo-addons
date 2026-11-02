@@ -389,6 +389,18 @@ Hermes passent le Markdown en HTML, puis l’assainissent. La prise en
 charge inclut notamment le gras, l’italique, le code, les liens
 HTTP(S), titres, listes et tableaux. Le HTML fourni par le modèle
 n’est pas interprété comme contenu actif.</li>
+<li>Une réponse écrite en HTML simple par le modèle est d’abord ramenée en
+Markdown, puis convertie comme les autres. Avec <tt class="docutils literal">body_is_html</tt>, le
+HTML déjà préparé par la passerelle est seulement assaini.</li>
+<li>L’invite d’approbation du framework Hermes (« Reply <tt class="docutils literal">/approve</tt> to
+execute… ») devient quatre boutons : Approuver, Pour la session,
+Toujours, Refuser. Les commandes à taper restent écrites dessous.</li>
+<li>Un clic poste la commande au nom de la personne qui clique, membre du
+canal, sans <tt class="docutils literal">sudo</tt>. Il passe par <tt class="docutils literal">/hermes/approbation</tt> en
+JSON-RPC. Sans JavaScript, le lien <tt class="docutils literal">/hermes/repondre</tt> affiche une
+page de confirmation dont le formulaire POST porte le jeton CSRF.
+Aucun GET n’écrit : une image insérée dans un message ne peut donc pas
+approuver une commande.</li>
 <li>Le polling de la passerelle actualise la présence du compte. Une tâche
 planifiée marque hors ligne les agents sans heartbeat récent.</li>
 </ul>
@@ -402,8 +414,10 @@ modifié directement par RPC ordinaire.</p>
 </div>
 <div class="section" id="tests">
 <h1>Tests</h1>
-<p>Les tests couvrent le formatage sûr, l’attribution des réponses, la
-présence et le traitement des séquences d’activité :</p>
+<p>Les tests couvrent le formatage sûr, les boutons d’approbation (aucune
+écriture par GET, jeton CSRF, liste blanche, membre du canal),
+l’attribution des réponses, la présence et le traitement des séquences
+d’activité :</p>
 <pre class="code sh literal-block">
 <span class="nv">ADDONS</span><span class="o">=</span>addons<span class="w"> </span>tools/test-modules.sh<span class="w"> </span>IMAGE<span class="w"> </span>hermes_activity
 </pre>

@@ -4,13 +4,13 @@
         <field name="model">proxmox.storage</field>
         <field name="arch" type="xml">
             <list string="Stockages">
-                <field name="name"/>
-                <field name="node"/>
-                <field name="storage_type"/>
-                <field name="shared"/>
-                <field name="used"/>
-                <field name="avail"/>
-                <field name="total"/>
+                <field name="name" />
+                <field name="node" />
+                <field name="storage_type" />
+                <field name="shared" />
+                <field name="used" />
+                <field name="avail" />
+                <field name="total" />
             </list>
         </field>
     </record>

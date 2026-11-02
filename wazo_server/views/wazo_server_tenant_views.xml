@@ -93,8 +93,14 @@
                             <field name="group_range_end" readonly="state != 'new'" />
                             <field name="queue_range_start" readonly="state != 'new'" />
                             <field name="queue_range_end" readonly="state != 'new'" />
-                            <field name="conference_range_start" readonly="state != 'new'" />
-                            <field name="conference_range_end" readonly="state != 'new'" />
+                            <field
+                                name="conference_range_start"
+                                readonly="state != 'new'"
+                            />
+                            <field
+                                name="conference_range_end"
+                                readonly="state != 'new'"
+                            />
                         </group>
                     </group>
                     <group

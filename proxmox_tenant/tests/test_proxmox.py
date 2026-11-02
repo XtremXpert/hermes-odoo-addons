@@ -78,8 +78,7 @@ class TestProxmoxSync(TransactionCase):
     def setUp(self):
         super().setUp()
         self.serveur = self.env["proxmox.server"].create(
-            {"name": "pve1", "url": "https://pve.test:8006",
-             "api_token": "root@pam!odoo=aa-11"}
+            {"name": "pve1", "url": "https://pve.test:8006", "api_token": "root@pam!odoo=aa-11"}
         )
 
     def test_les_vms_du_perimetre_seulement(self):

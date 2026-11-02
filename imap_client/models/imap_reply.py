@@ -33,17 +33,21 @@ class ImapReply(models.TransientModel):
         self._exiger()
         self.ensure_one()
         origin = self.message_id
-        corps = self.env["mail.mail"].sudo().create(
-            {
-                "subject": self.subject,
-                "email_to": self.to_addr,
-                "email_from": self.env.user.email or self.env.user.login,
-                "body_html": self.body,
-                "headers": {
-                    "In-Reply-To": origin.message_id or "",
-                    "References": origin.message_id or "",
-                },
-            }
+        corps = (
+            self.env["mail.mail"]
+            .sudo()
+            .create(
+                {
+                    "subject": self.subject,
+                    "email_to": self.to_addr,
+                    "email_from": self.env.user.email or self.env.user.login,
+                    "body_html": self.body,
+                    "headers": {
+                        "In-Reply-To": origin.message_id or "",
+                        "References": origin.message_id or "",
+                    },
+                }
+            )
         )
         corps.send()
         if origin.partner_id:

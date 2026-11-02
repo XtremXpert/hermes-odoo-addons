@@ -21,8 +21,12 @@ class ProxmoxVm(models.Model):
     _order = "server_id, vmid"
 
     server_id = fields.Many2one(
-        "proxmox.server", string="Serveur", required=True, readonly=True,
-        ondelete="cascade", index=True,
+        "proxmox.server",
+        string="Serveur",
+        required=True,
+        readonly=True,
+        ondelete="cascade",
+        index=True,
     )
     vmid = fields.Integer(string="VMID", required=True, readonly=True)
     name = fields.Char(string="Nom", readonly=True)
@@ -54,12 +58,12 @@ class ProxmoxVm(models.Model):
     def _sync_all_from_proxmox(self):
         """Rapatrier les machines de chaque serveur actif du tenant."""
         from ..services.proxmox_client import ProxmoxAPIError
+
         Server = self.env["proxmox.server"].sudo()
         for serveur in Server._serveurs_actifs():
-            pools = (
-                {p.strip() for p in (serveur.allowed_pools or "").split(",") if p.strip()}
-                or None
-            )
+            pools = {
+                p.strip() for p in (serveur.allowed_pools or "").split(",") if p.strip()
+            } or None
             try:
                 entries = serveur._client()._request("GET", "/cluster/resources?type=vm") or []
             except ProxmoxAPIError:
@@ -97,8 +101,11 @@ class ProxmoxVm(models.Model):
                 else:
                     self.create(dict(valeurs, vmid=vmid))
             self.search(
-                [("server_id", "=", serveur.id), ("vmid", "not in", list(vus)),
-                 ("active", "=", True)]
+                [
+                    ("server_id", "=", serveur.id),
+                    ("vmid", "not in", list(vus)),
+                    ("active", "=", True),
+                ]
             ).write({"active": False})
 
     def _chemin_statut(self):
@@ -110,9 +117,7 @@ class ProxmoxVm(models.Model):
         """Poster start/stop/shutdown/reboot sur le serveur de la machine."""
         self._exiger("user")
         self.ensure_one()
-        self.server_id._client()._request(
-            "POST", "%s/%s" % (self._chemin_statut(), action), {}
-        )
+        self.server_id._client()._request("POST", "%s/%s" % (self._chemin_statut(), action), {})
         self._journaliser(
             "%s demande sur %s (VMID %s)." % (libelle, self.server_id.name, self.vmid)
         )

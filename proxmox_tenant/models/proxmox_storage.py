@@ -15,8 +15,12 @@ class ProxmoxStorage(models.Model):
     _order = "server_id, node, name"
 
     server_id = fields.Many2one(
-        "proxmox.server", string="Serveur", required=True, readonly=True,
-        ondelete="cascade", index=True,
+        "proxmox.server",
+        string="Serveur",
+        required=True,
+        readonly=True,
+        ondelete="cascade",
+        index=True,
     )
     name = fields.Char(string="Nom", required=True, readonly=True)
     node = fields.Char(string="Noeud", readonly=True)
@@ -40,6 +44,7 @@ class ProxmoxStorage(models.Model):
     @api.model
     def _sync_all_from_proxmox(self):
         from ..services.proxmox_client import ProxmoxAPIError
+
         Server = self.env["proxmox.server"].sudo()
         for serveur in Server._serveurs_actifs():
             try:
@@ -66,16 +71,13 @@ class ProxmoxStorage(models.Model):
                     "last_synced_on": fields.Datetime.now(),
                 }
                 stockage = self.search(
-                    [("server_id", "=", serveur.id), ("name", "=", nom),
-                     ("node", "=", noeud)],
+                    [("server_id", "=", serveur.id), ("name", "=", nom), ("node", "=", noeud)],
                     limit=1,
                 )
                 if stockage:
                     stockage.write(valeurs)
                 else:
                     self.create(dict(valeurs, name=nom))
-            for stockage in self.search(
-                [("server_id", "=", serveur.id), ("active", "=", True)]
-            ):
+            for stockage in self.search([("server_id", "=", serveur.id), ("active", "=", True)]):
                 if (stockage.name, stockage.node or "") not in vus:
                     stockage.write({"active": False})

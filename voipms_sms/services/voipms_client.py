@@ -36,9 +36,7 @@ class VoIPMSClient:
         url = API_URL + "?" + urllib.parse.urlencode(payload)
         try:
             # VoIP.ms rejects Python's default urllib User-Agent with 403.
-            request = urllib.request.Request(
-                url, headers={"User-Agent": "voipms_sms/1.0 (Odoo)"}
-            )
+            request = urllib.request.Request(url, headers={"User-Agent": "voipms_sms/1.0 (Odoo)"})
             # Provisioning calls are slow (createSubAccount measured at
             # 12-23 s): a per-call timeout, wider than the default.
             with urllib.request.urlopen(

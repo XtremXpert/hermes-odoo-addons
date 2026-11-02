@@ -39,7 +39,10 @@ export class WazoServerDashboard extends Component {
         this.state.loading = true;
         try {
             this.state.data = await this.orm.call(
-                "wazo.server.dashboard", "get_server_dashboard", []);
+                "wazo.server.dashboard",
+                "get_server_dashboard",
+                []
+            );
         } finally {
             this.state.loading = false;
         }
@@ -65,11 +68,9 @@ export class WazoServerDashboard extends Component {
     async checkRegistration(trunk) {
         this.state.checking = trunk.id;
         try {
-            await this.orm.call(
-                "wazo.voipms.trunk",
-                "action_check_registration",
-                [[trunk.id]]
-            );
+            await this.orm.call("wazo.voipms.trunk", "action_check_registration", [
+                [trunk.id],
+            ]);
             await this.reload();
         } finally {
             this.state.checking = null;
@@ -114,7 +115,10 @@ export class WazoServerDashboard extends Component {
             type: "ir.actions.act_window",
             res_model: "voipms.did",
             name: "DIDs",
-            views: [[false, "list"], [false, "form"]],
+            views: [
+                [false, "list"],
+                [false, "form"],
+            ],
             domain: domain || [],
         });
     }

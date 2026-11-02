@@ -74,7 +74,6 @@ SCALARS = {
 }
 CONTROL = {
     "id",
-
     "state",
     "company_id",
     "company_ids",
@@ -155,9 +154,7 @@ class Business(models.Model):
                     and name in ("user_id", "user_ids")
                 )
                 if field.comodel_name.startswith(FORBIDDEN) or (
-                    writable
-                    and field.comodel_name.startswith(TECHNICAL)
-                    and not user_reference
+                    writable and field.comodel_name.startswith(TECHNICAL) and not user_reference
                 ):
                     continue
             if writable:
@@ -195,9 +192,7 @@ class Business(models.Model):
                 "editable": {} if readonly else self._business_fields(target, writable=True),
                 "operations": ["read"] if readonly else ["read", "create", "write", "unlink"],
                 "actions": (
-                    []
-                    if readonly or "active" not in target._fields
-                    else ["archive", "unarchive"]
+                    [] if readonly or "active" not in target._fields else ["archive", "unarchive"]
                 ),
                 "note": (
                     "Droits ORM du demandeur. "

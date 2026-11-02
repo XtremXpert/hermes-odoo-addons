@@ -46,7 +46,8 @@ class VoIPMSDid(models.Model):
     #: maison les voit tous (menu Serveur Wazo → DIDs).
     tenant_slug = fields.Char(
         string="Slug du tenant propriétaire",
-        readonly=True, copy=False,
+        readonly=True,
+        copy=False,
     )
     trunk_id = fields.Many2one(
         "wazo.voipms.trunk",
@@ -56,17 +57,14 @@ class VoIPMSDid(models.Model):
         "aucun port à exposer. Un trunk SIP exige que le Wazo soit "
         "joignable publiquement (URI sip:).",
     )
-    wazo_ring_group_id = fields.Many2one(
-        "wazo.ring.group", string="Groupe d'appel"
-    )
+    wazo_ring_group_id = fields.Many2one("wazo.ring.group", string="Groupe d'appel")
     wazo_queue_id = fields.Many2one("wazo.queue", string="File d'attente")
     wazo_ivr_id = fields.Many2one("wazo.ivr", string="Menu vocal")
     wazo_conference_id = fields.Many2one("wazo.conference", string="Conférence")
     wazo_voicemail_id = fields.Many2one("wazo.voicemail", string="Messagerie vocale")
     wazo_incall_id = fields.Integer(string="ID incall Wazo", readonly=True)
-    wazo_incall_extension_id = fields.Integer(
-        string="ID extension incall", readonly=True
-    )
+    wazo_incall_extension_id = fields.Integer(string="ID extension incall", readonly=True)
+
     def _remplir_tenant(self):
         """Le DID herite du tenant de son trunk — jamais saisi a la main."""
         for did in self:
@@ -138,13 +136,9 @@ class VoIPMSDid(models.Model):
 
     def _wazo_public_host(self):
         """Hôte public du serveur Wazo, pour l'URI SIP du routage VoIP.ms."""
-        url = (
-            self.env["ir.config_parameter"].sudo().get_str("wazo.url", default="")
-        ).strip()
+        url = (self.env["ir.config_parameter"].sudo().get_str("wazo.url", default="")).strip()
         if not url:
-            raise UserError(
-                self.env._("Configurez l'URL du serveur Wazo avant le routage.")
-            )
+            raise UserError(self.env._("Configurez l'URL du serveur Wazo avant le routage."))
         return url.split("://", 1)[-1].split("/", 1)[0].split(":", 1)[0]
 
     def _destination_payload(self):
@@ -185,11 +179,7 @@ class VoIPMSDid(models.Model):
         if cible:
             objet, champ_id, cle_corps = cible
             if objet.wazo_state != "synced":
-                raise UserError(
-                    self.env._(
-                        "%s n'est pas synchronisé sur Wazo.", objet.name
-                    )
-                )
+                raise UserError(self.env._("%s n'est pas synchronisé sur Wazo.", objet.name))
             return {"type": self.wazo_destination_type, cle_corps: objet[champ_id]}
         return {"type": "none"}
 
@@ -210,9 +200,7 @@ class VoIPMSDid(models.Model):
         for item in items:
             if item.get("label") == "from-extern":
                 return item["name"]
-        created = client.conf(
-            "POST", "/contexts", body={"label": "from-extern", "type": "incall"}
-        )
+        created = client.conf("POST", "/contexts", body={"label": "from-extern", "type": "incall"})
         return created["name"]
 
     def _voipms_did_number(self):
@@ -238,11 +226,7 @@ class VoIPMSDid(models.Model):
         """
         if self.trunk_id:
             if self.trunk_id.state != "synced":
-                raise UserError(
-                    self.env._(
-                        "Provisionnez d'abord le trunk %s.", self.trunk_id.name
-                    )
-                )
+                raise UserError(self.env._("Provisionnez d'abord le trunk %s.", self.trunk_id.name))
             return "account:%s" % self.trunk_id.voipms_username
         return self._sip_routing_uri()
 
@@ -254,9 +238,7 @@ class VoIPMSDid(models.Model):
         """
         if not self.trunk_id or self.trunk_id.protocol != "iax2":
             return
-        body = self.trunk_id._iax_register_payload(
-            callback_exten=self._voipms_did_number()
-        )
+        body = self.trunk_id._iax_register_payload(callback_exten=self._voipms_did_number())
         client.conf(
             "PUT",
             "/registers/iax/%s" % self.trunk_id.remote_register_iax_id,
@@ -278,9 +260,7 @@ class VoIPMSDid(models.Model):
         """
         self.ensure_one()
         if self.wazo_route_state == "routed":
-            raise UserError(
-                self.env._("Le DID %s est déjà routé vers Wazo.", self.number)
-            )
+            raise UserError(self.env._("Le DID %s est déjà routé vers Wazo.", self.number))
         incall_id = self.wazo_incall_id or False
         incall_extension_id = self.wazo_incall_extension_id or False
         try:
@@ -334,11 +314,7 @@ class VoIPMSDid(models.Model):
                             "context": incall_context,
                         },
                     )
-                    items = (
-                        response.get("items") or []
-                        if isinstance(response, dict)
-                        else response
-                    )
+                    items = response.get("items") or [] if isinstance(response, dict) else response
                     for item in items:
                         if str(item.get("exten")) == str(self.number):
                             extension = item
@@ -359,9 +335,7 @@ class VoIPMSDid(models.Model):
                 {"did": self._voipms_did_number(), "routing": self._routing_value()},
             )
             if str(response.get("status")) != "success":
-                raise UserError(
-                    self.env._("VoIP.ms a refusé le routage : %s") % response
-                )
+                raise UserError(self.env._("VoIP.ms a refusé le routage : %s") % response)
         except (WazoAPIError, VoIPMSAPIError, UserError) as error:
             self.sudo().write(
                 {
@@ -425,16 +399,12 @@ class VoIPMSDid(models.Model):
             # 3. L'extension « from-extern » devient orpheline : on la retire.
             if self.wazo_incall_extension_id:
                 try:
-                    client.conf(
-                        "DELETE", "/extensions/%s" % self.wazo_incall_extension_id
-                    )
+                    client.conf("DELETE", "/extensions/%s" % self.wazo_incall_extension_id)
                 except WazoAPIError as error:
                     if "HTTP 404" not in str(error):
                         raise
         except (WazoAPIError, VoIPMSAPIError) as error:
-            self.sudo().write(
-                {"wazo_route_state": "error", "wazo_route_error": str(error)}
-            )
+            self.sudo().write({"wazo_route_state": "error", "wazo_route_error": str(error)})
             return False
         self.sudo().write(
             {

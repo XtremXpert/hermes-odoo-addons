@@ -59,10 +59,10 @@ Versions d'API Wazo **26** utilisées par le client :
    - un bloc de réglages sous **Paramètres → Applications → Téléphonie Wazo** ;
    - un cron « synchronisation du journal d'appels » (**désactivé par défaut**).
 
-> Le module dépend de `base`, `web` et `mail` (ce dernier pour les notes et
-> activités du bouclage d'appel, et le bus des notifications) : il s'installe
-> sans Enterprise. Le softphone embarque son propre moteur (SDK officiel
-> Wazo) ; le pont « voip » historique reste un no-op optionnel.
+> Le module dépend de `base`, `web` et `mail` (ce dernier pour les notes et activités du
+> bouclage d'appel, et le bus des notifications) : il s'installe sans Enterprise. Le
+> softphone embarque son propre moteur (SDK officiel Wazo) ; le pont « voip » historique
+> reste un no-op optionnel.
 
 ---
 

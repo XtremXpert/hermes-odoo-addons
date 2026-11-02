@@ -16,7 +16,7 @@ pas nécessaire au développement local.
 
 | module                      | rôle                                         |
 | --------------------------- | -------------------------------------------- |
-| `mailcow_server`            | plateforme : entretien du serveur Mailcow   |
+| `mailcow_server`            | plateforme : entretien du serveur Mailcow    |
 | `mailcow_tenant`            | tenant : domaines, boîtes, alias, synchro    |
 | `mailcow`                   | côté usager : vue d'ensemble du serveur      |
 | `wazo_server`               | plateforme : création et cycle des tenants   |
@@ -256,8 +256,8 @@ suivi, un commentaire, un message de commit ou une capture. Les filets de restau
 
 ## Retours prévus
 
-- **`mailcow_tenant`** — le bouton « Créer la boîte Mailcow » sur la fiche usager
-  reste visible quand la boîte existe (il lève « La boîte existe déjà »). À faire :
-  champ calculé `mailbox_id` pour `invisible`, ou ouvrir l'existante au lieu de
-  l'erreur — au choix à l'usage. Pendant ce temps, `wazo_tenant` fait déjà ça bien
+- **`mailcow_tenant`** — le bouton « Créer la boîte Mailcow » sur la fiche usager reste
+  visible quand la boîte existe (il lève « La boîte existe déjà »). À faire : champ
+  calculé `mailbox_id` pour `invisible`, ou ouvrir l'existante au lieu de l'erreur — au
+  choix à l'usage. Pendant ce temps, `wazo_tenant` fait déjà ça bien
   (`invisible="wazo_user_id"`).
