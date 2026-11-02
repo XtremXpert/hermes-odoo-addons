@@ -118,7 +118,8 @@ class ControlRoom(models.AbstractModel):
         from it; reusing that is safer than inventing a second credential path.
         A cluster that cannot be reached is reported as such, not hidden.
         """
-        clusters = self.env["k8s.cluster"].search([])
+        # Le parc de clusters est petit et la vue doit tous les montrer.
+        clusters = self.env["k8s.cluster"].search([])  # pylint: disable=no-search-all
         payload = []
         for cluster in clusters:
             entry = {
