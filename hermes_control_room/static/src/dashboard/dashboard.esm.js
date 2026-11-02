@@ -74,7 +74,9 @@ export class ControlRoomDashboard extends Component {
 
     get memoryPercent() {
         const totals = this.totals;
-        return totals.memory_max ? Math.round((totals.memory_used / totals.memory_max) * 100) : 0;
+        return totals.memory_max
+            ? Math.round((totals.memory_used / totals.memory_max) * 100)
+            : 0;
     }
 }
 

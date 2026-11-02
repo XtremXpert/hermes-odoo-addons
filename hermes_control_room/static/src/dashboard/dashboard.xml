@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8" ?>
 <templates xml:space="preserve">
     <t t-name="hermes_control_room.Dashboard">
         <div class="o_cr">
@@ -6,23 +6,50 @@
                 <div>
                     <h1>Salle de contrôle</h1>
                     <p class="o_cr__sub">
-                        <t t-if="state.data and state.data.synced_at">Données synchronisées le <t t-esc="state.data.synced_at"/></t>
+                        <t
+                            t-if="state.data and state.data.synced_at"
+                        >Données synchronisées le <t t-esc="state.data.synced_at" /></t>
                         <t t-else="">Aucune synchronisation enregistrée</t>
-                        <span t-if="state.loading" class="o_cr__loading">actualisation…</span>
+                        <span
+                            t-if="state.loading"
+                            class="o_cr__loading"
+                        >actualisation…</span>
                     </p>
                 </div>
-                <button type="button" class="btn btn-secondary btn-sm" t-on-click="reload">Rafraîchir</button>
+                <button
+                    type="button"
+                    class="btn btn-secondary btn-sm"
+                    t-on-click="reload"
+                >Rafraîchir</button>
             </header>
 
-            <p t-if="state.error" class="o_cr__error" t-esc="state.error"/>
+            <p t-if="state.error" class="o_cr__error" t-esc="state.error" />
 
             <section t-if="state.data" class="o_cr__kpis">
-                <article class="o_cr__kpi"><span>Serveurs</span><strong t-esc="totals.servers"/></article>
-                <article class="o_cr__kpi"><span>Nœuds</span><strong t-esc="totals.nodes"/></article>
-                <article class="o_cr__kpi"><span>Machines</span><strong t-esc="totals.vms"/></article>
-                <article class="o_cr__kpi o_cr__kpi--ok"><span>En fonction</span><strong t-esc="totals.running"/></article>
-                <article class="o_cr__kpi o_cr__kpi--ko"><span>Arrêtées</span><strong t-esc="totals.stopped"/></article>
-                <article class="o_cr__kpi"><span>Mémoire</span><strong t-esc="memoryPercent + ' %'"/></article>
+                <article class="o_cr__kpi">
+                    <span>Serveurs</span>
+                    <strong t-esc="totals.servers" />
+                </article>
+                <article class="o_cr__kpi">
+                    <span>Nœuds</span>
+                    <strong t-esc="totals.nodes" />
+                </article>
+                <article class="o_cr__kpi">
+                    <span>Machines</span>
+                    <strong t-esc="totals.vms" />
+                </article>
+                <article class="o_cr__kpi o_cr__kpi--ok">
+                    <span>En fonction</span>
+                    <strong t-esc="totals.running" />
+                </article>
+                <article class="o_cr__kpi o_cr__kpi--ko">
+                    <span>Arrêtées</span>
+                    <strong t-esc="totals.stopped" />
+                </article>
+                <article class="o_cr__kpi">
+                    <span>Mémoire</span>
+                    <strong t-esc="memoryPercent + ' %'" />
+                </article>
             </section>
 
             <section t-if="state.data" class="o_cr__grid">
@@ -30,16 +57,30 @@
                     <h2>Nœuds</h2>
                     <table class="o_cr__table">
                         <thead>
-                            <tr><th>Nœud</th><th>État</th><th>CPU</th><th>Mémoire</th></tr>
+                            <tr>
+                                <th>Nœud</th>
+                                <th>État</th>
+                                <th>CPU</th>
+                                <th>Mémoire</th>
+                            </tr>
                         </thead>
                         <tbody>
                             <tr t-foreach="nodes" t-as="node" t-key="node.name">
-                                <td t-esc="node.name"/>
-                                <td><span t-attf-class="o_cr__badge o_cr__badge--{{ node.status === 'online' ? 'ok' : 'ko' }}" t-esc="node.status"/></td>
-                                <td t-esc="node.cpu + ' %'"/>
+                                <td t-esc="node.name" />
                                 <td>
-                                    <div class="o_cr__meter"><span t-attf-style="width: {{ node.memory_ratio }}%"/></div>
-                                    <small t-esc="node.memory_ratio + ' %'"/>
+                                    <span
+                                        t-attf-class="o_cr__badge o_cr__badge--{{ node.status === 'online' ? 'ok' : 'ko' }}"
+                                        t-esc="node.status"
+                                    />
+                                </td>
+                                <td t-esc="node.cpu + ' %'" />
+                                <td>
+                                    <div class="o_cr__meter">
+                                        <span
+                                            t-attf-style="width: {{ node.memory_ratio }}%"
+                                        />
+                                    </div>
+                                    <small t-esc="node.memory_ratio + ' %'" />
                                 </td>
                             </tr>
                         </tbody>
@@ -50,8 +91,13 @@
                     <h2>Alertes</h2>
                     <p t-if="!alerts.length" class="o_cr__empty">Rien à signaler.</p>
                     <ul class="o_cr__alerts">
-                        <li t-foreach="alerts" t-as="alert" t-key="alert_index" t-attf-class="o_cr__alert o_cr__alert--{{ alert.level }}">
-                            <t t-esc="alert.text"/>
+                        <li
+                            t-foreach="alerts"
+                            t-as="alert"
+                            t-key="alert_index"
+                            t-attf-class="o_cr__alert o_cr__alert--{{ alert.level }}"
+                        >
+                            <t t-esc="alert.text" />
                         </li>
                     </ul>
                 </div>
@@ -59,25 +105,41 @@
 
             <section t-if="state.k8s" class="o_cr__panel o_cr__panel--wide">
                 <h2>Kubernetes (Rancher)</h2>
-                <p t-if="!clusters.length" class="o_cr__empty">Aucun cluster configuré dans Odoo Herd.</p>
+                <p
+                    t-if="!clusters.length"
+                    class="o_cr__empty"
+                >Aucun cluster configuré dans Odoo Herd.</p>
                 <table t-if="clusters.length" class="o_cr__table">
                     <thead>
-                        <tr><th>Cluster</th><th>Joignable</th><th>Nœuds prêts</th><th>Déploiements indisponibles</th></tr>
+                        <tr>
+                            <th>Cluster</th>
+                            <th>Joignable</th>
+                            <th>Nœuds prêts</th>
+                            <th>Déploiements indisponibles</th>
+                        </tr>
                     </thead>
                     <tbody>
                         <tr t-foreach="clusters" t-as="cluster" t-key="cluster.name">
-                            <td t-esc="cluster.name"/>
+                            <td t-esc="cluster.name" />
                             <td>
-                                <span t-attf-class="o_cr__badge o_cr__badge--{{ cluster.reachable ? 'ok' : 'ko' }}"
-                                      t-esc="cluster.reachable ? 'oui' : 'non'"/>
+                                <span
+                                    t-attf-class="o_cr__badge o_cr__badge--{{ cluster.reachable ? 'ok' : 'ko' }}"
+                                    t-esc="cluster.reachable ? 'oui' : 'non'"
+                                />
                             </td>
-                            <td t-esc="cluster.reachable ? cluster.nodes_ready + ' / ' + cluster.nodes_total : '—'"/>
-                            <td t-esc="cluster.reachable ? cluster.deployments_unavailable : '—'"/>
+                            <td
+                                t-esc="cluster.reachable ? cluster.nodes_ready + ' / ' + cluster.nodes_total : '—'"
+                            />
+                            <td
+                                t-esc="cluster.reachable ? cluster.deployments_unavailable : '—'"
+                            />
                         </tr>
                     </tbody>
                 </table>
                 <p t-if="k8sTotals.unavailable" class="o_cr__sub">
-                    <t t-esc="k8sTotals.unavailable"/> déploiement(s) en deçà du nombre de réplicas voulu.
+                    <t
+                    t-esc="k8sTotals.unavailable"
+                /> déploiement(s) en deçà du nombre de réplicas voulu.
                 </p>
             </section>
         </div>

@@ -54,22 +54,28 @@ class ControlRoom(models.AbstractModel):
         alerts = []
         for node in nodes:
             if node.status != "online":
-                alerts.append({
-                    "level": "critical",
-                    "text": "%s : %s" % (node.name, node.status or "état inconnu"),
-                })
+                alerts.append(
+                    {
+                        "level": "critical",
+                        "text": "%s : %s" % (node.name, node.status or "état inconnu"),
+                    }
+                )
                 continue
             ratio = (node.mem_used / node.mem_max) if node.mem_max else 0.0
             if ratio >= MEMORY_CRITICAL:
-                alerts.append({
-                    "level": "critical",
-                    "text": "%s : mémoire à %d %%" % (node.name, ratio * 100),
-                })
+                alerts.append(
+                    {
+                        "level": "critical",
+                        "text": "%s : mémoire à %d %%" % (node.name, ratio * 100),
+                    }
+                )
             elif ratio >= MEMORY_WARNING:
-                alerts.append({
-                    "level": "warning",
-                    "text": "%s : mémoire à %d %%" % (node.name, ratio * 100),
-                })
+                alerts.append(
+                    {
+                        "level": "warning",
+                        "text": "%s : mémoire à %d %%" % (node.name, ratio * 100),
+                    }
+                )
         for vm in stopped:
             alerts.append({"level": "info", "text": "VM arrêtée : %s (%s)" % (vm.name, vm.vmid)})
 
@@ -156,12 +162,8 @@ class ControlRoom(models.AbstractModel):
             "totals": {
                 "clusters": len(payload),
                 "reachable": len([entry for entry in payload if entry["reachable"]]),
-                "nodes": sum(
-                    entry["nodes_total"] for entry in payload if entry["reachable"]
-                ),
-                "nodes_ready": sum(
-                    entry["nodes_ready"] for entry in payload if entry["reachable"]
-                ),
+                "nodes": sum(entry["nodes_total"] for entry in payload if entry["reachable"]),
+                "nodes_ready": sum(entry["nodes_ready"] for entry in payload if entry["reachable"]),
                 "deployments": sum(
                     entry["deployments_total"] for entry in payload if entry["reachable"]
                 ),

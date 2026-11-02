@@ -11,18 +11,22 @@ class TestControlRoom(TransactionCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.server = cls.env["proxmox.server"].create({
-            "name": "test",
-            "url": "https://pve.test:8006",
-            "api_token": "user@pve!test=secret",
-        })
-        cls.node = cls.env["proxmox.node"].create({
-            "server_id": cls.server.id,
-            "name": "pve-test",
-            "status": "online",
-            "mem_used": 90,
-            "mem_max": 100,
-        })
+        cls.server = cls.env["proxmox.server"].create(
+            {
+                "name": "test",
+                "url": "https://pve.test:8006",
+                "api_token": "user@pve!test=secret",
+            }
+        )
+        cls.node = cls.env["proxmox.node"].create(
+            {
+                "server_id": cls.server.id,
+                "name": "pve-test",
+                "status": "online",
+                "mem_used": 90,
+                "mem_max": 100,
+            }
+        )
 
     def test_snapshot_has_the_expected_shape(self):
         snapshot = self.env["control.room"].proxmox_snapshot()
