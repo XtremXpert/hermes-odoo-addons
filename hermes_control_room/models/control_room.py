@@ -7,9 +7,30 @@ of the snapshot is part of the payload on purpose: a dashboard that hides how
 old its data is lies by omission.
 """
 
+from kubernetes import client
+
 from odoo import api
 from odoo import fields
 from odoo import models
+
+
+def summarize_kubernetes(nodes, deployments):
+    """Pure aggregation, kept out of the API call so it can be tested alone."""
+    ready = [node for node in nodes if node["ready"]]
+    unavailable = [
+        "%s/%s" % (item["namespace"], item["name"])
+        for item in deployments
+        if item["desired"] and item["ready"] < item["desired"]
+    ]
+    return {
+        "nodes": nodes,
+        "nodes_total": len(nodes),
+        "nodes_ready": len(ready),
+        "deployments_total": len(deployments),
+        "deployments_unavailable": len(unavailable),
+        "unavailable": sorted(unavailable)[:20],
+    }
+
 
 MEMORY_WARNING = 0.90
 MEMORY_CRITICAL = 0.97
@@ -81,4 +102,71 @@ class ControlRoom(models.AbstractModel):
                 for node in nodes.sorted("name")
             ],
             "alerts": alerts,
+        }
+
+    @api.model
+    def kubernetes_snapshot(self):
+        """Read nodes and deployments from the clusters the herd already knows.
+
+        The herd stores a kubeconfig per cluster and knows how to build a client
+        from it; reusing that is safer than inventing a second credential path.
+        A cluster that cannot be reached is reported as such, not hidden.
+        """
+        clusters = self.env["k8s.cluster"].search([])
+        payload = []
+        for cluster in clusters:
+            entry = {
+                "name": cluster.name,
+                "reachable": False,
+                "error": False,
+                "nodes": [],
+                "deployments": [],
+            }
+            try:
+                api_client = cluster._get_k8s_client()
+                core = client.CoreV1Api(api_client)
+                apps = client.AppsV1Api(api_client)
+                nodes = [
+                    {
+                        "name": node.metadata.name,
+                        "ready": any(
+                            condition.type == "Ready" and condition.status == "True"
+                            for condition in (node.status.conditions or [])
+                        ),
+                    }
+                    for node in core.list_node().items
+                ]
+                deployments = [
+                    {
+                        "namespace": item.metadata.namespace,
+                        "name": item.metadata.name,
+                        "ready": item.status.ready_replicas or 0,
+                        "desired": item.spec.replicas or 0,
+                    }
+                    for item in apps.list_deployment_for_all_namespaces().items
+                ]
+                entry.update(summarize_kubernetes(nodes, deployments))
+                entry["reachable"] = True
+            except Exception as error:  # noqa: BLE001 - one bad cluster must not hide the others
+                entry["error"] = str(error)[:200]
+            payload.append(entry)
+        return {
+            "generated_at": fields.Datetime.to_string(fields.Datetime.now()),
+            "clusters": payload,
+            "totals": {
+                "clusters": len(payload),
+                "reachable": len([entry for entry in payload if entry["reachable"]]),
+                "nodes": sum(
+                    entry["nodes_total"] for entry in payload if entry["reachable"]
+                ),
+                "nodes_ready": sum(
+                    entry["nodes_ready"] for entry in payload if entry["reachable"]
+                ),
+                "deployments": sum(
+                    entry["deployments_total"] for entry in payload if entry["reachable"]
+                ),
+                "unavailable": sum(
+                    entry["deployments_unavailable"] for entry in payload if entry["reachable"]
+                ),
+            },
         }
