@@ -4,7 +4,7 @@
     "version": "20.0.1.0.0",
     "license": "LGPL-3",
     "summary": "Tableau de bord d'exploitation : Proxmox, lu depuis les miroirs Odoo.",
-    "depends": ["proxmox_tenant", "web"],
+    "depends": ["proxmox_tenant", "odoo_herd", "web"],
     "data": ["views/menus.xml"],
     "assets": {
         "web.assets_backend": [

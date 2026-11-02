@@ -18,7 +18,7 @@ export class ControlRoomDashboard extends Component {
 
     setup() {
         this.orm = useService("orm");
-        this.state = useState({data: null, loading: true, error: null});
+        this.state = useState({data: null, k8s: null, loading: true, error: null});
         this.timer = null;
         onWillStart(() => this.reload());
         onWillUnmount(() => this.stopTimer());
@@ -34,7 +34,12 @@ export class ControlRoomDashboard extends Component {
     async reload() {
         this.state.loading = true;
         try {
-            this.state.data = await this.orm.call("control.room", "proxmox_snapshot", []);
+            const [proxmox, kubernetes] = await Promise.all([
+                this.orm.call("control.room", "proxmox_snapshot", []),
+                this.orm.call("control.room", "kubernetes_snapshot", []),
+            ]);
+            this.state.data = proxmox;
+            this.state.k8s = kubernetes;
             this.state.error = null;
             if (!this.timer) {
                 this.timer = setInterval(() => this.reload(), REFRESH_MS);
@@ -57,6 +62,14 @@ export class ControlRoomDashboard extends Component {
 
     get alerts() {
         return (this.state.data && this.state.data.alerts) || [];
+    }
+
+    get clusters() {
+        return (this.state.k8s && this.state.k8s.clusters) || [];
+    }
+
+    get k8sTotals() {
+        return (this.state.k8s && this.state.k8s.totals) || {};
     }
 
     get memoryPercent() {

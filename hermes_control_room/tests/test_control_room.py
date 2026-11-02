@@ -3,6 +3,8 @@
 from odoo.tests import TransactionCase
 from odoo.tests import tagged
 
+from ..models.control_room import summarize_kubernetes
+
 
 @tagged("post_install", "-at_install")
 class TestControlRoom(TransactionCase):
@@ -40,3 +42,23 @@ class TestControlRoom(TransactionCase):
         snapshot = self.env["control.room"].proxmox_snapshot()
         criticals = [alert for alert in snapshot["alerts"] if alert["level"] == "critical"]
         self.assertTrue(any("pve-test" in alert["text"] for alert in criticals))
+
+    def test_summarize_kubernetes_counts_what_is_not_ready(self):
+        result = summarize_kubernetes(
+            [{"name": "n1", "ready": True}, {"name": "n2", "ready": False}],
+            [
+                {"namespace": "a", "name": "ok", "ready": 2, "desired": 2},
+                {"namespace": "b", "name": "down", "ready": 0, "desired": 1},
+            ],
+        )
+        self.assertEqual(result["nodes_total"], 2)
+        self.assertEqual(result["nodes_ready"], 1)
+        self.assertEqual(result["deployments_unavailable"], 1)
+        self.assertEqual(result["unavailable"], ["b/down"])
+
+    def test_summarize_kubernetes_ignores_scaled_to_zero(self):
+        result = summarize_kubernetes(
+            [],
+            [{"namespace": "a", "name": "sleeping", "ready": 0, "desired": 0}],
+        )
+        self.assertEqual(result["deployments_unavailable"], 0)

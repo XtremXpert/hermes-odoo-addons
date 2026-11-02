@@ -56,6 +56,30 @@
                     </ul>
                 </div>
             </section>
+
+            <section t-if="state.k8s" class="o_cr__panel o_cr__panel--wide">
+                <h2>Kubernetes (Rancher)</h2>
+                <p t-if="!clusters.length" class="o_cr__empty">Aucun cluster configuré dans Odoo Herd.</p>
+                <table t-if="clusters.length" class="o_cr__table">
+                    <thead>
+                        <tr><th>Cluster</th><th>Joignable</th><th>Nœuds prêts</th><th>Déploiements indisponibles</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr t-foreach="clusters" t-as="cluster" t-key="cluster.name">
+                            <td t-esc="cluster.name"/>
+                            <td>
+                                <span t-attf-class="o_cr__badge o_cr__badge--{{ cluster.reachable ? 'ok' : 'ko' }}"
+                                      t-esc="cluster.reachable ? 'oui' : 'non'"/>
+                            </td>
+                            <td t-esc="cluster.reachable ? cluster.nodes_ready + ' / ' + cluster.nodes_total : '—'"/>
+                            <td t-esc="cluster.reachable ? cluster.deployments_unavailable : '—'"/>
+                        </tr>
+                    </tbody>
+                </table>
+                <p t-if="k8sTotals.unavailable" class="o_cr__sub">
+                    <t t-esc="k8sTotals.unavailable"/> déploiement(s) en deçà du nombre de réplicas voulu.
+                </p>
+            </section>
         </div>
     </t>
 </templates>
