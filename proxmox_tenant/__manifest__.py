@@ -5,6 +5,7 @@
     "category": "Services",
     "summary": "Cluster Proxmox VE : noeuds, machines, pools, stockage — perimetre par pool",
     "author": "XtremXpert, Diverse-Cité",
+    "website": "https://github.com/XtremXpert/hermes-odoo-addons",
     "license": "LGPL-3",
     "depends": ["base", "mail"],
     "data": [

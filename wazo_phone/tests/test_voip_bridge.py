@@ -196,7 +196,7 @@ class TestVoipBridge(TransactionCase):
             ],
         )
 
-    @mute_logger("odoo.addons.wazo_tenant.models.voip_bridge")
+    @mute_logger("odoo.addons.wazo_phone.models.voip_bridge")
     def test_propagate_swallows_apply_errors(self):
         """Une erreur d'écriture ne doit jamais casser la synchro."""
 
