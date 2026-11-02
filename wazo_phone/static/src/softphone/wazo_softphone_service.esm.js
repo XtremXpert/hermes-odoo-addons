@@ -769,7 +769,9 @@ export class WazoSoftphoneService {
     _notifyCallEndedToBackend() {
         // Same pattern as _notifyIncomingToBackend: best-effort, no await —
         // local behaviour must never depend on the backend.
-        this.orm.call("res.users", "notify_wazo_call_ended", [[]]).catch(() => undefined);
+        this.orm
+            .call("res.users", "notify_wazo_call_ended", [[]])
+            .catch(() => undefined);
     }
 
     _onCallTerminated() {
