@@ -31,9 +31,7 @@ class TestDashboardAssets(TransactionCase):
                 module = CORRESPONDANCES.get(prefixe[1:], prefixe[1:])
                 if module in declarees:
                     continue
-                manquantes.setdefault(module, set()).add(
-                    str(fichier.relative_to(racine))
-                )
+                manquantes.setdefault(module, set()).add(str(fichier.relative_to(racine)))
         self.assertFalse(
             manquantes,
             "Modules importés par le JavaScript sans figurer dans les "
@@ -52,6 +50,5 @@ class TestDashboardAssets(TransactionCase):
         )
         self.assertTrue(
             ordonne,
-            "Le JavaScript doit être déclaré ('after', "
-            "'web/static/src/module_loader.js', ...).",
+            "Le JavaScript doit être déclaré ('after', 'web/static/src/module_loader.js', ...).",
         )

@@ -11,7 +11,11 @@ import {
 
 describe("buildCallInfo", () => {
     test("normalise la fiche d'appel", () => {
-        const call = buildCallInfo({direction: "inbound", num: "5145550100", startedAt: 1000});
+        const call = buildCallInfo({
+            direction: "inbound",
+            num: "5145550100",
+            startedAt: 1000,
+        });
         assert.deepEqual(call, {
             direction: "inbound",
             num: "5145550100",
@@ -33,7 +37,11 @@ describe("finalizePayload", () => {
     });
 
     test("produit la charge utile avec la durée écoulée", () => {
-        const call = buildCallInfo({direction: "inbound", num: "1011", startedAt: 1000});
+        const call = buildCallInfo({
+            direction: "inbound",
+            num: "1011",
+            startedAt: 1000,
+        });
         call.answered = true;
         const payload = finalizePayload(call, 90000);
         assert.equal(payload.num, "1011");
@@ -43,7 +51,11 @@ describe("finalizePayload", () => {
     });
 
     test("durée plancher à zéro", () => {
-        const call = buildCallInfo({direction: "outbound", num: "2000", startedAt: 5000});
+        const call = buildCallInfo({
+            direction: "outbound",
+            num: "2000",
+            startedAt: 5000,
+        });
         assert.equal(finalizePayload(call, 4999).duration, 0);
     });
 });
@@ -92,7 +104,11 @@ describe("isDuplicateIncoming", () => {
 
     test("charge vide : ignorée", () => {
         assert.equal(
-            isDuplicateIncoming({state: "registered", currentCall: null, payload: null}),
+            isDuplicateIncoming({
+                state: "registered",
+                currentCall: null,
+                payload: null,
+            }),
             true
         );
     });

@@ -443,7 +443,11 @@
                         <div class="border rounded p-2 h-100">
                             <div class="text-muted small">Services</div>
                             <div class="small mt-1">
-                                <t t-foreach="this.traffic.services" t-as="service" t-key="service.nom">
+                                <t
+                                    t-foreach="this.traffic.services"
+                                    t-as="service"
+                                    t-key="service.nom"
+                                >
                                     <div class="d-flex justify-content-between">
                                         <span t-out="service.nom" />
                                         <span
@@ -452,7 +456,10 @@
                                         />
                                     </div>
                                 </t>
-                                <div t-if="!this.traffic.services.length" class="text-muted">
+                                <div
+                                    t-if="!this.traffic.services.length"
+                                    class="text-muted"
+                                >
                                     non disponible
                                 </div>
                             </div>
@@ -461,18 +468,36 @@
                     <div class="col-md-4">
                         <div class="border rounded p-2 h-100">
                             <div class="text-muted small">Derniers messages</div>
-                            <div class="small mt-1" style="max-height: 12em; overflow-y: auto;">
-                                <t t-foreach="this.traffic.derniers_messages" t-as="message" t-key="message.heure + message.expediteur">
-                                    <div class="d-flex justify-content-between border-bottom py-1">
-                                        <span class="text-truncate" t-out="message.expediteur" />
-                                        <span class="text-truncate" t-out="message.destinataire" />
+                            <div
+                                class="small mt-1"
+                                style="max-height: 12em; overflow-y: auto;"
+                            >
+                                <t
+                                    t-foreach="this.traffic.derniers_messages"
+                                    t-as="message"
+                                    t-key="message.heure + message.expediteur"
+                                >
+                                    <div
+                                        class="d-flex justify-content-between border-bottom py-1"
+                                    >
+                                        <span
+                                            class="text-truncate"
+                                            t-out="message.expediteur"
+                                        />
+                                        <span
+                                            class="text-truncate"
+                                            t-out="message.destinataire"
+                                        />
                                         <span
                                             t-attf-class="{{message.score &gt; 5 ? 'text-warning' : 'text-success'}}"
                                             t-out="message.score"
                                         />
                                     </div>
                                 </t>
-                                <div t-if="!this.traffic.derniers_messages.length" class="text-muted">
+                                <div
+                                    t-if="!this.traffic.derniers_messages.length"
+                                    class="text-muted"
+                                >
                                     aucun message récent
                                 </div>
                             </div>
@@ -487,22 +512,50 @@
                             <div class="text-muted small">
                                 Courrier récent du domaine
                             </div>
-                            <div class="small mt-1" style="max-height: 20em; overflow-y: auto;">
-                                <t t-foreach="this.traffic.journal_domaine" t-as="message" t-key="message.heure + message.expediteur">
-                                    <div class="d-flex justify-content-between border-bottom py-1">
-                                        <span class="text-muted" t-out="message.heure" />
-                                        <span class="text-truncate mx-2" t-out="message.expediteur" />
+                            <div
+                                class="small mt-1"
+                                style="max-height: 20em; overflow-y: auto;"
+                            >
+                                <t
+                                    t-foreach="this.traffic.journal_domaine"
+                                    t-as="message"
+                                    t-key="message.heure + message.expediteur"
+                                >
+                                    <div
+                                        class="d-flex justify-content-between border-bottom py-1"
+                                    >
+                                        <span
+                                            class="text-muted"
+                                            t-out="message.heure"
+                                        />
+                                        <span
+                                            class="text-truncate mx-2"
+                                            t-out="message.expediteur"
+                                        />
                                         <span class="text-muted">→</span>
-                                        <span class="text-truncate mx-2" t-out="message.destinataire" />
+                                        <span
+                                            class="text-truncate mx-2"
+                                            t-out="message.destinataire"
+                                        />
                                         <span
                                             t-attf-class="{{message.score &gt; 5 ? 'text-warning' : 'text-success'}}"
                                             t-out="message.score"
                                         />
-                                        <span class="text-muted small text-truncate" t-out="message.sujet" />
+                                        <span
+                                            class="text-muted small text-truncate"
+                                            t-out="message.sujet"
+                                        />
                                     </div>
-                                    <div t-if="message.symboles" class="text-muted fst-italic small mb-1" t-out="message.symboles" />
+                                    <div
+                                        t-if="message.symboles"
+                                        class="text-muted fst-italic small mb-1"
+                                        t-out="message.symboles"
+                                    />
                                 </t>
-                                <div t-if="!this.traffic.journal_domaine.length" class="text-muted">
+                                <div
+                                    t-if="!this.traffic.journal_domaine.length"
+                                    class="text-muted"
+                                >
                                     aucun courrier récent pour ce domaine
                                 </div>
                             </div>
@@ -515,17 +568,44 @@
                     <div class="col-md-8">
                         <div class="border rounded p-2 h-100">
                             <div class="text-muted small">Quarantaine du domaine</div>
-                            <div class="small mt-1" style="max-height: 14em; overflow-y: auto;">
-                                <t t-foreach="this.traffic.quarantaine" t-as="quarantaine" t-key="quarantaine.id">
-                                    <div class="d-flex justify-content-between border-bottom py-1">
-                                        <span class="text-muted" t-out="quarantaine.heure" />
-                                        <span class="text-truncate mx-2" t-out="quarantaine.expediteur" />
-                                        <span class="text-truncate mx-2" t-out="quarantaine.destinataire" />
-                                        <span class="text-warning" t-out="quarantaine.score" />
-                                        <span class="text-muted small text-truncate" t-out="quarantaine.sujet" />
+                            <div
+                                class="small mt-1"
+                                style="max-height: 14em; overflow-y: auto;"
+                            >
+                                <t
+                                    t-foreach="this.traffic.quarantaine"
+                                    t-as="quarantaine"
+                                    t-key="quarantaine.id"
+                                >
+                                    <div
+                                        class="d-flex justify-content-between border-bottom py-1"
+                                    >
+                                        <span
+                                            class="text-muted"
+                                            t-out="quarantaine.heure"
+                                        />
+                                        <span
+                                            class="text-truncate mx-2"
+                                            t-out="quarantaine.expediteur"
+                                        />
+                                        <span
+                                            class="text-truncate mx-2"
+                                            t-out="quarantaine.destinataire"
+                                        />
+                                        <span
+                                            class="text-warning"
+                                            t-out="quarantaine.score"
+                                        />
+                                        <span
+                                            class="text-muted small text-truncate"
+                                            t-out="quarantaine.sujet"
+                                        />
                                     </div>
                                 </t>
-                                <div t-if="!this.traffic.quarantaine.length" class="text-muted">
+                                <div
+                                    t-if="!this.traffic.quarantaine.length"
+                                    class="text-muted"
+                                >
                                     rien en quarantaine
                                 </div>
                             </div>
@@ -535,13 +615,20 @@
                         <div class="border rounded p-2 h-100">
                             <div class="text-muted small">Statistiques de filtrage</div>
                             <div class="small mt-1">
-                                <t t-foreach="Object.entries(this.traffic.stats_globales)" t-as="entree" t-key="entree[0]">
+                                <t
+                                    t-foreach="Object.entries(this.traffic.stats_globales)"
+                                    t-as="entree"
+                                    t-key="entree[0]"
+                                >
                                     <div class="d-flex justify-content-between">
                                         <span class="text-muted" t-out="entree[0]" />
                                         <span t-out="entree[1]" />
                                     </div>
                                 </t>
-                                <div t-if="!Object.keys(this.traffic.stats_globales).length" class="text-muted">
+                                <div
+                                    t-if="!Object.keys(this.traffic.stats_globales).length"
+                                    class="text-muted"
+                                >
                                     non disponible
                                 </div>
                             </div>

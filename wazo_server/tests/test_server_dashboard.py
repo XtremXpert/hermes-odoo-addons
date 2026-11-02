@@ -18,9 +18,7 @@ from odoo.tests import TransactionCase
 from odoo.tests import tagged
 
 #: Point de construction du client VoIP.ms dans le modèle du tableau.
-VOIPMS_CTOR = (
-    "odoo.addons.wazo_server.models.wazo_server_dashboard.VoIPMSClient"
-)
+VOIPMS_CTOR = "odoo.addons.wazo_server.models.wazo_server_dashboard.VoIPMSClient"
 
 
 @tagged("wazo_server", "post_install", "-at_install")
@@ -38,9 +36,7 @@ class TestServerDashboard(TransactionCase):
 
     def test_aggregates_tenants_trunks_and_dids(self):
         self.Tenant.create({"name": "Diverse-Cité", "slug": "diverse"})
-        self.Trunk.create(
-            {"name": "T1", "voipms_username": "u", "voipms_password": "p"}
-        )
+        self.Trunk.create({"name": "T1", "voipms_username": "u", "voipms_password": "p"})
         self.Did.create({"number": "4184803381"})
         data = self._dashboard()
         self.assertEqual(data["tenants"]["total"], 1)
@@ -59,23 +55,13 @@ class TestServerDashboard(TransactionCase):
         self.assertEqual(data["dids"]["muted"], 0)
 
     def test_token_expiry_flags_only_soon(self):
-        bientot = fields.Datetime.to_string(
-            datetime.now() + timedelta(days=10)
-        )
-        loin = fields.Datetime.to_string(
-            datetime.now() + timedelta(days=200)
-        )
-        self.Tenant.create(
-            {"name": "Bientôt", "slug": "bientot", "token_expires_at": bientot}
-        )
-        self.Tenant.create(
-            {"name": "Loin", "slug": "loin", "token_expires_at": loin}
-        )
+        bientot = fields.Datetime.to_string(datetime.now() + timedelta(days=10))
+        loin = fields.Datetime.to_string(datetime.now() + timedelta(days=200))
+        self.Tenant.create({"name": "Bientôt", "slug": "bientot", "token_expires_at": bientot})
+        self.Tenant.create({"name": "Loin", "slug": "loin", "token_expires_at": loin})
         data = self._dashboard()
         self.assertEqual(data["tenants"]["expiring"], 1)
-        noms = {
-            item["name"]: item["expires_soon"] for item in data["tenants"]["items"]
-        }
+        noms = {item["name"]: item["expires_soon"] for item in data["tenants"]["items"]}
         self.assertTrue(noms["Bientôt"])
         self.assertFalse(noms["Loin"])
 

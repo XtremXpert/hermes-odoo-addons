@@ -16,9 +16,12 @@
             <list>
                 <field name="tenant_slug" string="Tenant" />
                 <field name="number" />
-                <field name="wazo_route_state" widget="badge"
-                       decoration-success="wazo_route_state == 'routed'"
-                       decoration-danger="wazo_route_state == 'error'" />
+                <field
+                    name="wazo_route_state"
+                    widget="badge"
+                    decoration-success="wazo_route_state == 'routed'"
+                    decoration-danger="wazo_route_state == 'error'"
+                />
                 <field name="trunk_id" />
                 <field name="wazo_user_id" />
             </list>

@@ -19,8 +19,8 @@
                 <field name="answered" />
                 <field name="duration" sum="Total" />
                 <field name="partner_id" />
-                        <field name="recording_id" />
-                        <field name="transcript_state" />
+                <field name="recording_id" />
+                <field name="transcript_state" />
             </list>
         </field>
     </record>

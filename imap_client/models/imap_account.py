@@ -44,9 +44,7 @@ class ImapAccount(models.Model):
     @api.model
     def _search(self, domain, *args, **kwargs):
         """Borne chaque recherche aux comptes de l'usager — les gestionnaires voient tout."""
-        if not self.env.su and not self.env.user.has_group(
-            "imap_client.group_imap_manager"
-        ):
+        if not self.env.su and not self.env.user.has_group("imap_client.group_imap_manager"):
             domain = [("user_id", "=", self.env.user.id), *domain]
         return super()._search(domain, *args, **kwargs)
 

@@ -4,12 +4,12 @@
         <field name="model">proxmox.node</field>
         <field name="arch" type="xml">
             <list string="Noeuds">
-                <field name="name"/>
-                <field name="status"/>
-                <field name="cpu" widget="progressbar"/>
-                <field name="mem_max"/>
-                <field name="disk_max"/>
-                <field name="last_synced_on"/>
+                <field name="name" />
+                <field name="status" />
+                <field name="cpu" widget="progressbar" />
+                <field name="mem_max" />
+                <field name="disk_max" />
+                <field name="last_synced_on" />
             </list>
         </field>
     </record>
@@ -20,27 +20,27 @@
                 <sheet>
                     <group>
                         <group>
-                            <field name="name"/>
-                            <field name="status"/>
-                            <field name="uptime"/>
+                            <field name="name" />
+                            <field name="status" />
+                            <field name="uptime" />
                         </group>
                         <group>
-                            <field name="cpu"/>
-                            <field name="mem_used"/>
-                            <field name="mem_max"/>
+                            <field name="cpu" />
+                            <field name="mem_used" />
+                            <field name="mem_max" />
                         </group>
                     </group>
                     <group>
                         <group>
-                            <field name="disk_used"/>
-                            <field name="disk_max"/>
+                            <field name="disk_used" />
+                            <field name="disk_max" />
                         </group>
                         <group>
-                            <field name="last_synced_on"/>
+                            <field name="last_synced_on" />
                         </group>
                     </group>
                 </sheet>
-                <chatter/>
+                <chatter />
             </form>
         </field>
     </record>

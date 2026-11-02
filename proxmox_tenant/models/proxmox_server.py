@@ -20,11 +20,10 @@ class ProxmoxServer(models.Model):
     _order = "name"
 
     name = fields.Char(string="Nom", required=True)
-    url = fields.Char(
-        string="URL", required=True, help="https://pve.exemple.com:8006"
-    )
+    url = fields.Char(string="URL", required=True, help="https://pve.exemple.com:8006")
     api_token = fields.Char(
-        string="Jeton API", required=True,
+        string="Jeton API",
+        required=True,
         help="user@realm!tokenid=uuid",
         groups="proxmox_tenant.group_proxmox_manager",
     )

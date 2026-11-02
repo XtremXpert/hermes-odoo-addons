@@ -37,7 +37,10 @@ export class WazoTenantDashboard extends Component {
         this.state.loading = true;
         try {
             this.state.data = await this.orm.call(
-                "wazo.tenant.dashboard", "get_tenant_dashboard", []);
+                "wazo.tenant.dashboard",
+                "get_tenant_dashboard",
+                []
+            );
         } finally {
             this.state.loading = false;
         }
@@ -73,7 +76,10 @@ export class WazoTenantDashboard extends Component {
             type: "ir.actions.act_window",
             res_model: "wazo.user",
             name: "Utilisateurs",
-            views: [[false, "list"], [false, "form"]],
+            views: [
+                [false, "list"],
+                [false, "form"],
+            ],
             domain: domain || [],
         });
     }
@@ -87,7 +93,10 @@ export class WazoTenantDashboard extends Component {
             type: "ir.actions.act_window",
             res_model: "wazo.ring.group",
             name: "Groupes d'appel",
-            views: [[false, "list"], [false, "form"]],
+            views: [
+                [false, "list"],
+                [false, "form"],
+            ],
             domain: domain || [],
         });
     }
@@ -97,7 +106,10 @@ export class WazoTenantDashboard extends Component {
             type: "ir.actions.act_window",
             res_model: "wazo.cdr",
             name: "Journal d'appels",
-            views: [[false, "list"], [false, "form"]],
+            views: [
+                [false, "list"],
+                [false, "form"],
+            ],
             domain: domain || [],
         });
     }

@@ -55,7 +55,8 @@ class ProxmoxTenant(models.Model):
             tenant.message_post(
                 body=self.env._(
                     "Pool « %s » créé sur %s.",
-                    tenant.pool_name, tenant.server_id.name,
+                    tenant.pool_name,
+                    tenant.server_id.name,
                 ),
                 subtype_xmlid="mail.mt_note",
             )
@@ -86,7 +87,8 @@ class ProxmoxTenant(models.Model):
             tenant.message_post(
                 body=self.env._(
                     "Pool « %s » supprimé de %s.",
-                    tenant.pool_name, tenant.server_id.name,
+                    tenant.pool_name,
+                    tenant.server_id.name,
                 ),
                 subtype_xmlid="mail.mt_note",
             )

@@ -41,11 +41,9 @@ export class WazoDashboard extends Component {
     async reload() {
         this.state.loading = true;
         try {
-            this.state.data = await this.orm.call(
-                "wazo.cdr",
-                "get_wazo_dashboard",
-                [this.state.days]
-            );
+            this.state.data = await this.orm.call("wazo.cdr", "get_wazo_dashboard", [
+                this.state.days,
+            ]);
         } finally {
             this.state.loading = false;
         }

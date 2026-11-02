@@ -43,12 +43,9 @@ class WazoVoicemail(models.Model):
         default="new",
         required=True,
     )
-    remote_voicemail_id = fields.Integer(
-        string="ID messagerie Wazo", readonly=True, copy=False
-    )
+    remote_voicemail_id = fields.Integer(string="ID messagerie Wazo", readonly=True, copy=False)
     error_message = fields.Text(string="Dernier message d'erreur", readonly=True, copy=False)
     active = fields.Boolean(default=True)
-
 
     def action_sync_wazo(self):
         """Crée la boîte sur Wazo, dans le contexte du tenant."""

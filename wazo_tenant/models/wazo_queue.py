@@ -35,9 +35,7 @@ class WazoQueue(models.Model):
         string="Membres",
         help="Agents de la file — des usagers Wazo synchronisés.",
     )
-    member_count = fields.Integer(
-        string="Nombre de membres", compute="_compute_member_count"
-    )
+    member_count = fields.Integer(string="Nombre de membres", compute="_compute_member_count")
     wazo_state = fields.Selection(
         selection=[
             ("new", "Nouveau"),
@@ -80,20 +78,15 @@ class WazoQueue(models.Model):
         """Crée (ou reprend) la file et son poste sur Wazo."""
         self.ensure_one()
         if self.wazo_state == "synced":
-            raise UserError(
-                self.env._("La file %s est déjà synchronisée sur Wazo.", self.name)
-            )
+            raise UserError(self.env._("La file %s est déjà synchronisée sur Wazo.", self.name))
         client = self._wazo_client()
         context = self._wazo_line_context()
         # Les membres sont désignés par uuid côté Wazo.
-        sans_uuid = self.member_ids.filtered(
-            lambda user: not user._ensure_remote_user_uuid(client)
-        )
+        sans_uuid = self.member_ids.filtered(lambda user: not user._ensure_remote_user_uuid(client))
         if sans_uuid:
             raise UserError(
                 self.env._(
-                    "Ces utilisateurs n'ont pas d'uuid côté Wazo : %s. "
-                    "Synchronisez-les d'abord.",
+                    "Ces utilisateurs n'ont pas d'uuid côté Wazo : %s. Synchronisez-les d'abord.",
                     ", ".join(sans_uuid.mapped("name")),
                 )
             )
@@ -127,9 +120,7 @@ class WazoQueue(models.Model):
                     "POST", "/extensions", body={"exten": self.extension, "context": context}
                 )
                 self.sudo().write({"remote_extension_id": extension["id"]})
-            client.conf(
-                "PUT", "/queues/%s/extensions/%s" % (queue_id, extension["id"])
-            )
+            client.conf("PUT", "/queues/%s/extensions/%s" % (queue_id, extension["id"]))
             for user in self.member_ids:
                 # Corps exigé (mesuré : sans lui, confd répond 400) —
                 # priorité 0 : l'ordre n'a d'effet qu'en stratégie linéaire.

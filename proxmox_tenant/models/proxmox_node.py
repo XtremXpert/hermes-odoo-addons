@@ -15,8 +15,12 @@ class ProxmoxNode(models.Model):
     _order = "server_id, name"
 
     server_id = fields.Many2one(
-        "proxmox.server", string="Serveur", required=True, readonly=True,
-        ondelete="cascade", index=True,
+        "proxmox.server",
+        string="Serveur",
+        required=True,
+        readonly=True,
+        ondelete="cascade",
+        index=True,
     )
     name = fields.Char(string="Nom", required=True, readonly=True)
     status = fields.Char(string="État", readonly=True)
@@ -40,6 +44,7 @@ class ProxmoxNode(models.Model):
     @api.model
     def _sync_all_from_proxmox(self):
         from ..services.proxmox_client import ProxmoxAPIError
+
         Server = self.env["proxmox.server"].sudo()
         for serveur in Server._serveurs_actifs():
             try:
@@ -64,14 +69,15 @@ class ProxmoxNode(models.Model):
                     "active": True,
                     "last_synced_on": fields.Datetime.now(),
                 }
-                noeud = self.search(
-                    [("server_id", "=", serveur.id), ("name", "=", nom)], limit=1
-                )
+                noeud = self.search([("server_id", "=", serveur.id), ("name", "=", nom)], limit=1)
                 if noeud:
                     noeud.write(valeurs)
                 else:
                     self.create(dict(valeurs, name=nom))
             self.search(
-                [("server_id", "=", serveur.id), ("name", "not in", list(vus)),
-                 ("active", "=", True)]
+                [
+                    ("server_id", "=", serveur.id),
+                    ("name", "not in", list(vus)),
+                    ("active", "=", True),
+                ]
             ).write({"active": False})

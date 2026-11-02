@@ -31,12 +31,9 @@ class WazoSetupWizard(models.TransientModel):
         string="Protocole",
         default="iax2",
         required=True,
-        help="IAX2 traverse le NAT sans port ouvert — recommandé derrière "
-        "un réseau résidentiel.",
+        help="IAX2 traverse le NAT sans port ouvert — recommandé derrière un réseau résidentiel.",
     )
-    pop_host = fields.Char(
-        string="Serveur (POP)", default="montreal1.voip.ms", required=True
-    )
+    pop_host = fields.Char(string="Serveur (POP)", default="montreal1.voip.ms", required=True)
     voipms_username = fields.Char(
         string="Identifiant SIP VoIP.ms",
         help="Laisser vide pour créer le sous-compte automatiquement.",
@@ -92,9 +89,7 @@ class WazoSetupWizard(models.TransientModel):
 
     def _do_user(self):
         User = self.env["wazo.user"].sudo()
-        user = User.create(
-            {"name": self.user_name, "extension": self.user_extension}
-        )
+        user = User.create({"name": self.user_name, "extension": self.user_extension})
         if user.wazo_state != "synced":
             user.action_sync_wazo()
         self.write({"state": "group", "user_id": user.id})

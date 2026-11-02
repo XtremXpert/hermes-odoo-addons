@@ -22,8 +22,10 @@
             </div>
 
             <!-- Empty state: the first-setup wizard. -->
-            <div t-if="this.onboarding and this.onboarding.needed"
-                 class="alert alert-info d-flex align-items-center justify-content-between mb-4">
+            <div
+                t-if="this.onboarding and this.onboarding.needed"
+                class="alert alert-info d-flex align-items-center justify-content-between mb-4"
+            >
                 <div>
                     <h5 class="mb-1">La téléphonie n'est pas encore configurée.</h5>
                     <div class="text-muted">
@@ -85,10 +87,7 @@
                             <div class="fs-2">
                                 <t t-out="this.groups?.total || 0" />
                             </div>
-                            <div
-                                t-if="this.groups?.empty"
-                                class="small text-warning"
-                            >
+                            <div t-if="this.groups?.empty" class="small text-warning">
                                 ⚠ <t t-out="this.groups.empty" /> sans membre
                                 — ils n'appellent personne
                             </div>
@@ -108,15 +107,14 @@
                             t-on-click="() => this.openCalls()"
                         >
                             <div class="text-muted small">
-                                Appels — <t t-out="this.calls?.window_days || 7" /> jours
+                                Appels — <t
+                                t-out="this.calls?.window_days || 7"
+                            /> jours
                             </div>
                             <div class="fs-2">
                                 <t t-out="this.calls?.total || 0" />
                             </div>
-                            <div
-                                t-if="this.calls?.missed"
-                                class="small text-warning"
-                            >
+                            <div t-if="this.calls?.missed" class="small text-warning">
                                 <a
                                     href="#"
                                     t-on-click.prevent="() => this.openMissed()"
@@ -162,7 +160,9 @@
                                 t-as="user"
                                 t-key="user.id"
                             >
-                                <td><t t-out="user.name" /></td>
+                                <td>
+                                    <t t-out="user.name" />
+                                </td>
                                 <td class="text-muted">
                                     <t t-out="user.extension || '—'" />
                                 </td>
@@ -210,7 +210,9 @@
                                 t-as="group"
                                 t-key="group.id"
                             >
-                                <td><t t-out="group.name" /></td>
+                                <td>
+                                    <t t-out="group.name" />
+                                </td>
                                 <td class="text-muted">
                                     <t t-out="group.extension || '—'" />
                                 </td>
@@ -264,15 +266,17 @@
                                 <td>
                                     <t t-out="this.directionLabel(call.direction)" />
                                 </td>
-                                <td><t t-out="call.from || '—'" /></td>
-                                <td><t t-out="call.to || '—'" /></td>
+                                <td>
+                                    <t t-out="call.from || '—'" />
+                                </td>
+                                <td>
+                                    <t t-out="call.to || '—'" />
+                                </td>
                                 <td>
                                     <span
                                         t-attf-class="badge #{call.answered ? 'text-bg-success' : 'text-bg-warning'}"
                                     >
-                                        <t
-                                            t-out="call.answered ? 'oui' : 'manqué'"
-                                        />
+                                        <t t-out="call.answered ? 'oui' : 'manqué'" />
                                     </span>
                                 </td>
                                 <td class="text-muted">

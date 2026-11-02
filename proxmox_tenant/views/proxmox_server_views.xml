@@ -4,10 +4,10 @@
         <field name="model">proxmox.server</field>
         <field name="arch" type="xml">
             <list string="Serveurs">
-                <field name="name"/>
-                <field name="url"/>
-                <field name="allowed_pools"/>
-                <field name="verify_ssl"/>
+                <field name="name" />
+                <field name="url" />
+                <field name="allowed_pools" />
+                <field name="verify_ssl" />
             </list>
         </field>
     </record>
@@ -18,17 +18,17 @@
                 <sheet>
                     <group>
                         <group>
-                            <field name="name"/>
-                            <field name="url"/>
+                            <field name="name" />
+                            <field name="url" />
                         </group>
                         <group>
-                            <field name="api_token" password="True"/>
-                            <field name="verify_ssl"/>
-                            <field name="allowed_pools"/>
+                            <field name="api_token" password="True" />
+                            <field name="verify_ssl" />
+                            <field name="allowed_pools" />
                         </group>
                     </group>
                 </sheet>
-                <chatter/>
+                <chatter />
             </form>
         </field>
     </record>

@@ -4,11 +4,11 @@
         <field name="model">imap.account</field>
         <field name="arch" type="xml">
             <list string="Comptes">
-                <field name="name"/>
-                <field name="user_id"/>
-                            <field name="host"/>
-                <field name="user"/>
-                <field name="last_synced_on"/>
+                <field name="name" />
+                <field name="user_id" />
+                <field name="host" />
+                <field name="user" />
+                <field name="last_synced_on" />
             </list>
         </field>
     </record>
@@ -17,36 +17,36 @@
         <field name="arch" type="xml">
             <form string="Compte">
                 <header>
-                    <button name="action_tester" type="object" string="Tester"/>
-                    <button name="action_sync" type="object" string="Synchroniser"/>
+                    <button name="action_tester" type="object" string="Tester" />
+                    <button name="action_sync" type="object" string="Synchroniser" />
                 </header>
                 <sheet>
                     <group>
                         <group>
-                            <field name="name"/>
-                            <field name="user_id"/>
-                            <field name="host"/>
-                            <field name="port"/>
+                            <field name="name" />
+                            <field name="user_id" />
+                            <field name="host" />
+                            <field name="port" />
                         </group>
                         <group>
-                            <field name="use_ssl"/>
-                            <field name="user"/>
-                            <field name="password" password="True"/>
-                            <field name="post_to_partner"/>
+                            <field name="use_ssl" />
+                            <field name="user" />
+                            <field name="password" password="True" />
+                            <field name="post_to_partner" />
                         </group>
                     </group>
                     <notebook>
                         <page string="Dossiers">
                             <field name="folder_ids">
                                 <list>
-                                    <field name="name"/>
-                                    <field name="unread"/>
+                                    <field name="name" />
+                                    <field name="unread" />
                                 </list>
                             </field>
                         </page>
                     </notebook>
                 </sheet>
-                <chatter/>
+                <chatter />
             </form>
         </field>
     </record>

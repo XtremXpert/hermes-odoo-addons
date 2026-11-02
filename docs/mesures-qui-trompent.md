@@ -108,20 +108,20 @@ qu'on voulait y mettre y est : regarder `git ls-files <fichier>`, pas le code de
 
 ## Entrant IAX2 VoIP.ms : le peer `voipms` porte l'identité (mesuré 2026-10-27)
 
-L'appel entrant IAX2 de VoIP.ms se présente avec `username=voipms` — **pas** le nom
-du sous-compte. Asterisk matche ce peer par nom avant de regarder l'IP : si le peer
-`voipms` (type `friend`, `host=208.100.60.19`) n'existe pas dans `useriax`, tout
-entrant est rejeté `No authority found` (cause 50) **avant** le dialplan — aucun CDR,
-aucune trace Wazo, seulement `failed to authenticate as voipms` dans le log Asterisk.
-Ne jamais le supprimer; il est partagé par tous les tenants d'un même compte.
+L'appel entrant IAX2 de VoIP.ms se présente avec `username=voipms` — **pas** le nom du
+sous-compte. Asterisk matche ce peer par nom avant de regarder l'IP : si le peer
+`voipms` (type `friend`, `host=208.100.60.19`) n'existe pas dans `useriax`, tout entrant
+est rejeté `No authority found` (cause 50) **avant** le dialplan — aucun CDR, aucune
+trace Wazo, seulement `failed to authenticate as voipms` dans le log Asterisk. Ne jamais
+le supprimer; il est partagé par tous les tenants d'un même compte.
 
 Deux autres conditions mesurées pour l'entrant :
 
 - le DID doit terminer sur le **même POP que le register** (montreal1 = 208.100.60.19)
-  sinon l'appel part d'un autre serveur et le pinhole NAT du register ne le laisse
-  pas passer (zéro paquet entrant — invisible dans `iax2 set debug on`) ;
+  sinon l'appel part d'un autre serveur et le pinhole NAT du register ne le laisse pas
+  passer (zéro paquet entrant — invisible dans `iax2 set debug on`) ;
 - sans **port forward UDP 4569** vers la VM Wazo, seul le sortant fonctionne (le flux
   register couvre les réponses, pas les nouveaux appels).
 
-L'exten livré est le DID à 10 chiffres; l'incall doit exister dans le contexte du
-peer (`options={context,...}` sur `useriax`).
+L'exten livré est le DID à 10 chiffres; l'incall doit exister dans le contexte du peer
+(`options={context,...}` sur `useriax`).

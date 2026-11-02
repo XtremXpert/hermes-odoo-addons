@@ -4,9 +4,9 @@
         <field name="model">imap.folder</field>
         <field name="arch" type="xml">
             <list string="Dossiers">
-                <field name="account_id"/>
-                <field name="name"/>
-                <field name="unread"/>
+                <field name="account_id" />
+                <field name="name" />
+                <field name="unread" />
             </list>
         </field>
     </record>

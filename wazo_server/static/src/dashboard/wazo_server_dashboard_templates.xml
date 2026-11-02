@@ -102,15 +102,12 @@
                                     / <t t-out="this.dids?.total || 0" />
                                 </span>
                             </div>
-                            <div
-                                t-if="this.dids?.muted"
-                                class="small text-warning"
-                            >
+                            <div t-if="this.dids?.muted" class="small text-warning">
                                 <t t-out="this.dids.muted" /> muet(s) —
                                 <a
-                                    href="#"
-                                    t-on-click.prevent="() => this.openMutedDids()"
-                                >les voir</a>
+                                href="#"
+                                t-on-click.prevent="() => this.openMutedDids()"
+                            >les voir</a>
                             </div>
                             <div
                                 t-if="!this.dids?.muted and this.dids?.total"
@@ -143,7 +140,9 @@
                                 t-on-click="() => this.refreshBalance()"
                                 disabled="this.state.balanceLoading"
                             >
-                                <t t-out="this.state.balanceLoading ? 'Lecture…' : 'Actualiser le solde'" />
+                                <t
+                                    t-out="this.state.balanceLoading ? 'Lecture…' : 'Actualiser le solde'"
+                                />
                             </button>
                         </div>
                     </div>
@@ -167,8 +166,12 @@
                                 t-as="tenant"
                                 t-key="tenant.id"
                             >
-                                <td><t t-out="tenant.name" /></td>
-                                <td class="text-muted"><t t-out="tenant.context_name" /></td>
+                                <td>
+                                    <t t-out="tenant.name" />
+                                </td>
+                                <td class="text-muted">
+                                    <t t-out="tenant.context_name" />
+                                </td>
                                 <td>
                                     <span
                                         t-attf-class="badge #{tenant.state == 'created' ? 'text-bg-success' : (tenant.state == 'error' ? 'text-bg-danger' : 'text-bg-secondary')}"
@@ -203,7 +206,7 @@
                                 <th>Sous-compte</th>
                                 <th>Provisioning</th>
                                 <th>Enregistrement SIP</th>
-                                <th></th>
+                                <th />
                             </tr>
                         </thead>
                         <tbody>
@@ -240,7 +243,9 @@
                                     <span
                                         t-attf-class="badge #{trunk.registered ? 'text-bg-success' : 'text-bg-warning'}"
                                     >
-                                        <t t-out="trunk.registered ? 'enregistré' : 'inconnu'" />
+                                        <t
+                                            t-out="trunk.registered ? 'enregistré' : 'inconnu'"
+                                        />
                                     </span>
                                 </td>
                                 <td class="text-end">
@@ -281,7 +286,9 @@
                                 t-as="did"
                                 t-key="did.id"
                             >
-                                <td><t t-out="did.number" /></td>
+                                <td>
+                                    <t t-out="did.number" />
+                                </td>
                                 <td>
                                     <span
                                         t-attf-class="badge #{did.route_state == 'routed' ? 'text-bg-success' : (did.route_state == 'error' ? 'text-bg-danger' : 'text-bg-secondary')}"

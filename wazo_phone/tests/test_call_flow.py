@@ -160,9 +160,7 @@ class TestCallFlow(TransactionCase):
         self.assertTrue(result["missed"])
         self.assertFalse(result["partner_id"])
         self.assertFalse(result["activity_id"])
-        self.assertEqual(
-            [s[1] for s in sent].count("wazo_phone.missed_call"), 1
-        )
+        self.assertEqual([s[1] for s in sent].count("wazo_phone.missed_call"), 1)
 
     def test_finalize_unknown_direction_defaults_outbound(self):
         result = self.user.finalize_wazo_call(

@@ -94,8 +94,7 @@ class WazoServerDashboard(models.AbstractModel):
                 "name": tenant.name,
                 "state": tenant.state,
                 "context_name": tenant.context_name or tenant.remote_context_name or "",
-                "token_expires_at": tenant.token_expires_at
-                and tenant.token_expires_at.isoformat(),
+                "token_expires_at": tenant.token_expires_at and tenant.token_expires_at.isoformat(),
                 "expires_soon": self._tenant_expires_soon(tenant),
             }
             for tenant in tenants

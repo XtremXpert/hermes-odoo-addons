@@ -334,20 +334,24 @@ export class WazoSoftphoneService {
         this.arbiter.start();
         // Unlock the audio context on the first user gesture: browsers refuse
         // autoplay sound until the user has interacted with the page once.
-        document.addEventListener("click", () => {
-            try {
-                const AC = window.AudioContext || window.webkitAudioContext;
-                if (!AC) {
-                    return;
+        document.addEventListener(
+            "click",
+            () => {
+                try {
+                    const AC = window.AudioContext || window.webkitAudioContext;
+                    if (!AC) {
+                        return;
+                    }
+                    if (!this._audioCtx) {
+                        this._audioCtx = new AC();
+                    }
+                    this._audioCtx.resume().catch(() => {});
+                } catch (e) {
+                    // Audio unavailable (headless, blocked) — ringtone is optional.
                 }
-                if (!this._audioCtx) {
-                    this._audioCtx = new AC();
-                }
-                this._audioCtx.resume().catch(() => {});
-            } catch (e) {
-                // Audio unavailable (headless, blocked) — ringtone is optional.
-            }
-        }, {once: true});
+            },
+            {once: true}
+        );
         // La désignation est asynchrone côté navigateur (l'octroi du verrou
         // est remis à une tâche). Si, une boucle d'événements plus tard, on
         // n'est toujours pas propriétaire, c'est qu'un autre onglet l'est :
@@ -835,14 +839,15 @@ export class WazoSoftphoneService {
                 );
             }
             // Panneau post-appel : note, rappel, fiche contact.
-            this.postCall = result && result.partner_id
-                ? {
-                      partnerId: result.partner_id,
-                      partnerName: result.partner_name,
-                      num: payload.num,
-                      duration: payload.duration,
-                  }
-                : null;
+            this.postCall =
+                result && result.partner_id
+                    ? {
+                          partnerId: result.partner_id,
+                          partnerName: result.partner_name,
+                          num: payload.num,
+                          duration: payload.duration,
+                      }
+                    : null;
         } catch {
             // Le bouclage est un confort : un échec ne doit jamais bloquer
             // la fin d'appel ni afficher d'erreur incompréhensible.
@@ -864,9 +869,9 @@ export class WazoSoftphoneService {
 
     /** Parque l'appel dans le lot parking du tenant (transfert vers son exten). */
     async park() {
-        const lots = await this.orm.searchRead(
-            "wazo.parking", [], ["extension"], {limit: 1}
-        );
+        const lots = await this.orm.searchRead("wazo.parking", [], ["extension"], {
+            limit: 1,
+        });
         const target = lots.length && lots[0].extension ? lots[0].extension : "*70";
         return this.transfer(target);
     }
@@ -944,7 +949,7 @@ export class WazoSoftphoneService {
         this._ringTimeout = setTimeout(() => this._stopRingtone(), 60000);
         const audio = this._ringAudio;
         const fallback = () => {
-            // pause()/load() can reject play() after the call was answered.
+            // Pause()/load() can reject play() after the call was answered.
             // A previous call must never restart or replace the current ring.
             if (this._ringAudio !== audio) {
                 return;
@@ -1015,7 +1020,7 @@ export class WazoSoftphoneService {
             const a = this._ringAudio;
             this._ringAudio = null;
             a.pause();
-            // load() aborts a still-pending play() — pause() alone can race
+            // Load() aborts a still-pending play() — pause() alone can race
             // and the ring keeps playing after the call is answered.
             a.load();
         }
@@ -1086,4 +1091,3 @@ const wazoSoftphoneService = {
 };
 
 registry.category("services").add("wazo_softphone", wazoSoftphoneService);
-

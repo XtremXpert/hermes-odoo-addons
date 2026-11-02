@@ -4,15 +4,15 @@
         <field name="model">proxmox.vm</field>
         <field name="arch" type="xml">
             <list string="Machines">
-                <field name="vmid"/>
-                <field name="name"/>
-                <field name="node"/>
-                <field name="machine_type"/>
-                <field name="status"/>
-                <field name="pool_name"/>
-                <field name="cpus"/>
-                <field name="mem_max"/>
-                <field name="uptime"/>
+                <field name="vmid" />
+                <field name="name" />
+                <field name="node" />
+                <field name="machine_type" />
+                <field name="status" />
+                <field name="pool_name" />
+                <field name="cpus" />
+                <field name="mem_max" />
+                <field name="uptime" />
             </list>
         </field>
     </record>
@@ -21,42 +21,58 @@
         <field name="arch" type="xml">
             <form string="Machine">
                 <header>
-                    <button name="action_start" type="object" string="Démarrer"
-                            invisible="status == 'running'"/>
-                    <button name="action_shutdown" type="object" string="Éteindre"
-                            invisible="status != 'running'"/>
-                    <button name="action_reboot" type="object" string="Redémarrer"
-                            invisible="status != 'running'"/>
-                    <button name="action_stop" type="object" string="Arrêt forcé"
-                            confirm="Couper la machine immédiatement ?"/>
+                    <button
+                        name="action_start"
+                        type="object"
+                        string="Démarrer"
+                        invisible="status == 'running'"
+                    />
+                    <button
+                        name="action_shutdown"
+                        type="object"
+                        string="Éteindre"
+                        invisible="status != 'running'"
+                    />
+                    <button
+                        name="action_reboot"
+                        type="object"
+                        string="Redémarrer"
+                        invisible="status != 'running'"
+                    />
+                    <button
+                        name="action_stop"
+                        type="object"
+                        string="Arrêt forcé"
+                        confirm="Couper la machine immédiatement ?"
+                    />
                 </header>
                 <sheet>
                     <group>
                         <group>
-                            <field name="vmid"/>
-                            <field name="name"/>
-                            <field name="machine_type"/>
-                            <field name="status"/>
+                            <field name="vmid" />
+                            <field name="name" />
+                            <field name="machine_type" />
+                            <field name="status" />
                         </group>
                         <group>
-                            <field name="node"/>
-                            <field name="pool_name"/>
-                            <field name="uptime"/>
+                            <field name="node" />
+                            <field name="pool_name" />
+                            <field name="uptime" />
                         </group>
                     </group>
                     <group string="Ressources">
                         <group>
-                            <field name="cpus"/>
-                            <field name="mem_used"/>
-                            <field name="mem_max"/>
+                            <field name="cpus" />
+                            <field name="mem_used" />
+                            <field name="mem_max" />
                         </group>
                         <group>
-                            <field name="disk_used"/>
-                            <field name="disk_max"/>
+                            <field name="disk_used" />
+                            <field name="disk_max" />
                         </group>
                     </group>
                 </sheet>
-                <chatter/>
+                <chatter />
             </form>
         </field>
     </record>

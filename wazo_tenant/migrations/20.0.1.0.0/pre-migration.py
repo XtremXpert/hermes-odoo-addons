@@ -17,20 +17,20 @@ Idempotent : simple UPDATE, ne fait rien si les lignes sont absentes.
 #: est exclu par le NOT LIKE du script. Les réglages softphone gardent
 #: leur xmlid wazo_phone (champs définis par voip_bridge, qui reste).
 MOVED_PREFIXES = (
-    "wazo_user%",            # modèle, vues, action des utilisateurs
-    "wazo_ring_group%",      # groupes d'appel + membres
-    "wazo_cdr%",             # journal d'appels
-    "wazo_extension%",       # mixin, inventaire des postes
+    "wazo_user%",  # modèle, vues, action des utilisateurs
+    "wazo_ring_group%",  # groupes d'appel + membres
+    "wazo_cdr%",  # journal d'appels
+    "wazo_extension%",  # mixin, inventaire des postes
     "wazo_res_config_settings_view",  # vue de connexion (sans _phone)
-    "access_wazo_%",         # règles ir.model.access déplacées
-    "model_wazo_%",          # ir.model des modèles déplacés
-    "field_wazo_%",          # champs de ces modèles
-    "field_res_partner__wazo_%",      # wazo_user_id sur le contact
-    "menu_wazo_%",           # menus — dashboard exclu ci-dessous
-    "action_wazo_%",         # actions — dashboard exclu ci-dessous
-    "group_wazo_%",          # groupes de sécurité
-    "ir_cron_wazo_cdr%",     # tâche planifiée de synchro CDR
-    "view_partner_form%wazo%",        # héritage fiche contact
+    "access_wazo_%",  # règles ir.model.access déplacées
+    "model_wazo_%",  # ir.model des modèles déplacés
+    "field_wazo_%",  # champs de ces modèles
+    "field_res_partner__wazo_%",  # wazo_user_id sur le contact
+    "menu_wazo_%",  # menus — dashboard exclu ci-dessous
+    "action_wazo_%",  # actions — dashboard exclu ci-dessous
+    "group_wazo_%",  # groupes de sécurité
+    "ir_cron_wazo_cdr%",  # tâche planifiée de synchro CDR
+    "view_partner_form%wazo%",  # héritage fiche contact
 )
 
 

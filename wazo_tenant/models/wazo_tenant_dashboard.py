@@ -63,9 +63,7 @@ class WazoTenantDashboard(models.AbstractModel):
 
         # Groupes d'appel : état et effectif — un groupe sans membre
         # n'appelle personne, c'est une alerte silencieuse.
-        group_states = {
-            state: 0 for state, _ in Group._fields["wazo_state"].selection
-        }
+        group_states = {state: 0 for state, _ in Group._fields["wazo_state"].selection}
         for group in groups:
             group_states[group.wazo_state] = group_states.get(group.wazo_state, 0) + 1
         group_items = [
@@ -128,8 +126,6 @@ class WazoTenantDashboard(models.AbstractModel):
                 "total": fenetre,
                 "missed": fenetre_manques,
                 "recent": recent_items,
-                "last_cdr": dernier
-                and dernier.date_start
-                and dernier.date_start.isoformat(),
+                "last_cdr": dernier and dernier.date_start and dernier.date_start.isoformat(),
             },
         }

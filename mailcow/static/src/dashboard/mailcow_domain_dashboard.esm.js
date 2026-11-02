@@ -242,7 +242,7 @@ export class MailcowDomainDashboard extends Component {
             type: "ir.actions.act_window",
             res_model: modele,
             views: [[false, "form"]],
-            context: { default_domain_id: this.identite.id },
+            context: {default_domain_id: this.identite.id},
         });
     }
 
@@ -310,6 +310,4 @@ export class MailcowDomainDashboard extends Component {
     }
 }
 
-registry
-    .category("actions")
-    .add("mailcow.dashboard_domaine", MailcowDomainDashboard);
+registry.category("actions").add("mailcow.dashboard_domaine", MailcowDomainDashboard);

@@ -48,9 +48,7 @@ class WazoIVR(models.Model):
         """Crée le menu sur Wazo — coquille : les choix se bâtissent côté Wazo."""
         self.ensure_one()
         if self.wazo_state == "synced":
-            raise UserError(
-                self.env._("Le menu %s est déjà synchronisé sur Wazo.", self.name)
-            )
+            raise UserError(self.env._("Le menu %s est déjà synchronisé sur Wazo.", self.name))
         client = self._wazo_client()
         try:
             if self.remote_ivr_id:

@@ -4,10 +4,10 @@
         <field name="model">proxmox.pool</field>
         <field name="arch" type="xml">
             <list string="Pools">
-                <field name="name"/>
-                <field name="description"/>
-                <field name="members"/>
-                <field name="last_synced_on"/>
+                <field name="name" />
+                <field name="description" />
+                <field name="members" />
+                <field name="last_synced_on" />
             </list>
         </field>
     </record>

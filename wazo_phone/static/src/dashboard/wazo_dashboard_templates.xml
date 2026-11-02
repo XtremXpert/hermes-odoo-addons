@@ -81,7 +81,10 @@
                                                         t-out="' (' + agent.extension + ')'"
                                                     />
                                                 </td>
-                                                <td class="text-end" t-out="agent.total" />
+                                                <td
+                                                    class="text-end"
+                                                    t-out="agent.total"
+                                                />
                                                 <td
                                                     class="text-end"
                                                     t-att-class="agent.missed ? 'text-danger' : ''"
@@ -177,13 +180,10 @@
         </div>
 
         <!-- Série quotidienne : barres CSS, manqués superposés. -->
-        <div class="card mt-3" t-if="scope?.series?.length">
+        <div t-if="scope?.series?.length" class="card mt-3">
             <div class="card-header fw-bold">Appels par jour</div>
             <div class="card-body">
-                <div
-                    class="d-flex align-items-end gap-1"
-                    style="height: 120px"
-                >
+                <div class="d-flex align-items-end gap-1" style="height: 120px">
                     <div
                         t-foreach="this.seriesOf(scope)"
                         t-as="day"
@@ -233,7 +233,9 @@
                                 t-att-data-icon="entry.direction === 'inbound' ? 'arrow_downward' : 'arrow_upward'"
                             />
                             <span class="me-auto">
-                                <t t-out="entry.partner_name or entry.name or entry.num or '—'" />
+                                <t
+                                    t-out="entry.partner_name or entry.name or entry.num or '—'"
+                                />
                                 <small class="text-muted">
                                     (<t t-out="entry.num" />)
                                 </small>
@@ -249,7 +251,10 @@
                         </div>
                     </a>
                 </li>
-                <li t-if="!(scope?.recent || []).length" class="list-group-item text-muted">
+                <li
+                    t-if="!(scope?.recent || []).length"
+                    class="list-group-item text-muted"
+                >
                     Aucun appel sur la période.
                 </li>
             </ul>

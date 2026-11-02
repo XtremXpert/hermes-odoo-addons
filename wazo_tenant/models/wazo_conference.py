@@ -41,9 +41,7 @@ class WazoConference(models.Model):
         default="new",
         required=True,
     )
-    remote_conference_id = fields.Integer(
-        string="ID conférence Wazo", readonly=True, copy=False
-    )
+    remote_conference_id = fields.Integer(string="ID conférence Wazo", readonly=True, copy=False)
     remote_extension_id = fields.Integer(string="ID poste Wazo", readonly=True, copy=False)
     error_message = fields.Text(string="Dernier message d'erreur", readonly=True, copy=False)
     active = fields.Boolean(default=True)
@@ -94,9 +92,7 @@ class WazoConference(models.Model):
                     "POST", "/extensions", body={"exten": self.extension, "context": context}
                 )
                 self.sudo().write({"remote_extension_id": extension["id"]})
-            client.conf(
-                "PUT", "/conferences/%s/extensions/%s" % (conference_id, extension["id"])
-            )
+            client.conf("PUT", "/conferences/%s/extensions/%s" % (conference_id, extension["id"]))
         except UserError:
             raise
         except Exception as error:  # noqa: BLE001 — consigner plutôt que remonter

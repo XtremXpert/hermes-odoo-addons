@@ -14,10 +14,16 @@
         <field name="arch" type="xml">
             <form>
                 <header>
-                    <field name="state" widget="statusbar"
-                           statusbar_visible="trunk,user,group,done" />
+                    <field
+                        name="state"
+                        widget="statusbar"
+                        statusbar_visible="trunk,user,group,done"
+                    />
                 </header>
-                <group invisible="state != 'trunk'" string="Trunk VoIP.ms — relier le Wazo au RTC">
+                <group
+                    invisible="state != 'trunk'"
+                    string="Trunk VoIP.ms — relier le Wazo au RTC"
+                >
                     <group>
                         <field name="protocol" />
                         <field name="pop_host" />
@@ -27,13 +33,19 @@
                         <field name="voipms_password" password="True" />
                     </group>
                 </group>
-                <group invisible="state != 'user'" string="Premier usager — un poste qui sonne">
+                <group
+                    invisible="state != 'user'"
+                    string="Premier usager — un poste qui sonne"
+                >
                     <group>
                         <field name="user_name" />
                         <field name="user_extension" />
                     </group>
                 </group>
-                <group invisible="state != 'group'" string="Premier groupe d'appel — sonnerie groupée">
+                <group
+                    invisible="state != 'group'"
+                    string="Premier groupe d'appel — sonnerie groupée"
+                >
                     <group>
                         <field name="group_name" />
                         <field name="group_extension" />
@@ -57,13 +69,27 @@
                     </group>
                 </group>
                 <footer>
-                    <button name="action_back" type="object" string="Retour"
-                            class="btn-secondary" invisible="state == 'trunk'" />
-                    <button name="action_continue" type="object"
-                            string="Continuer" class="btn-primary"
-                            invisible="state == 'done'" />
-                    <button name="action_close" type="object" string="Fermer"
-                            class="btn-secondary" invisible="state != 'done'" />
+                    <button
+                        name="action_back"
+                        type="object"
+                        string="Retour"
+                        class="btn-secondary"
+                        invisible="state == 'trunk'"
+                    />
+                    <button
+                        name="action_continue"
+                        type="object"
+                        string="Continuer"
+                        class="btn-primary"
+                        invisible="state == 'done'"
+                    />
+                    <button
+                        name="action_close"
+                        type="object"
+                        string="Fermer"
+                        class="btn-secondary"
+                        invisible="state != 'done'"
+                    />
                 </footer>
             </form>
         </field>

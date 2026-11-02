@@ -371,8 +371,9 @@ ul.auto-toc {
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! -->
 <p><a class="reference external image-reference" href="https://odoo-community.org/page/development-status"><img alt="Beta" src="https://img.shields.io/badge/maturity-Beta-yellow.png" /></a> <a class="reference external image-reference" href="http://www.gnu.org/licenses/lgpl-3.0-standalone.html"><img alt="License: LGPL-3" src="https://img.shields.io/badge/license-LGPL--3-blue.png" /></a> <a class="reference external image-reference" href="https://github.com/XtremXpert/hermes-odoo-addons/tree/20.0/wazo_server"><img alt="XtremXpert/hermes-odoo-addons" src="https://img.shields.io/badge/github-XtremXpert%2Fhermes--odoo--addons-lightgray.png?logo=github" /></a></p>
 <p>Création et encadrement des <strong>tenants</strong> Wazo. C’est le module de <strong>celui
-qui exploite le serveur</strong> Wazo, par opposition à <tt class="docutils literal">wazo_phone</tt>, qui est
-le module d’<strong>un tenant</strong>.</p>
+qui entretient le serveur</strong> Wazo (l’exploitant de la plateforme), par
+opposition à <tt class="docutils literal">wazo_tenant</tt> (exploitation d’un tenant) et
+<tt class="docutils literal">wazo_phone</tt> (usagers du téléphone).</p>
 <ul class="simple">
 <li>création d’un tenant (wazo-auth), avec son <strong>contexte interne</strong> et ses
 <strong>plages d’extensions</strong> (postes, groupes d’appel) ;</li>
@@ -383,10 +384,22 @@ le module d’<strong>un tenant</strong>.</p>
 postes ;</li>
 <li>adoption des tenants d’un Wazo déjà peuplé ;</li>
 <li>suppression gardée : refusée tant que le tenant porte des postes ou
-des lignes.</li>
+des lignes ;</li>
+<li><strong>tableau de bord de l’exploitant</strong> (menu « Serveur Wazo → Tableau de
+bord ») : état des tenants et expiration de leurs jetons (alerte à 30
+jours), trunk SIP du pont VoIP.ms (<tt class="docutils literal">wazo_voipms</tt>) avec vérification
+de l’enregistrement, DIDs routés ou muets, solde du compte VoIP.ms —
+relu <strong>sur demande seulement</strong>, un chargement de page n’appelle jamais
+le fournisseur.</li>
 </ul>
-<p>Dépend de <tt class="docutils literal">wazo_phone</tt> (client et réglages partagés) ; un tenant
-installe <tt class="docutils literal">wazo_phone</tt> seul et n’hérite jamais de cette machinerie.</p>
+<p>Dépend de <tt class="docutils literal">wazo_tenant</tt> (modèles d’exploitation) et de <tt class="docutils literal">wazo_voipms</tt>
+(état du pont) ; un tenant installe <tt class="docutils literal">wazo_tenant</tt> + <tt class="docutils literal">wazo_phone</tt> et
+n’hérite jamais de cette machinerie. <strong>Limite connue, mesurée</strong> : le
+jeton d’un tenant <strong>ne le cloisonne pas</strong>. Un jeton de tenant peut lire
+les données d’un autre tenant en changeant l’en-tête <tt class="docutils literal"><span class="pre">Wazo-Tenant</span></tt>. La
+frontière réelle se place à l’<strong>URL</strong> — un point d’entrée par tenant qui
+impose l’en-tête —, pas dans le jeton. Voir
+<tt class="docutils literal">doc/P5_WAZO_SERVER_SPEC.md</tt>.</p>
 <p><strong>Table of contents</strong></p>
 <div class="contents local topic" id="contents">
 <ul class="simple">

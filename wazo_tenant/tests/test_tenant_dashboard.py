@@ -75,6 +75,4 @@ class TestTenantDashboard(TransactionCase):
         vieux = self._cdr(minutes_ago=10 * 24 * 60, answered=True)
         data = self.Dashboard.get_tenant_dashboard()
         self.assertEqual(data["calls"]["total"], 0)
-        self.assertIn(
-            vieux.date_start.isoformat(), data["calls"]["last_cdr"]
-        )
+        self.assertIn(vieux.date_start.isoformat(), data["calls"]["last_cdr"])

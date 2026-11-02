@@ -382,7 +382,8 @@ class TestTenantResume(WazoServerTestBase):
         with self._patch(repondre):
             self.assertTrue(tenant.action_create_on_wazo())
         creations = [
-            appel[3].get("label") for appel in appels
+            appel[3].get("label")
+            for appel in appels
             if appel[0] == "confd" and appel[1] == "POST" and appel[2] == "/contexts"
         ]
         self.assertNotIn("ctx-alpha-internal", creations)
