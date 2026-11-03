@@ -30,12 +30,14 @@
                     <h2>Nœuds</h2>
                     <table class="o_cr__table">
                         <thead>
-                            <tr><th>Nœud</th><th>État</th><th>CPU</th><th>Mémoire</th></tr>
+                            <tr><th>Nœud</th><th>État</th><th>Version PVE</th><th>Disponibilité</th><th>CPU</th><th>Mémoire</th></tr>
                         </thead>
                         <tbody>
                             <tr t-foreach="nodes" t-as="node" t-key="node.name">
                                 <td t-esc="node.name"/>
                                 <td><span t-attf-class="o_cr__badge o_cr__badge--{{ node.status === 'online' ? 'ok' : 'ko' }}" t-esc="node.status"/></td>
+                                <td><code class="o_cr__version" t-if="node.pve_version" t-esc="node.pve_version"/><small t-else="" class="text-muted">—</small></td>
+                                <td><small t-esc="node.uptime > 86400 ? Math.floor(node.uptime / 86400) + ' j ' + Math.floor((node.uptime % 86400) / 3600) + ' h' : Math.floor(node.uptime / 3600) + ' h'"/></td>
                                 <td t-esc="node.cpu + ' %'"/>
                                 <td>
                                     <div class="o_cr__meter"><span t-attf-style="width: {{ node.memory_ratio }}%"/></div>

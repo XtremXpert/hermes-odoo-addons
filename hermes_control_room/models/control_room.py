@@ -77,7 +77,7 @@ class ControlRoom(models.AbstractModel):
         memory_used = sum(nodes.mapped("mem_used"))
         memory_max = sum(nodes.mapped("mem_max"))
 
-        return {
+        result = {
             "generated_at": fields.Datetime.to_string(fields.Datetime.now()),
             "synced_at": fields.Datetime.to_string(max(stamped)) if stamped else False,
             "totals": {
@@ -98,11 +98,23 @@ class ControlRoom(models.AbstractModel):
                     "memory_ratio": (
                         round(node.mem_used / node.mem_max * 100, 1) if node.mem_max else 0.0
                     ),
+                    "pve_version": node.pve_version or "",
+                    "uptime": node.uptime or 0,
                 }
                 for node in nodes.sorted("name")
             ],
             "alerts": alerts,
         }
+        # Fleet alignment: diverging versions across nodes deserve a loud
+        # alert, because a weekly pass exists precisely to keep them even.
+        versions = {n["pve_version"] for n in result["nodes"] if n["pve_version"]}
+        if len(versions) > 1:
+            result["alerts"].append({
+                "level": "warning",
+                "text": "Versions PVE non alignées : %s"
+                        % ", ".join(sorted(versions)),
+            })
+        return result
 
     @api.model
     def kubernetes_snapshot(self):

@@ -21,6 +21,9 @@ class ProxmoxNode(models.Model):
     name = fields.Char(string="Nom", required=True, readonly=True)
     status = fields.Char(string="État", readonly=True)
     uptime = fields.Integer(string="Disponibilité (s)", readonly=True)
+    # Version string from the node status: "pve-manager/9.2.25/… (running kernel: …)".
+    # Kept whole: the dashboard shows both version and running kernel.
+    pve_version = fields.Char(string="Version PVE", readonly=True)
     cpu = fields.Float(string="CPU", readonly=True)
     mem_used = BigInteger(string="Mémoire utilisée (o)", readonly=True)
     mem_max = BigInteger(string="Mémoire totale (o)", readonly=True)
@@ -52,10 +55,17 @@ class ProxmoxNode(models.Model):
                 if not nom:
                     continue
                 vus.add(nom)
+                # One extra call per node: the cluster resources payload does
+                # not carry the PVE version, the node status does.
+                try:
+                    detail = serveur._client()._request("GET", f"/nodes/{nom}/status") or {}
+                except ProxmoxAPIError:
+                    detail = {}
                 valeurs = {
                     "server_id": serveur.id,
                     "status": entry.get("status") or "",
                     "uptime": int(entry.get("uptime") or 0),
+                    "pve_version": detail.get("pveversion") or "",
                     "cpu": float(entry.get("cpu") or 0.0),
                     "mem_used": int(entry.get("mem") or 0),
                     "mem_max": int(entry.get("maxmem") or 0),
