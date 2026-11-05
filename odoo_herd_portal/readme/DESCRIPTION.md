@@ -178,3 +178,14 @@ abandonner celles sans nouvelles du cluster depuis 6 h ; faire avancer les deman
 bases approuvées.
 
 Tests : `ADDONS=addons tools/test-modules.sh IMAGE odoo_herd_portal`.
+
+## Le client d'une instance
+
+Une instance sans client est invisible du portail : aucun utilisateur ne la voit, et
+personne ne s'en aperçoit. Deux règles évitent que le lien se perde :
+
+- un staging hérite du client de sa production, à la création comme lorsqu'il y est
+  rattaché après coup ; un client saisi explicitement n'est jamais écrasé ;
+- une instance sans client porte le drapeau « Sans client », filtrable dans la
+  recherche, pour que les instances importées de Kubernetes se voient avant d'être
+  oubliées.

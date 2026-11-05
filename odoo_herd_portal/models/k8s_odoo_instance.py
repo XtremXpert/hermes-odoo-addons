@@ -4,6 +4,7 @@ from kubernetes import client
 
 from odoo import SUPERUSER_ID
 from odoo import _
+from odoo import api
 from odoo import fields
 from odoo import models
 from odoo.exceptions import AccessError
@@ -36,6 +37,14 @@ class K8sOdooInstance(models.Model):
         string="Client",
         tracking=True,
         help="Client whose portal users see this production and its stagings.",
+    )
+    herd_partner_missing = fields.Boolean(
+        string="Sans client",
+        compute="_compute_herd_partner_missing",
+        store=True,
+        help="Une instance sans client est invisible sur le portail : ses "
+        "utilisateurs ne la voient pas. Un staging hérite du client de sa "
+        "production.",
     )
     herd_approver_ids = fields.Many2many(
         "res.users",
@@ -82,6 +91,23 @@ class K8sOdooInstance(models.Model):
         "k8s.odoo.upgrade", string="Delivery module update", readonly=True, copy=False
     )
 
+    @api.depends("herd_partner_id")
+    def _compute_herd_partner_missing(self):
+        for instance in self:
+            instance.herd_partner_missing = not instance.herd_partner_id
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        # Un staging appartient au client de sa production. Sans cet héritage,
+        # la base clonée reste invisible du portail et personne ne s'en aperçoit.
+        for vals in vals_list:
+            if vals.get("herd_partner_id") or not vals.get("production_instance_id"):
+                continue
+            production = self.browse(vals["production_instance_id"])
+            if production.herd_partner_id:
+                vals["herd_partner_id"] = production.herd_partner_id.id
+        return super().create(vals_list)
+
     def write(self, vals):
         if herd_is_agent(self.env.user):
             forbidden = AGENT_FORBIDDEN_FIELDS & set(vals)
@@ -91,6 +117,10 @@ class K8sOdooInstance(models.Model):
                 raise AccessError(
                     _("Agents cannot change %s on these instances.", ", ".join(sorted(forbidden)))
                 )
+        if "production_instance_id" in vals and "herd_partner_id" not in vals:
+            production = self.browse(vals["production_instance_id"] or 0)
+            if production.herd_partner_id and self.filtered(lambda i: not i.herd_partner_id):
+                vals = dict(vals, herd_partner_id=production.herd_partner_id.id)
         res = super().write(vals)
         if "phase" in vals:
             self._herd_wake_requests()
