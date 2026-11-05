@@ -17,6 +17,7 @@
                             <field name="herd_require_2fa" />
                         </group>
                         <group string="Staging" invisible="environment != 'staging'">
+                            <field name="herd_partner_id" readonly="production_instance_id != False" />
                             <field name="herd_agent_allowed" />
                             <field name="herd_ci_user_ids" widget="many2many_tags" />
                         </group>
@@ -40,6 +41,22 @@
                         readonly="1"
                     />
                 </page>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_k8s_odoo_instance_search_herd_portal" model="ir.ui.view">
+        <field name="name">k8s.odoo.instance.search.herd.portal</field>
+        <field name="model">k8s.odoo.instance</field>
+        <field name="inherit_id" ref="odoo_herd.view_k8s_odoo_instance_search" />
+        <field name="arch" type="xml">
+            <xpath expr="//filter[@name='production']" position="after">
+                <filter
+                    string="Sans client"
+                    name="herd_partner_missing"
+                    domain="[('herd_partner_missing', '=', True)]"
+                    help="Instances invisibles du portail : aucun client ne les voit."
+                />
             </xpath>
         </field>
     </record>
