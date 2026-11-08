@@ -730,6 +730,7 @@ class K8sOdooPromotion(models.Model):
         l'emplacement d'un outil d'observation :
 
             odoo_herd.drift_cluster_id   (id du k8s.cluster qui porte le manifeste)
+            odoo_herd.drift_instance     (nom de la seule instance à publier — sinon toutes)
             odoo_herd.drift_namespace    (défaut : odoo-drift)
             odoo_herd.drift_configmap    (défaut : drift-manifest)
             odoo_herd.drift_key          (défaut : <nom de l'instance>.yaml)
@@ -742,6 +743,13 @@ class K8sOdooPromotion(models.Model):
         params = self.env["ir.config_parameter"].sudo()
         cluster_id = params.get_str("odoo_herd.drift_cluster_id")
         if not cluster_id:
+            return
+        # Sans ce filtre, promouvoir une autre instance écraserait le manifeste
+        # de celle que le détecteur surveille : la dérive deviendrait silencieuse,
+        # un manifeste d'une instance étant comparé à une autre. Constaté le
+        # 2026-11-08 sur PROMO/0171 (instance maison, clé fixe diverse-odoo.yaml).
+        instance = params.get_str("odoo_herd.drift_instance")
+        if instance and self.production_id.name != instance:
             return
         cluster = self.env["k8s.cluster"].sudo().browse(int(cluster_id)).exists()
         if not cluster or not cluster.active:
