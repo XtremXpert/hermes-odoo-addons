@@ -5,6 +5,8 @@ import re
 import secrets
 from datetime import timedelta
 
+import yaml
+from kubernetes import client
 from markupsafe import Markup
 from markupsafe import escape
 
@@ -651,6 +653,7 @@ class K8sOdooPromotion(models.Model):
             if not promotion._module_list() and not promotion._module_list("modules_install"):
                 promotion._herd_set_step("done", message=_("Image deployed."))
                 promotion.message_post(body=_("Production now runs %s.", promotion.image))
+                promotion._herd_publish_manifest()
                 continue
             # The module update must not run while the pods restart on the new
             # image: both would load the registry and the update would time out
@@ -704,6 +707,7 @@ class K8sOdooPromotion(models.Model):
                     "done", message=_("Image deployed, modules updated or installed.")
                 )
                 promotion.message_post(body=_("Production now runs %s.", promotion.image))
+                promotion._herd_publish_manifest()
             else:
                 promotion._herd_fail(
                     _(
@@ -714,6 +718,94 @@ class K8sOdooPromotion(models.Model):
                 )
 
     @api.model
+    def _herd_publish_manifest(self):
+        """Republie le manifeste de production là où le détecteur de dérive le lit.
+
+        Une promotion change l'image de production. Sans republication, le
+        manifeste versionné reste sur l'image précédente et le détecteur
+        signale une dérive à chaque mise en production légitime (constaté le
+        2026-11-08 : promotion à 17 h 20, alerte jusqu'à 18 h).
+
+        La cible vient d'ir.config_parameter — un module ne doit pas connaître
+        l'emplacement d'un outil d'observation :
+
+            odoo_herd.drift_cluster_id   (id du k8s.cluster qui porte le manifeste)
+            odoo_herd.drift_namespace    (défaut : odoo-drift)
+            odoo_herd.drift_configmap    (défaut : drift-manifest)
+            odoo_herd.drift_key          (défaut : <nom de l'instance>.yaml)
+
+        Sans configuration, la méthode ne fait rien. Un échec n'échoue pas la
+        promotion : le manifeste sert à lire la production, il ne la conditionne
+        pas.
+        """
+        self.ensure_one()
+        params = self.env["ir.config_parameter"].sudo()
+        cluster_id = params.get_param("odoo_herd.drift_cluster_id")
+        if not cluster_id:
+            return
+        cluster = self.env["k8s.cluster"].sudo().browse(int(cluster_id)).exists()
+        if not cluster or not cluster.active:
+            _logger.warning("Manifest not published: cluster %s unavailable", cluster_id)
+            return
+        prod = self.production_id
+        try:
+            custom_api = client.CustomObjectsApi(cluster._get_k8s_client())
+            obj = custom_api.get_namespaced_custom_object(
+                group="bemade.org",
+                version="v1alpha1",
+                namespace=prod.namespace,
+                plural="odooinstances",
+                name=prod.name,
+            )
+            spec = dict(obj.get("spec") or {})
+            # Même expurgation que le manifeste tenu à la main : la ressource
+            # live reste la seule détentrice des secrets.
+            if spec.get("adminPassword"):
+                spec["adminPassword"] = "<redacted>"
+            webhook = spec.get("webhook")
+            if isinstance(webhook, dict) and webhook.get("token"):
+                webhook["token"] = "<redacted>"
+            manifeste = {
+                "apiVersion": "bemade.org/v1alpha1",
+                "kind": "OdooInstance",
+                "metadata": {
+                    "name": prod.name,
+                    "namespace": prod.namespace,
+                    "finalizers": (obj.get("metadata") or {}).get("finalizers") or [],
+                },
+                "spec": spec,
+            }
+            entete = (
+                "# OdooInstance de PRODUCTION — cluster %s, namespace %s.\n"
+                "# Versionnée pour rendre la production lisible et comparable.\n"
+                "#\n"
+                "# SECRETS EXPURGÉS : adminPassword et le jeton du webhook odoo-herd sont retirés.\n"
+                "# Les valeurs réelles vivent dans la ressource live ; ne pas appliquer tel quel.\n"
+                "# Publié par odoo_herd à la fin d'une promotion.\n"
+                % (prod.cluster_id.display_name, prod.namespace)
+            )
+            contenu = entete + yaml.safe_dump(manifeste, sort_keys=False, allow_unicode=True)
+            namespace = params.get_param("odoo_herd.drift_namespace") or "odoo-drift"
+            nom = params.get_param("odoo_herd.drift_configmap") or "drift-manifest"
+            cle = params.get_param("odoo_herd.drift_key") or "%s.yaml" % prod.name
+            core_api = client.CoreV1Api(cluster._get_k8s_client())
+            corps = {"data": {cle: contenu}}
+            try:
+                core_api.patch_namespaced_config_map(nom, namespace, corps)
+            except client.exceptions.ApiException as exc:
+                if exc.status != 404:
+                    raise
+                core_api.create_namespaced_config_map(
+                    namespace,
+                    {
+                        "metadata": {"name": nom, "namespace": namespace},
+                        "data": {cle: contenu},
+                    },
+                )
+            _logger.info("Manifest of %s published to %s/%s", prod.name, namespace, nom)
+        except Exception:  # noqa: BLE001 — un manifeste non publié ne casse pas une promotion
+            _logger.warning("Manifest of %s not published", prod.name, exc_info=True)
+
     def _cron_herd_promotions(self):
         now = fields.Datetime.now()
         due = self.sudo().search([("state", "=", "scheduled"), ("scheduled_at", "<=", now)])
