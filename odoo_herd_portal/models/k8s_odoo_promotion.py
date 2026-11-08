@@ -740,7 +740,7 @@ class K8sOdooPromotion(models.Model):
         """
         self.ensure_one()
         params = self.env["ir.config_parameter"].sudo()
-        cluster_id = params.get_param("odoo_herd.drift_cluster_id")
+        cluster_id = params.get_str("odoo_herd.drift_cluster_id")
         if not cluster_id:
             return
         cluster = self.env["k8s.cluster"].sudo().browse(int(cluster_id)).exists()
@@ -785,9 +785,9 @@ class K8sOdooPromotion(models.Model):
                 % (prod.cluster_id.display_name, prod.namespace)
             )
             contenu = entete + yaml.safe_dump(manifeste, sort_keys=False, allow_unicode=True)
-            namespace = params.get_param("odoo_herd.drift_namespace") or "odoo-drift"
-            nom = params.get_param("odoo_herd.drift_configmap") or "drift-manifest"
-            cle = params.get_param("odoo_herd.drift_key") or "%s.yaml" % prod.name
+            namespace = params.get_str("odoo_herd.drift_namespace", "odoo-drift")
+            nom = params.get_str("odoo_herd.drift_configmap", "drift-manifest")
+            cle = params.get_str("odoo_herd.drift_key") or "%s.yaml" % prod.name
             core_api = client.CoreV1Api(cluster._get_k8s_client())
             corps = {"data": {cle: contenu}}
             try:
