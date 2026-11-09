@@ -44,7 +44,15 @@ class TestNeutralizeGuard(TransactionCase):
     def test_callback_delegates_on_a_normal_database(self):
         self.icp.set_bool("database.is_neutralized", False)
         action = self.cron.ir_actions_server_id
-        parent = type(self.cron).__mro__[1]
+        # `_callback` n'est pas défini par la première classe parente : la chaîne
+        # passe par des héritages (mail, par exemple) qui n'en déclarent rien, et
+        # `patch.object` exige l'attribut SUR la classe visée, pas hérité. On
+        # cherche donc celle qui le déclare réellement, quel que soit le nombre
+        # d'héritages intermédiaires.
+        parent = next(
+            classe for classe in type(self.cron).__mro__[1:]
+            if "_callback" in classe.__dict__
+        )
         with patch.object(parent, "_callback") as delegated:
             self.cron._callback(self.cron.name, action.id)
         delegated.assert_called_once_with(self.cron.name, action.id)
