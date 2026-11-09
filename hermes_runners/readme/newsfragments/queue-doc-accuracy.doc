@@ -1,0 +1,2 @@
+Le docstring du modèle et le ROADMAP décrivent désormais la limite réelle :
+la file GitHub Actions n'est pas lue, seule la vue cluster existe.

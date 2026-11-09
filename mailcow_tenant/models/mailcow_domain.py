@@ -727,7 +727,7 @@ class MailcowDomain(models.Model):
         self.ensure_one()
         return {
             "type": "ir.actions.client",
-            "tag": "mailcow_tenant.dashboard_domaine",
+            "tag": "mailcow.dashboard_domaine",
             "name": "Domaine %s" % self.name,
             "res_id": self.id,
             "params": {"resId": self.id},
