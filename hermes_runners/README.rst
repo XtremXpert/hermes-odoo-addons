@@ -81,6 +81,14 @@ Contributors
 Maintainers
 -----------
 
+.. |maintainer-XtremXpert| image:: https://github.com/XtremXpert.png?size=40px
+    :target: https://github.com/XtremXpert
+    :alt: XtremXpert
+
+Current maintainer:
+
+|maintainer-XtremXpert| 
+
 This module is part of the `XtremXpert/hermes-odoo-addons <https://github.com/XtremXpert/hermes-odoo-addons/tree/20.0/hermes_runners>`_ project on GitHub.
 
 You are welcome to contribute.
