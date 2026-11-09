@@ -18,7 +18,7 @@
     ],
     "data": [
         "security/groups.xml",
-        "security/ir.access.csv",
+        "security/ir.model.access.csv",
         "data/ir_sequence_data.xml",
         "data/ir_cron_data.xml",
         "data/portal_entry_data.xml",

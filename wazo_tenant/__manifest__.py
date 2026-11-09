@@ -8,7 +8,7 @@
     "depends": ["base", "web", "mail"],
     "data": [
         "security/wazo_groups.xml",
-        "security/ir.access.csv",
+        "security/ir.model.access.csv",
         "data/ir_cron.xml",
         "views/res_partner_views.xml",
         "views/wazo_user_views.xml",

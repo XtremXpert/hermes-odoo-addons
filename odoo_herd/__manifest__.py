@@ -30,7 +30,7 @@ Features:
     ],
     "data": [
         "security/k8s_security.xml",
-        "security/ir.access.csv",
+        "security/ir.model.access.csv",
         "data/k8s_data.xml",
         "wizards/k8s_cluster_test_wizard_views.xml",
         "wizards/k8s_sync_instances_wizard_views.xml",

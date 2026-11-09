@@ -12,7 +12,7 @@
     "depends": ["base", "mail"],
     "data": [
         "security/proxmox_groups.xml",
-        "security/ir.access.csv",
+        "security/ir.model.access.csv",
         "views/proxmox_server_views.xml",
         "views/proxmox_node_views.xml",
         "views/proxmox_vm_views.xml",
