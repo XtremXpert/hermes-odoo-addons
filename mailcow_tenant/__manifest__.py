@@ -4,6 +4,7 @@
     "category": "Productivity",
     "summary": """Exploitation d'un serveur Mailcow : domaines, boîtes, alias""",
     "version": "20.0.2.1.0",
+    "development_status": "Beta",
     "depends": ["base", "mail"],
     "data": [
         "security/mailcow_groups.xml",
@@ -20,6 +21,7 @@
     ],
     "author": "Benoît Vézina, Diverse-Cité",
     "website": "https://github.com/XtremXpert/hermes-odoo-addons",
+    "maintainers": ["XtremXpert"],
     "license": "LGPL-3",
     "installable": True,
     "application": True,

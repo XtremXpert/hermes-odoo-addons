@@ -4,6 +4,7 @@
     "category": "Productivity",
     "summary": """Exploitation d'un tenant Wazo : utilisateurs, postes, groupes, CDR""",
     "version": "20.0.3.0.0",
+    "development_status": "Beta",
     "depends": ["base", "web", "mail"],
     "data": [
         "security/wazo_groups.xml",
@@ -23,6 +24,7 @@
     ],
     "author": "Benoît Vézina, Diverse-Cité",
     "website": "https://github.com/XtremXpert/hermes-odoo-addons",
+    "maintainers": ["XtremXpert"],
     "license": "LGPL-3",
     "assets": {
         "web.assets_backend": [
