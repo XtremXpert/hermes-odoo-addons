@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <record id="action_arc_runners" model="ir.actions.client">
+        <field name="name">Runners — état</field>
+        <field name="tag">hermes_runners.dashboard</field>
+    </record>
+
+    <menuitem
+        id="menu_arc_runners"
+        name="Runners"
+        sequence="93"
+        groups="base.group_system"
+        action="action_arc_runners"
+    />
+</odoo>
