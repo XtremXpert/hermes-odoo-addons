@@ -138,8 +138,13 @@ class ArcRunners(models.AbstractModel):
     def _age_minutes(creation_timestamp, now):
         """Ancienneté lisible d'un runner, en minutes.
 
-        Un runner ARC est éphémère : sa durée de vie EST l'information. Un pod
-        de six heures signale un job bloqué, pas un runner qui travaille.
+        L'âge est celui du POD, pas celui du job.
+
+        Un pool avec `minRunners > 0` garde un pod pré-provisionné en attente :
+        `arc-maison` affiche ainsi treize jours d'âge sans qu'aucun job ne soit
+        bloqué. L'âge ne devient une information sur un job qu'une fois la phase
+        connue — et le module ne lit pas encore le job lui-même. Il vaut donc
+        mieux l'afficher comme une ancienneté de pod que comme une alerte.
         """
         try:
             cree = fields.Datetime.to_datetime(creation_timestamp).replace(tzinfo=None)
