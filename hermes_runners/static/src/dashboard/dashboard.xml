@@ -4,7 +4,11 @@
         <div class="o_arc_runners p-3">
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <h4 class="mb-0">Runners GitHub Actions</h4>
-                <button class="btn btn-sm btn-secondary" t-on-click="reload" t-att-disabled="state.loading">
+                <button
+                    class="btn btn-sm btn-secondary"
+                    t-on-click="reload"
+                    t-att-disabled="state.loading"
+                >
                     Rafraîchir
                 </button>
             </div>
@@ -31,10 +35,17 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr t-foreach="state.data.runners" t-as="runner" t-key="runner.name">
+                        <tr
+                            t-foreach="state.data.runners"
+                            t-as="runner"
+                            t-key="runner.name"
+                        >
                             <td t-esc="runner.cluster" />
                             <td t-esc="runner.pool" />
-                            <td t-att-class="phaseClass(runner.phase)" t-esc="runner.phase" />
+                            <td
+                                t-att-class="phaseClass(runner.phase)"
+                                t-esc="runner.phase"
+                            />
                             <td t-esc="runner.runner_id" />
                             <td>
                                 <t t-esc="runner.age_minutes" /> min
@@ -59,13 +70,19 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr t-foreach="state.data.clusters" t-as="cluster" t-key="cluster.cluster">
+                        <tr
+                            t-foreach="state.data.clusters"
+                            t-as="cluster"
+                            t-key="cluster.cluster"
+                        >
                             <t t-foreach="cluster.pools" t-as="pool" t-key="pool.name">
                                 <tr>
                                     <td t-esc="pool.name" />
                                     <td t-esc="pool.repo" />
                                     <td t-att-class="pool.saturated ? 'o_arc_bad' : ''">
-                                        <t t-esc="pool.running" /> / <t t-esc="pool.max" />
+                                        <t t-esc="pool.running" /> / <t
+                                        t-esc="pool.max"
+                                    />
                                         <t t-if="pool.paused"> (en pause)</t>
                                     </td>
                                 </tr>

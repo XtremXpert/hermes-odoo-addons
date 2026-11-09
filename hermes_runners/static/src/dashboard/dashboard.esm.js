@@ -40,7 +40,11 @@ export class ArcRunnersDashboard extends Component {
         this.state.loading = true;
         this.state.error = null;
         try {
-            this.state.data = await this.orm.call("arc.runners", "runners_snapshot", []);
+            this.state.data = await this.orm.call(
+                "arc.runners",
+                "runners_snapshot",
+                []
+            );
         } catch (error) {
             this.state.error = error.message || String(error);
         } finally {
