@@ -19,6 +19,16 @@ plateforme gère aussi le miroir. Son menu s'ajoute sous *Proxmox*, fourni par
 
 ## Modèle de données
 
-| Modèle | Champs clés | Relations |
-| ------ | ----------- | --------- |
-| `proxmox.tenant` | name, pool_name, remote_created, members | « serveur » : → `proxmox.server` (n-1), modèle de `proxmox_tenant`, externe à ce module |
+```mermaid
+erDiagram
+    PROXMOX_TENANT {
+        int id
+        string name
+        string pool_name
+        bool remote_created
+        int members
+    }
+```
+
+La fiche est reliée à un `proxmox.server` (module `proxmox_tenant`) : relation
+externe, hors de ce bloc.

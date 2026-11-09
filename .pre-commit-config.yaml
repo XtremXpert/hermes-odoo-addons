@@ -58,6 +58,11 @@ repos:
       - id: oca-fix-manifest-website
         args: ["https://github.com/XtremXpert/hermes-odoo-addons"]
       - id: oca-gen-addon-readme
+        # Le RST engendré est validé par docutils, qui ne connaît pas de lexer
+        # Pygments « mermaid » : un bloc ```mermaid ferait échouer le hook.
+        # tools/oca_gen_addon_readme.py enregistre un lexer de repli pour la
+        # validation, puis appelle l'outil OCA inchangé.
+        entry: python tools/oca_gen_addon_readme.py
         args:
           - --addons-dir=.
           - --branch=20.0

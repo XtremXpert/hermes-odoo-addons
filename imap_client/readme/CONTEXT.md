@@ -24,9 +24,31 @@ bibliothèque standard.
 
 ## Modèle de données
 
-| Modèle | Champs clés | Relations |
-| --- | --- | --- |
-| `imap.account` | `name`, `host`, `use_ssl` | `folder_ids` → `imap.folder` (1-n). |
-| `imap.folder` | `name`, `unread` | `account_id` → `imap.account` ; `message_ids` → `imap.message`. |
-| `imap.message` | `message_id`, `subject`, `seen` | `folder_id` → `imap.folder` ; `res.partner` et `mail.message` (externes). |
-| `imap.reply` | `to_addr`, `subject` | `message_id` → `imap.message` (1-n). |
+```mermaid
+erDiagram
+    IMAP_ACCOUNT {
+        int id
+        string name
+        string host
+        int port
+    }
+    IMAP_FOLDER {
+        int id
+        string name
+        int unread
+    }
+    IMAP_MESSAGE {
+        int id
+        string message_id
+        string subject
+        bool seen
+    }
+    IMAP_REPLY {
+        int id
+        string to_addr
+        string subject
+    }
+    IMAP_ACCOUNT ||--o{ IMAP_FOLDER : "dossiers"
+    IMAP_FOLDER ||--o{ IMAP_MESSAGE : "messages"
+    IMAP_MESSAGE ||--o{ IMAP_REPLY : "réponses"
+```

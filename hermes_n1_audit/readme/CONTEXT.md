@@ -25,9 +25,15 @@ qu'un staging cloné ne soit jamais piloté par un agent.
 
 ## Modèle de données
 
-| Modèle | Champs clés | Relations |
-| --- | --- | --- |
-| `hermes.n1.change` | `request_key`, `target_model`, `target_id` | Aucune relation interne ; `res.users` et `mail.message` (externes). |
+```mermaid
+erDiagram
+    HERMES_N1_CHANGE {
+        int id
+        string request_key
+        string target_model
+        int target_id
+    }
+```
 
 Le journal référence des modèles externes au module sans les posséder :
 `res.users` (demandeur et agent) et `mail.message` (message source et note du

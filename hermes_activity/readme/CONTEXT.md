@@ -23,3 +23,12 @@ n'écrit. La présence des agents est rafraîchie par le polling de la passerell
 et une tâche planifiée les marque hors ligne après trois minutes sans
 heartbeat. Les groupes reconnus sont ceux de `hermes_n1_audit`,
 `hermes_n2_support` et `hermes_n3_infra` quand ces modules sont installés.
+
+## Modèle de données
+
+Le module n'enregistre aucun modèle persistant : `hermes.activity` est un `AbstractModel` (service d'état d'activité des agents (AbstractModel, sans table)). Le diagramme le représente seul.
+
+```mermaid
+erDiagram
+    HERMES_ACTIVITY
+```

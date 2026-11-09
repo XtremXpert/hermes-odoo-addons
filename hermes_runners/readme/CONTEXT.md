@@ -20,3 +20,12 @@ directement au cluster côté navigateur : le serveur compose l'instantané,
 l'interface l'affiche avec l'heure de l'instantané et un rafraîchissement de
 30 secondes. La moitié « file d'attente GitHub » n'est pas lue ici (voir
 Roadmap).
+
+## Modèle de données
+
+Le module n'enregistre aucun modèle persistant : `arc.runners` est un `AbstractModel` (service de lecture de l'état des runners (AbstractModel, sans table)). Le diagramme le représente seul.
+
+```mermaid
+erDiagram
+    ARC_RUNNERS
+```

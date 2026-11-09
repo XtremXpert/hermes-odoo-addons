@@ -21,7 +21,19 @@ réutilise ce client et étend `voipms.did` pour router les appels entrants.
 
 ## Modèle de données
 
-| Modèle | Champs clés | Relations |
-| ------ | ----------- | --------- |
-| `voipms.did` | number, label, sms_enabled, synced | « messages envoyés » : → `voipms.sms.out` (1-n) |
-| `voipms.sms.out` | destination, body, state, date_sent | « DID émetteur » : → `voipms.did` (n-1) |
+```mermaid
+erDiagram
+    VOIPMS_DID {
+        int id
+        string number
+        string label
+        int sms_enabled
+    }
+    VOIPMS_SMS_OUT {
+        int id
+        string destination
+        string state
+        date date_sent
+    }
+    VOIPMS_DID ||--o{ VOIPMS_SMS_OUT : "messages envoyés"
+```

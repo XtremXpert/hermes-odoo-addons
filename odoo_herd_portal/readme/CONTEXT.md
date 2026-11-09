@@ -25,8 +25,27 @@ pilote jamais un vrai cluster. Il dépend d'`odoo_herd`, de `portal` et de
 
 ## Modèle de données
 
-| Modèle | Champs clés | Relations |
-| ------ | ----------- | --------- |
-| `k8s.odoo.promotion` | name, image, state, confirm_method | « production » : → `k8s.odoo.instance` (n-1, externe) ; « staging » : → `k8s.odoo.instance` (n-1, externe) ; « confirmation » : ← `k8s.odoo.promotion.confirm` (1-n) |
-| `k8s.odoo.instance.request` | instance_name, state, host, staging_host | « client » : → `res.partner` (n-1, externe) ; « offre » : → `k8s.odoo.instance.template` (n-1, externe) ; « production » et « staging » : → `k8s.odoo.instance` (n-1, externes) |
-| `k8s.odoo.promotion.confirm` | method, code, message, error | « mise en production » : → `k8s.odoo.promotion` (n-1) |
+```mermaid
+erDiagram
+    K8S_ODOO_INSTANCE_REQUEST {
+        int id
+        string instance_name
+        string state
+        string host
+    }
+    K8S_ODOO_PROMOTION {
+        int id
+        string image
+        string state
+        string confirm_method
+    }
+    K8S_ODOO_PROMOTION_CONFIRM {
+        int id
+        string method
+        string code
+    }
+    K8S_ODOO_PROMOTION ||--o{ K8S_ODOO_PROMOTION_CONFIRM : "confirmation"
+```
+
+Les instances, tâches, offres et clients visés sont déclarés par `odoo_herd` ou
+par le cœur d'Odoo : relations externes, hors de ce bloc.

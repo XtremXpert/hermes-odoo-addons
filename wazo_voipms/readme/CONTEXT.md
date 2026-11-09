@@ -23,7 +23,21 @@ les DIDs.
 
 ## Modèle de données
 
-| Modèle | Champs clés | Relations |
-| ------ | ----------- | --------- |
-| `wazo.voipms.trunk` | name, protocol, pop_host, state | « assistants de première configuration » : ← `wazo.setup.wizard` (1-n) |
-| `wazo.setup.wizard` | state, protocol, pop_host | « trunk créé » : → `wazo.voipms.trunk` (n-1) ; « usager créé » : → `wazo.user` (n-1, externe) ; « groupe créé » : → `wazo.ring.group` (n-1, externe) |
+```mermaid
+erDiagram
+    WAZO_VOIPMS_TRUNK {
+        int id
+        string name
+        string protocol
+        string state
+    }
+    WAZO_SETUP_WIZARD {
+        int id
+        string state
+        string protocol
+    }
+    WAZO_VOIPMS_TRUNK ||--o{ WAZO_SETUP_WIZARD : "trunk créé"
+```
+
+L'assistant vise aussi `wazo.user` et `wazo.ring.group`, déclarés par
+`wazo_tenant` : relations externes, hors de ce bloc.

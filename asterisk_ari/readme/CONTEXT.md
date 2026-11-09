@@ -21,6 +21,12 @@ posséder : supprimer le contact ne supprime pas l'historique.
 
 ## Modèle de données
 
-| Modèle | Champs clés | Relations |
-| --- | --- | --- |
-| `asterisk.call` | `phone`, `state`, `ari_call_id`, `date_started` | Aucune relation interne ; `partner_id` pointe vers `res.partner` (externe). |
+```mermaid
+erDiagram
+    ASTERISK_CALL {
+        int id
+        string phone
+        string state
+        date date_started
+    }
+```

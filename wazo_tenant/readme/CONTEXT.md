@@ -27,16 +27,74 @@ s'appuie dessus et `wazo_voipms` route les DID vers leurs destinations.
 
 ## Modèle de données
 
-| Modèle | Champs clés | Relations |
-| ------ | ----------- | --------- |
-| `wazo.tenant` | name, slug, remote_uuid, last_seen_at | — (fiche alimentée par `action_sync_from_wazo`) |
-| `wazo.user` | name, extension, wazo_state | « contact » : → `res.partner` (n-1, externe) ; « membres » : ← `wazo.ring.group.member` (1-n) ; « groupes » : ↔ `wazo.queue` (n-n) |
-| `wazo.ring.group` | name, extension, ring_strategy, wazo_state | « membres » : → `wazo.ring.group.member` (1-n) |
-| `wazo.ring.group.member` | priority, extension | « groupe » : → `wazo.ring.group` (n-1) ; « utilisateur » : → `wazo.user` (n-1) |
-| `wazo.queue` | name, extension, wazo_state | « agents » : ↔ `wazo.user` (n-n) |
-| `wazo.ivr` | name, menu_sound, timeout, max_tries | — (pas de poste) |
-| `wazo.conference` | name, extension, pin, max_users | — |
-| `wazo.parking` | name, extension, slots_start, slots_end | — |
-| `wazo.voicemail` | name, number, language, wazo_state | — |
-| `wazo.cdr` | call_direction, caller_num, answered, date_start | « contact » : → `res.partner` (n-1, externe) ; « enregistrement » : → `ir.attachment` (n-1, externe) |
-| `wazo.extension.inventory` | extension, attachment_kind, is_orphan | — (modèle transitoire) |
+```mermaid
+erDiagram
+    WAZO_TENANT {
+        int id
+        string name
+        string slug
+        string remote_uuid
+    }
+    WAZO_USER {
+        int id
+        string name
+        string extension
+        string wazo_state
+    }
+    WAZO_RING_GROUP {
+        int id
+        string name
+        string extension
+        string ring_strategy
+    }
+    WAZO_RING_GROUP_MEMBER {
+        int id
+        int priority
+        string extension
+    }
+    WAZO_QUEUE {
+        int id
+        string name
+        string extension
+        string wazo_state
+    }
+    WAZO_IVR {
+        int id
+        string name
+        string menu_sound
+        int timeout
+    }
+    WAZO_CONFERENCE {
+        int id
+        string name
+        string extension
+        int max_users
+    }
+    WAZO_PARKING {
+        int id
+        string name
+        string extension
+        string slots_start
+    }
+    WAZO_VOICEMAIL {
+        int id
+        string name
+        string number
+        string language
+    }
+    WAZO_CDR {
+        int id
+        string call_direction
+        string caller_num
+        bool answered
+    }
+    WAZO_EXTENSION_INVENTORY {
+        int id
+        string extension
+        string attachment_kind
+        bool is_orphan
+    }
+    WAZO_RING_GROUP ||--o{ WAZO_RING_GROUP_MEMBER : "membres"
+    WAZO_USER ||--o{ WAZO_RING_GROUP_MEMBER : "membre de"
+    WAZO_QUEUE }o--o{ WAZO_USER : "agents"
+```

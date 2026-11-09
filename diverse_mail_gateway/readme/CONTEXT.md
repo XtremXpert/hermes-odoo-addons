@@ -21,7 +21,19 @@ n'ajoute aucune dépendance Python.
 
 ## Modèle de données
 
-| Modèle | Champs clés | Relations |
-| --- | --- | --- |
-| `diverse.mail_gateway.token` | `name`, `token_hash`, `active`, `expires_at` | Source des jetons du module. |
-| `diverse.mail_gateway.token.create.wizard` | `name`, `generated_token` | `generated_token_id` → `diverse.mail_gateway.token` (1-n). |
+```mermaid
+erDiagram
+    DIVERSE_MAIL_GATEWAY_TOKEN {
+        int id
+        string name
+        string token_hash
+        bool active
+    }
+    DIVERSE_MAIL_GATEWAY_TOKEN_CREATE_WIZARD {
+        int id
+        string name
+        string generated_token
+        date expires_at
+    }
+    DIVERSE_MAIL_GATEWAY_TOKEN ||--o{ DIVERSE_MAIL_GATEWAY_TOKEN_CREATE_WIZARD : "jeton"
+```

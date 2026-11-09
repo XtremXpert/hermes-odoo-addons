@@ -29,11 +29,42 @@ ni menus ni groupes.
 
 ## Modèle de données
 
-| Modèle | Champs clés | Relations |
-| ------ | ----------- | --------- |
-| `mailcow.domain` | name, quota_mb, mailboxes_max, active | « boîtes mail » : → `mailcow.mailbox` (1-n) ; « alias » : → `mailcow.alias` (1-n) |
-| `mailcow.mailbox` | email, local_part, quota_mb, active | « domaine » : → `mailcow.domain` (n-1) ; « mot de passe applicatif » : ← `mailcow.app.password.wizard` (1-n) |
-| `mailcow.alias` | alias_name, is_catch_all, active | « domaine » : → `mailcow.domain` (n-1) ; « destinations » : ↔ `mailcow.email_address` (n-n) |
-| `mailcow.email_address` | address, comment | « destinations » : ← `mailcow.alias` (n-n) |
-| `mailcow.sync.preview` | model_name, plan | — (modèle transitoire) |
-| `mailcow.app.password.wizard` | app_name, protocols | « boîte » : → `mailcow.mailbox` (n-1) |
+```mermaid
+erDiagram
+    MAILCOW_DOMAIN {
+        int id
+        string name
+        int mailboxes_max
+        bool active
+    }
+    MAILCOW_MAILBOX {
+        int id
+        string email
+        string local_part
+        int quota_mb
+    }
+    MAILCOW_ALIAS {
+        int id
+        string alias_name
+        bool is_catch_all
+    }
+    MAILCOW_EMAIL_ADDRESS {
+        int id
+        string address
+        string comment
+    }
+    MAILCOW_SYNC_PREVIEW {
+        int id
+        string model_name
+        string plan
+    }
+    MAILCOW_APP_PASSWORD_WIZARD {
+        int id
+        string app_name
+        string protocols
+    }
+    MAILCOW_DOMAIN ||--o{ MAILCOW_MAILBOX : "boîtes mail"
+    MAILCOW_DOMAIN ||--o{ MAILCOW_ALIAS : "alias"
+    MAILCOW_ALIAS }o--o{ MAILCOW_EMAIL_ADDRESS : "destinations"
+    MAILCOW_MAILBOX ||--o{ MAILCOW_APP_PASSWORD_WIZARD : "mot de passe applicatif"
+```

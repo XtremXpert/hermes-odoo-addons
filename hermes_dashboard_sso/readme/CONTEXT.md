@@ -22,6 +22,12 @@ heure.
 
 ## Modèle de données
 
-| Modèle | Champs clés | Relations |
-| --- | --- | --- |
-| `hermes.dashboard.sso.code` | `code_hash`, `level`, `expires_at` | Aucune relation interne ; `user_id` pointe vers `res.users` (externe). |
+```mermaid
+erDiagram
+    HERMES_DASHBOARD_SSO_CODE {
+        int id
+        string code_hash
+        string level
+        date expires_at
+    }
+```

@@ -22,10 +22,40 @@ est le support de `proxmox_server` et alimente la salle de contrôle
 
 ## Modèle de données
 
-| Modèle | Champs clés | Relations |
-| ------ | ----------- | --------- |
-| `proxmox.server` | name, url, allowed_pools, verify_ssl | « nœuds » : ← `proxmox.node` (1-n) ; « machines » : ← `proxmox.vm` (1-n) ; « pools » : ← `proxmox.pool` (1-n) ; « stockages » : ← `proxmox.storage` (1-n) |
-| `proxmox.node` | name, status, uptime, cpu | « serveur » : → `proxmox.server` (n-1) |
-| `proxmox.vm` | vmid, name, status, machine_type | « serveur » : → `proxmox.server` (n-1) |
-| `proxmox.pool` | name, members, description | « serveur » : → `proxmox.server` (n-1) |
-| `proxmox.storage` | name, node, total, used | « serveur » : → `proxmox.server` (n-1) |
+```mermaid
+erDiagram
+    PROXMOX_SERVER {
+        int id
+        string name
+        string url
+        string allowed_pools
+    }
+    PROXMOX_NODE {
+        int id
+        string name
+        string status
+        int uptime
+    }
+    PROXMOX_VM {
+        int id
+        int vmid
+        string name
+        string status
+        string machine_type
+    }
+    PROXMOX_POOL {
+        int id
+        string name
+        int members
+    }
+    PROXMOX_STORAGE {
+        int id
+        string name
+        string node
+        int total
+    }
+    PROXMOX_SERVER ||--o{ PROXMOX_NODE : "nœuds"
+    PROXMOX_SERVER ||--o{ PROXMOX_VM : "machines"
+    PROXMOX_SERVER ||--o{ PROXMOX_POOL : "pools"
+    PROXMOX_SERVER ||--o{ PROXMOX_STORAGE : "stockages"
+```

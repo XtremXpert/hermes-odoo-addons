@@ -26,13 +26,62 @@ que sur demande. Le module dépend de `wazo_tenant` et de `wazo_voipms`.
 
 ## Modèle de données
 
-| Modèle | Champs clés | Relations |
-| ------ | ----------- | --------- |
-| `wazo.server.tenant` | name, slug, state, remote_uuid | « tenant parent » : → `wazo.server.tenant` (n-1) ; « objets rattachés » : ← les sept modèles ci-dessous (1-n) |
-| `wazo.user` | name, extension, wazo_state | « tenant administré » : → `wazo.server.tenant` (n-1) |
-| `wazo.ring.group` | name, extension, ring_strategy | « tenant administré » : → `wazo.server.tenant` (n-1) |
-| `wazo.queue` | name, extension, wazo_state | « tenant administré » : → `wazo.server.tenant` (n-1) |
-| `wazo.ivr` | name, menu_sound, timeout | « tenant administré » : → `wazo.server.tenant` (n-1) |
-| `wazo.conference` | name, extension, pin | « tenant administré » : → `wazo.server.tenant` (n-1) |
-| `wazo.parking` | name, extension, slots_start | « tenant administré » : → `wazo.server.tenant` (n-1) |
-| `wazo.voicemail` | name, number, language | « tenant administré » : → `wazo.server.tenant` (n-1) |
+```mermaid
+erDiagram
+    WAZO_SERVER_TENANT {
+        int id
+        string name
+        string slug
+        string state
+    }
+    WAZO_USER {
+        int id
+        string name
+        string extension
+        string wazo_state
+    }
+    WAZO_RING_GROUP {
+        int id
+        string name
+        string extension
+        string ring_strategy
+    }
+    WAZO_QUEUE {
+        int id
+        string name
+        string extension
+        string wazo_state
+    }
+    WAZO_IVR {
+        int id
+        string name
+        string menu_sound
+        int timeout
+    }
+    WAZO_CONFERENCE {
+        int id
+        string name
+        string extension
+        int max_users
+    }
+    WAZO_PARKING {
+        int id
+        string name
+        string extension
+        string slots_start
+    }
+    WAZO_VOICEMAIL {
+        int id
+        string name
+        string number
+        string language
+    }
+    WAZO_SERVER_TENANT ||--o{ WAZO_SERVER_TENANT : "tenants enfants"
+    WAZO_SERVER_TENANT ||--o{ WAZO_USER : "tenant administré"
+    WAZO_SERVER_TENANT ||--o{ WAZO_RING_GROUP : "tenant administré"
+    WAZO_SERVER_TENANT ||--o{ WAZO_QUEUE : "tenant administré"
+    WAZO_SERVER_TENANT ||--o{ WAZO_IVR : "tenant administré"
+    WAZO_SERVER_TENANT ||--o{ WAZO_CONFERENCE : "tenant administré"
+    WAZO_SERVER_TENANT ||--o{ WAZO_PARKING : "tenant administré"
+    WAZO_SERVER_TENANT ||--o{ WAZO_VOICEMAIL : "tenant administré"
+```

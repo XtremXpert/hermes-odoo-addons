@@ -20,3 +20,12 @@ importe `kubernetes` au chargement, bibliothèque fournie par la dépendance
 `odoo_herd`. Le menu est réservé au groupe
 `proxmox_tenant.group_proxmox_manager`, et le rafraîchissement de 60 secondes ne
 tourne que tant que la page est ouverte.
+
+## Modèle de données
+
+Le module n'enregistre aucun modèle persistant : `control.room` est un `AbstractModel` (service de calcul des instantanés de la salle de contrôle (AbstractModel, sans table)). Le diagramme le représente seul.
+
+```mermaid
+erDiagram
+    CONTROL_ROOM
+```
