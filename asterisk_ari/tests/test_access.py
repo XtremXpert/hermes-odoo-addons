@@ -10,6 +10,7 @@ from odoo.tests import tagged
 class TestAsteriskAccess(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare un usager hors groupe et un usager du groupe Asterisk."""
         super().setUpClass()
         GroupUser = cls.env.ref("asterisk_ari.group_asterisk_user")
         cls.external_user = cls.env["res.users"].create(
@@ -22,6 +23,7 @@ class TestAsteriskAccess(TransactionCase):
         cls.external_user.group_ids = [(4, GroupUser.id)]
 
     def test_user_without_group_cannot_read(self):
+        """Vérifie qu'un usager hors groupe ne lit pas les appels."""
         outsider = self.env["res.users"].create(
             {
                 "name": "Outsider",
@@ -33,6 +35,7 @@ class TestAsteriskAccess(TransactionCase):
             self.env["asterisk.call"].with_user(outsider).search([])
 
     def test_user_in_group_can_create(self):
+        """Vérifie qu'un usager du groupe crée un appel."""
         call = (
             self.env["asterisk.call"]
             .with_user(self.external_user)

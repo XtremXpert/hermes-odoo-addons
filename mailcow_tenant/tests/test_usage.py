@@ -29,6 +29,7 @@ ENTREE = {
 class TestUsageDesBoites(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare le domaine des tests d'usage des boîtes."""
         super().setUpClass()
         cls.domain = cls.env["mailcow.domain"].search([("name", "=", "dc.com")], limit=1)
         if not cls.domain:
@@ -44,6 +45,7 @@ class TestUsageDesBoites(TransactionCase):
         )
 
     def test_lit_le_quota_consomme_et_le_nombre_de_messages(self):
+        """Vérifie la lecture du quota consommé et du nombre de messages."""
         boite = self._synchroniser()
         # 87 857 octets = 0,08 Mo. Une valeur ronde (256 Mo) ne verrait pas
         # un arrondi fautif ; celle-ci le montre.
@@ -51,10 +53,12 @@ class TestUsageDesBoites(TransactionCase):
         self.assertEqual(boite.messages, 42)
 
     def test_lit_l_occupation_meme_quand_elle_arrive_en_texte(self):
+        """Vérifie que l'occupation est lue même quand elle arrive en texte."""
         boite = self._synchroniser()
         self.assertAlmostEqual(boite.percent_in_use, 25.0, places=1)
 
     def test_convertit_les_connexions_en_date_utilisable(self):
+        """Vérifie que les dates de connexion sont converties en date utilisable."""
         boite = self._synchroniser()
         self.assertTrue(boite.last_imap_login)
         # On vérifie l'aller-retour plutôt qu'une date écrite à la main.
@@ -64,6 +68,7 @@ class TestUsageDesBoites(TransactionCase):
         )
 
     def test_un_horodatage_nul_veut_dire_jamais(self):
+        """Vérifie qu'un horodatage nul signifie « jamais »."""
         boite = self._synchroniser()
         self.assertFalse(boite.last_pop3_login)
 

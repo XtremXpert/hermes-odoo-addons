@@ -27,6 +27,7 @@ class TestInstanceProbeConfiguration(TransactionCase):
 
     @classmethod
     def setUpClass(cls):
+        """Prépare le cluster et les valeurs de sonde des tests de configuration."""
         super().setUpClass()
         env: Any = cls.env
         cls.cluster = cast(
@@ -113,6 +114,7 @@ class TestCreateInstanceWizardProbeConfiguration(TransactionCase):
 
     @classmethod
     def setUpClass(cls):
+        """Prépare le cluster et le wizard des tests de sonde de configuration."""
         super().setUpClass()
         env: Any = cls.env
         cls.cluster = cast(

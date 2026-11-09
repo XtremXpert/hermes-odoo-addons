@@ -62,6 +62,17 @@ class K8sStagingRefreshWizard(models.TransientModel):
                     )
 
     def action_refresh(self):
+        """Vérifie les instances choisies et lance la resynchronisation du staging.
+
+        La cible doit être un staging, la source une production, et le nom saisi doit
+        correspondre à celui du staging cible.
+
+        Returns:
+            dict: action client affichant une notification et ouvrant la fiche créée.
+
+        Raises:
+            odoo.exceptions.UserError: sélection incomplète ou incohérente.
+        """
         self.ensure_one()
 
         if not self.target_instance_id:

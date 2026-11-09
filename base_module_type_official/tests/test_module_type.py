@@ -12,6 +12,7 @@ class TestModuleType(TransactionCase):
         module.invalidate_recordset(["module_type"])
 
     def test_empty_type_becomes_official_and_industries_is_kept(self):
+        """Vérifie qu'un type vide devient « official » sans écraser « industries »."""
         Module = self.env["ir.module.module"]
         empty, industry = Module.search([("state", "=", "uninstalled")], limit=2)
         self._set_type(empty, None)
@@ -25,11 +26,13 @@ class TestModuleType(TransactionCase):
         self.assertFalse(Module.search_count([("module_type", "=", False)]))
 
     def test_nothing_to_do_returns_zero(self):
+        """Vérifie que le remplissage retourne zéro quand rien ne manque."""
         Module = self.env["ir.module.module"]
         Module._fill_missing_module_type()
         self.assertEqual(Module._fill_missing_module_type(), 0)
 
     def test_registry_hook_fills_the_type(self):
+        """Vérifie que le hook de registre remplit le type des modules."""
         Module = self.env["ir.module.module"]
         module = Module.search([("state", "=", "uninstalled")], limit=1)
         self._set_type(module, None)

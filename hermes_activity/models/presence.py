@@ -41,6 +41,18 @@ class ChannelMember(models.Model):
 
     @api.model
     def search_read(self, domain=None, fields=None, offset=0, limit=None, order=None):
+        """Lit des membres de canal et rafraîchit la présence de l'utilisateur.
+
+        Args:
+            domain (list, optional): filtre Odoo.
+            fields (list[str], optional): champs renvoyés.
+            offset (int, optional): position de départ.
+            limit (int, optional): nombre maximum de lignes.
+            order (str, optional): ordre de tri.
+
+        Returns:
+            list[dict]: lignes demandées.
+        """
         result = super().search_read(
             domain=domain, fields=fields, offset=offset, limit=limit, order=order
         )

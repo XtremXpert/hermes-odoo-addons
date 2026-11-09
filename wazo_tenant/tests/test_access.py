@@ -10,6 +10,7 @@ from odoo.tests import tagged
 class TestWazoAccess(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare un gestionnaire et un lecteur Wazo pour les tests d'accès."""
         super().setUpClass()
         cls.group_user = cls.env.ref("wazo_tenant.group_wazo_user")
         cls.group_manager = cls.env.ref("wazo_tenant.group_wazo_manager")
@@ -23,6 +24,7 @@ class TestWazoAccess(TransactionCase):
         cls.viewer.group_ids = [(4, cls.group_user.id)]
 
     def test_manager_can_create_wazo_user(self):
+        """Vérifie qu'un gestionnaire peut créer un utilisateur Wazo."""
         record = (
             self.env["wazo.user"]
             .with_user(self.manager)
@@ -31,12 +33,14 @@ class TestWazoAccess(TransactionCase):
         self.assertTrue(record.id)
 
     def test_viewer_cannot_create_wazo_user(self):
+        """Vérifie qu'un lecteur ne peut pas créer d'utilisateur Wazo."""
         with self.assertRaises(AccessError):
             self.env["wazo.user"].with_user(self.viewer).create(
                 {"name": "Interdit", "extension": "101"}
             )
 
     def test_viewer_cannot_read_sip_password(self):
+        """Vérifie qu'un lecteur ne peut pas lire le mot de passe SIP."""
         record = (
             self.env["wazo.user"]
             .with_user(self.manager)
@@ -46,6 +50,7 @@ class TestWazoAccess(TransactionCase):
             record.with_user(self.viewer).read(["sip_password"])
 
     def test_viewer_cannot_write_wazo_user(self):
+        """Vérifie qu'un lecteur ne peut pas modifier un utilisateur Wazo."""
         record = (
             self.env["wazo.user"]
             .with_user(self.manager)
@@ -55,9 +60,11 @@ class TestWazoAccess(TransactionCase):
             record.with_user(self.viewer).write({"name": "Modifié"})
 
     def test_viewer_can_read_cdr(self):
+        """Vérifie qu'un lecteur peut lire le journal d'appels."""
         self.env["wazo.cdr"].with_user(self.viewer).search([])
 
     def test_user_without_group_cannot_read_cdr(self):
+        """Vérifie qu'un usager hors du groupe Wazo ne lit pas le journal d'appels."""
         outsider = self.env["res.users"].create(
             {"name": "Hors Wazo", "login": "hors.wazo", "email": "hors.wazo@example.com"}
         )
@@ -65,10 +72,12 @@ class TestWazoAccess(TransactionCase):
             self.env["wazo.cdr"].with_user(outsider).search([])
 
     def test_manager_can_read_cdr(self):
+        """Vérifie qu'un gestionnaire peut lire le journal d'appels."""
         # Lecture par le gestionnaire est autorisée (peut être vide).
         self.env["wazo.cdr"].with_user(self.manager).search([])
 
     def test_manager_can_create_wazo_ring_group(self):
+        """Vérifie qu'un gestionnaire peut créer un groupe d'appel."""
         record = (
             self.env["wazo.ring.group"]
             .with_user(self.manager)
@@ -77,12 +86,14 @@ class TestWazoAccess(TransactionCase):
         self.assertTrue(record.id)
 
     def test_viewer_cannot_create_wazo_ring_group(self):
+        """Vérifie qu'un lecteur ne peut pas créer de groupe d'appel."""
         with self.assertRaises(AccessError):
             self.env["wazo.ring.group"].with_user(self.viewer).create(
                 {"name": "Interdit", "extension": "206"}
             )
 
     def test_viewer_can_read_wazo_ring_group(self):
+        """Vérifie qu'un lecteur peut lire les groupes d'appel."""
         self.env["wazo.ring.group"].with_user(self.manager).create(
             {"name": "Lisible", "extension": "207"}
         )

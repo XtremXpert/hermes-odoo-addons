@@ -14,6 +14,7 @@ from odoo.tests import tagged
 class TestMailcowSettings(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare les réglages Mailcow des tests de connexion."""
         super().setUpClass()
         cls.env["ir.config_parameter"].sudo().set_str(
             "mailcow.base_url", "https://mail.example.com"
@@ -22,6 +23,7 @@ class TestMailcowSettings(TransactionCase):
         cls.settings = cls.env["res.config.settings"].create({})
 
     def test_connection_success_returns_success_notification(self):
+        """Vérifie qu'une connexion réussie rend une notification de succès."""
         remote = {
             "data": [
                 {"id": "a", "domain": "dc.com"},
@@ -36,6 +38,7 @@ class TestMailcowSettings(TransactionCase):
         self.assertIn("2 domaine", result["params"]["message"])
 
     def test_connection_failure_raises_user_error(self):
+        """Vérifie qu'une connexion en échec lève `UserError`."""
         with patch.object(
             MailcowClient,
             "_request",

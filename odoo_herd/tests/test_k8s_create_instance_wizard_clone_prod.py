@@ -11,6 +11,7 @@ from odoo.tests.common import tagged
 class TestCreateInstanceWizardCloneProd(TransactionCase):
     @classmethod
     def setUpClass(cls):  # type: ignore[misc]
+        """Prépare le cluster, l'offre et l'instance de production à cloner."""
         super().setUpClass()
         env: Any = cls.env
         cls.cluster = cast(
@@ -60,6 +61,7 @@ class TestCreateInstanceWizardCloneProd(TransactionCase):
         )
 
     def test_clone_prod_builds_expected_spec(self):
+        """Vérifie que la spec d'un clone de production contient les valeurs attendues."""
         wiz = self._make_wizard(
             environment="staging",
             initialization_mode="clone_prod",
@@ -74,6 +76,7 @@ class TestCreateInstanceWizardCloneProd(TransactionCase):
         self.assertFalse(spec["init"]["enabled"])
 
     def test_clone_prod_requires_source(self):
+        """Vérifie que le mode clone_prod exige une instance de production source."""
         wiz = self._make_wizard(
             environment="staging",
             initialization_mode="clone_prod",
@@ -83,6 +86,7 @@ class TestCreateInstanceWizardCloneProd(TransactionCase):
             wiz._validate_initialization_mode()
 
     def test_clone_prod_rejected_when_production(self):
+        """Vérifie que le mode clone_prod est refusé pour une instance de production."""
         wiz = self._make_wizard(
             environment="production",
             initialization_mode="clone_prod",
@@ -92,6 +96,7 @@ class TestCreateInstanceWizardCloneProd(TransactionCase):
             wiz._validate_initialization_mode()
 
     def test_action_create_instance_clone_prod_submits_production_instance_ref(self):
+        """Vérifie que la création soumet la référence à l'instance de production."""
         from odoo.addons.odoo_herd.tests.test_create_instance_wizard import FakeCoreV1Api
         from odoo.addons.odoo_herd.tests.test_create_instance_wizard import FakeCustomObjectsApi
 

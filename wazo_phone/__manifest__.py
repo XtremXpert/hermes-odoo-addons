@@ -4,6 +4,7 @@
     "category": "Productivity",
     "summary": """Connecteur Wazo Platform : utilisateurs, extensions et journal d'appels""",
     "version": "20.0.4.0.0",
+    "development_status": "Beta",
     # « mail » : note sur le contact et activité « appel manqué » du bouclage
     # d'appel, plus le bus Odoo des notifications (P3.3g).
     "depends": ["wazo_tenant", "web", "mail"],
@@ -14,6 +15,7 @@
     ],
     "author": "Benoît Vézina, Diverse-Cité",
     "website": "https://github.com/XtremXpert/hermes-odoo-addons",
+    "maintainers": ["XtremXpert"],
     "license": "LGPL-3",
     "installable": True,
     "application": True,

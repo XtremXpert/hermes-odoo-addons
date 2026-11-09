@@ -15,6 +15,7 @@ from odoo.tests import tagged
 class MailcowClientTestBase(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare la connexion Mailcow des tests du client."""
         super().setUpClass()
         cls.env["ir.config_parameter"].sudo().set_str(
             "mailcow.base_url", "https://mail.example.com"
@@ -42,6 +43,7 @@ class MailcowClientTestBase(TransactionCase):
 @tagged("mailcow_tenant", "post_install", "-at_install")
 class TestMailcowClientRequest(MailcowClientTestBase):
     def test_post_sends_url_key_header_and_json_body(self):
+        """Vérifie qu'un POST porte la clé en en-tête et un corps JSON."""
         request = self._call_with("POST", "/add/domain", {"domain": "ex.com"})
         self.assertEqual(request.full_url, "https://mail.example.com/api/v1/add/domain")
         self.assertEqual(request.get_header("X-API-Key"), "test-api-key")
@@ -49,18 +51,21 @@ class TestMailcowClientRequest(MailcowClientTestBase):
         self.assertEqual(json.loads(request.data.decode("utf-8")), {"domain": "ex.com"})
 
     def test_get_sends_no_body(self):
+        """Vérifie qu'un GET n'envoie pas de corps."""
         request = self._call_with("GET", "/get/domain/111", None)
         self.assertEqual(request.full_url, "https://mail.example.com/api/v1/get/domain/111")
         self.assertEqual(request.get_method(), "GET")
         self.assertIsNone(request.data)
 
     def test_missing_base_url_raises(self):
+        """Vérifie qu'une URL absente lève une erreur."""
         self.env["ir.config_parameter"].sudo().set_str("mailcow.base_url", False)
         client = MailcowClient(self.env)
         with self.assertRaises(MailcowAPIError):
             client._request("GET", "/get/domain/111")
 
     def test_http_error_raises_mailcow_api_error(self):
+        """Vérifie qu'une erreur HTTP devient `MailcowAPIError`."""
         error = urllib.error.HTTPError(
             "https://mail.example.com/api/v1/add/domain",
             403,
@@ -74,6 +79,7 @@ class TestMailcowClientRequest(MailcowClientTestBase):
                 client._request("POST", "/add/domain", {"domain": "ex.com"})
 
     def test_unreachable_server_raises_mailcow_api_error(self):
+        """Vérifie qu'un serveur injoignable devient `MailcowAPIError`."""
         with patch(
             "urllib.request.urlopen", side_effect=urllib.error.URLError("connection refused")
         ):

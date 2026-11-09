@@ -109,6 +109,16 @@ class HerdPortal(CustomerPortal):
 
     @route()
     def counters(self, counters, **kw):
+        """Ajoute le compteur du portail et le retire s'il n'a rien à montrer.
+
+        Args:
+            counters (list[str]): compteurs demandés par le portail.
+            **kw: arguments supplémentaires du portail.
+
+        Returns:
+            dict: compteurs calculés, sans `herd_instance_count` quand l'usager n'a
+                ni instance visible ni demande possible.
+        """
         res = super().counters(counters, **kw)
         # The card is always displayed (portal_home_counters patch) when the
         # counter is returned: drop it for users with nothing to see nor ask.
@@ -163,6 +173,16 @@ class HerdPortal(CustomerPortal):
     # ------------------------------------------------------------------
     @route("/my/odoo", type="http", auth="user", website=True)
     def herd_instances(self, herd_message=None, herd_error=None, **kw):
+        """Affiche la liste des productions visibles par l'usager.
+
+        Args:
+            herd_message (str, optional): message de succès à afficher.
+            herd_error (str, optional): message d'erreur à afficher.
+            **kw: paramètres de route supplémentaires, ignorés.
+
+        Returns:
+            odoo.http.Response: page du portail `portal_my_odoo_instances`.
+        """
         prods = request.env["k8s.odoo.instance"].sudo().search(self._herd_domain())
         values = self._prepare_portal_layout_values()
         values.update(
@@ -190,6 +210,18 @@ class HerdPortal(CustomerPortal):
 
     @route("/my/odoo/new", type="http", auth="user", website=True)
     def herd_new_database(self, herd_error=None, instance_name=None, template_id=None, **kw):
+        """Affiche le formulaire de demande de base de données.
+
+        Args:
+            herd_error (str, optional): message d'erreur à réafficher.
+            instance_name (str, optional): nom déjà saisi, à réafficher.
+            template_id (int, optional): offre déjà choisie, à réafficher.
+            **kw: paramètres de route supplémentaires, ignorés.
+
+        Returns:
+            odoo.http.Response: formulaire, ou redirection si l'usager ne peut pas
+                demander de base.
+        """
         Request = request.env["k8s.odoo.instance.request"]
         if not Request._herd_can_request(request.env.user):
             return request.redirect("/my/odoo")
@@ -221,6 +253,17 @@ class HerdPortal(CustomerPortal):
         methods=["POST"],
     )
     def herd_new_database_submit(self, template_id=None, instance_name=None, **kw):
+        """Traite la soumission du formulaire de demande de base.
+
+        Args:
+            template_id (int, optional): offre choisie.
+            instance_name (str, optional): nom d'instance demandé.
+            **kw: paramètres de route supplémentaires, ignorés.
+
+        Returns:
+            odoo.http.Response: redirection vers la liste, ou vers le formulaire avec
+                l'erreur rencontrée.
+        """
         try:
             request.env["k8s.odoo.instance.request"].herd_request_database(
                 template_id, instance_name
@@ -246,6 +289,15 @@ class HerdPortal(CustomerPortal):
         methods=["POST"],
     )
     def herd_cancel_database_request(self, request_id, **kw):
+        """Annule une demande de base de données en attente.
+
+        Args:
+            request_id (int): identifiant de la demande.
+            **kw: paramètres de route supplémentaires, ignorés.
+
+        Returns:
+            odoo.http.Response: redirection vers la liste avec message ou erreur.
+        """
         try:
             request.env["k8s.odoo.instance.request"].herd_cancel_database_request(request_id)
         except (AccessError, UserError, ValidationError) as e:
@@ -254,6 +306,20 @@ class HerdPortal(CustomerPortal):
 
     @route("/my/odoo/<int:production_id>", type="http", auth="user", website=True)
     def herd_instance(self, production_id, herd_message=None, herd_error=None, **kw):
+        """Affiche la fiche d'une production, ses stagings et ses promotions.
+
+        Args:
+            production_id (int): identifiant de la production.
+            herd_message (str, optional): message de succès à afficher.
+            herd_error (str, optional): message d'erreur à afficher.
+            **kw: paramètres de route supplémentaires, ignorés.
+
+        Returns:
+            odoo.http.Response: page du portail `portal_my_odoo_instance`.
+
+        Raises:
+            werkzeug.exceptions.NotFound: production absente ou non autorisée.
+        """
         prod = self._herd_production(production_id)
         user = request.env.user
         values = self._prepare_portal_layout_values()
@@ -299,6 +365,16 @@ class HerdPortal(CustomerPortal):
         methods=["POST"],
     )
     def herd_resync(self, production_id, staging_id=None, **kw):
+        """Lance la resynchronisation d'un staging depuis le portail.
+
+        Args:
+            production_id (int): identifiant de la production.
+            staging_id (int, optional): identifiant du staging à resynchroniser.
+            **kw: paramètres de route supplémentaires, ignorés.
+
+        Returns:
+            odoo.http.Response: redirection avec message ou erreur.
+        """
         prod = self._herd_production(production_id)
         staging = self._herd_staging(prod, staging_id)
         try:
@@ -325,6 +401,19 @@ class HerdPortal(CustomerPortal):
         modules_install=None,
         **kw,
     ):
+        """Demande une promotion d'un staging vers la production.
+
+        Args:
+            production_id (int): identifiant de la production.
+            staging_id (int, optional): identifiant du staging promu.
+            modules (str, optional): modules à mettre à jour, séparés par des virgules.
+            scheduled_at (str, optional): date locale de planification (datetime-local).
+            modules_install (str, optional): modules à installer.
+            **kw: paramètres de route supplémentaires, ignorés.
+
+        Returns:
+            odoo.http.Response: redirection avec message ou erreur.
+        """
         prod = self._herd_production(production_id)
         staging = self._herd_staging(prod, staging_id)
         try:
@@ -349,6 +438,16 @@ class HerdPortal(CustomerPortal):
         methods=["POST"],
     )
     def herd_send_code(self, production_id, promotion_id, **kw):
+        """Envoie le code de confirmation à l'approbateur qui le demande.
+
+        Args:
+            production_id (int): identifiant de la production.
+            promotion_id (int): identifiant de la promotion.
+            **kw: paramètres de route supplémentaires, ignorés.
+
+        Returns:
+            odoo.http.Response: redirection avec message ou erreur.
+        """
         prod = self._herd_production(production_id)
         promotion = self._herd_promotion(prod, promotion_id)
         try:
@@ -367,6 +466,17 @@ class HerdPortal(CustomerPortal):
         methods=["POST"],
     )
     def herd_confirm(self, production_id, promotion_id, code=None, **kw):
+        """Confirme une promotion avec le code fourni par l'approbateur.
+
+        Args:
+            production_id (int): identifiant de la production.
+            promotion_id (int): identifiant de la promotion.
+            code (str, optional): code reçu par courriel ou TOTP.
+            **kw: paramètres de route supplémentaires, ignorés.
+
+        Returns:
+            odoo.http.Response: redirection avec message ou erreur.
+        """
         prod = self._herd_production(production_id)
         promotion = self._herd_promotion(prod, promotion_id)
         try:
@@ -385,6 +495,16 @@ class HerdPortal(CustomerPortal):
         methods=["POST"],
     )
     def herd_cancel(self, production_id, promotion_id, **kw):
+        """Annule une promotion qui n'a pas encore démarré.
+
+        Args:
+            production_id (int): identifiant de la production.
+            promotion_id (int): identifiant de la promotion.
+            **kw: paramètres de route supplémentaires, ignorés.
+
+        Returns:
+            odoo.http.Response: redirection avec message ou erreur.
+        """
         prod = self._herd_production(production_id)
         promotion = self._herd_promotion(prod, promotion_id)
         try:

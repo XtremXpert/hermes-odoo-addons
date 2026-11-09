@@ -11,6 +11,7 @@ from odoo.tests import tagged
 class TestCreateInstanceWizardView(TransactionCase):
     @classmethod
     def setUpClass(cls):  # type: ignore[misc]
+        """Récupère la vue du wizard et la liste de ses champs de formulaire."""
         super().setUpClass()
         cls.view = cls.env.ref("odoo_herd.view_k8s_create_instance_wizard_form")
         cls.fields_def = cls.env["k8s.create.instance.wizard"].fields_get()
@@ -54,6 +55,7 @@ class TestCreateInstanceWizardView(TransactionCase):
         return fields
 
     def test_all_required_fields_are_present(self):
+        """Vérifie que tous les champs requis figurent dans le formulaire."""
         missing = []
         for name, definition in self.fields_def.items():
             if definition.get("required"):
@@ -62,6 +64,7 @@ class TestCreateInstanceWizardView(TransactionCase):
         self.assertFalse(missing, msg=f"Required fields missing from form view: {missing}")
 
     def test_critical_fields_not_readonly(self):
+        """Vérifie qu'aucun champ critique du wizard n'est en lecture seule."""
         critical = [
             "cluster_id",
             "name",
@@ -82,6 +85,7 @@ class TestCreateInstanceWizardView(TransactionCase):
         self.assertFalse(readonly, msg=f"Critical fields unexpectedly readonly in view: {readonly}")
 
     def test_restore_and_backup_fields_present_with_visibility_guards(self):
+        """Vérifie la présence et les conditions d'affichage des champs restore et backup."""
         restore_fields = ["restore_url", "restore_database", "restore_master_password"]
         backup_fields = ["backup_id"]
 
@@ -96,6 +100,7 @@ class TestCreateInstanceWizardView(TransactionCase):
         self.assertIn("initialization_mode", backup_required)
 
     def test_fresh_fields_writable_via_form(self):
+        """Vérifie que les champs d'une création neuve sont saisissables dans le formulaire."""
         wiz = self._make_wizard(initialization_mode="fresh")
         with Form(wiz) as f:
             f.name = "demo2"
@@ -112,6 +117,7 @@ class TestCreateInstanceWizardView(TransactionCase):
         self.assertEqual(wiz.ingress_hosts, "demo2.example.com")
 
     def test_restore_fields_visible_and_writable_via_form(self):
+        """Vérifie que les champs de restauration sont visibles et saisissables."""
         wiz = self._make_wizard(initialization_mode="restore")
         with Form(wiz) as f:
             f.initialization_mode = "restore"

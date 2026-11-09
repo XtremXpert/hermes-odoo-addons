@@ -1,13 +1,14 @@
 # hermes-odoo-addons
 
-Treize modules Odoo maison pour l'infrastructure de Diverse-Cité : courriel (Mailcow),
-téléphonie (Wazo, Asterisk ARI), SMS (VoIP.ms), le socle commun des agents Hermes
-(compte N3, journal N1, activité Discuss, pages web N1, SSO des tableaux de bord), et la
-gestion des instances Odoo du cluster avec sa barrière humaine des mises en production
-(odoo_herd, odoo_herd_portal), plus un correctif de l'écran Applications
-(base_module_type_official). Dépôt **public** depuis le 2026-10-11 (diverse-odoo et
-mac-demo le vendorisent sans jeton) : rien de secret n'y entre, ni dans un fichier ni
-dans l'historique.
+Vingt-quatre modules Odoo maison pour l'infrastructure de Diverse-Cité : courriel
+(Mailcow, passerelle d'entrée, client IMAP), téléphonie (Wazo, Asterisk ARI), SMS
+(VoIP.ms), le socle commun des agents Hermes (compte N3, journal N1, activité Discuss,
+pages web N1, SSO des tableaux de bord), les miroirs d'infrastructure (Proxmox, salle de
+contrôle, runners CI, garde-fou de neutralisation), et la gestion des instances Odoo du
+cluster avec sa barrière humaine des mises en production (odoo_herd, odoo_herd_portal),
+plus un correctif de l'écran Applications (base_module_type_official). Dépôt **public**
+depuis le 2026-10-11 (diverse-odoo et mac-demo le vendorisent sans jeton) : rien de
+secret n'y entre, ni dans un fichier ni dans l'historique.
 
 Le local se monte avec `odoo-dev setup --no-docker --yes`, après `cp .env.exemple .env`
 ; le lancement passe par `./start.sh`, jamais `odoo-bin` à la main. `.deploy/` est un
@@ -33,6 +34,13 @@ pas nécessaire au développement local.
 | `odoo_herd`                 | instances Odoo du cluster (opérateur Bemade) |
 | `odoo_herd_portal`          | portail, promotions confirmées, façades      |
 | `base_module_type_official` | modules visibles dans Applications           |
+| `diverse_mail_gateway`      | entrée HTTP authentifiée des courriels       |
+| `imap_client`               | boîtes IMAP, dossiers et messages            |
+| `hermes_control_room`       | salle de contrôle (Proxmox, Odoo Herd)       |
+| `hermes_runners`            | état des runners ARC du cluster              |
+| `neutralize_guard`          | garde-fou d'exécution sur base neutralisée   |
+| `proxmox_server`            | plateforme : cycle des tenants Proxmox       |
+| `proxmox_tenant`            | miroir Proxmox : nœuds, machines, stockage   |
 
 Le dépôt suit la **disposition des dépôts de modules de l'OCA** (gabarit
 `oca-addons-repo-template`, `.copier-answers.yml`) : chaque module est **à la racine**,

@@ -8,6 +8,18 @@ class MailMessage(models.Model):
     _inherit = "mail.message"
 
     def unlink(self):
+        """Supprime des messages en conservant les notes du journal.
+
+        Une note d'audit encore référencée est réaffectée au journal
+        `hermes.n1.change` avant la suppression du message d'origine ; une note du
+        journal lui-même reste immuable.
+
+        Returns:
+            bool: résultat de la suppression des messages restants.
+
+        Raises:
+            odoo.exceptions.AccessError: suppression d'une note du journal Hermes N1.
+        """
         if not self:
             return super().unlink()
         # Preserve the normal caller's access checks before touching audit data.

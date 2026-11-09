@@ -23,12 +23,14 @@ from odoo.tools import mute_logger
 class TestDiverseMailGatewayToken(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare le modèle des jetons pour les tests de stockage."""
         super().setUpClass()
         cls.Token = cls.env["diverse.mail_gateway.token"]
 
     # ---- Generation -------------------------------------------------------
 
     def test_generate_returns_record_and_raw_token(self):
+        """Vérifie que la génération renvoie l'enregistrement et le jeton brut."""
         rec, raw = self.Token.action_generate("test-1")
         self.assertTrue(rec.id)
         self.assertEqual(rec.name, "test-1")
@@ -36,6 +38,7 @@ class TestDiverseMailGatewayToken(TransactionCase):
         self.assertGreaterEqual(len(raw), 40, "expected ~43 chars from token_urlsafe(32)")
 
     def test_generated_token_is_hashed_in_db(self):
+        """Vérifie que seule l'empreinte SHA-256 du jeton est stockée."""
         rec, raw = self.Token.action_generate("test-2")
         expected = hashlib.sha256(raw.encode("ascii")).hexdigest()
         self.assertEqual(rec.token_hash, expected)
@@ -45,17 +48,20 @@ class TestDiverseMailGatewayToken(TransactionCase):
                 self.assertNotIn(raw, value, f"raw token leaked in field {fname!r}")
 
     def test_two_generates_yield_different_tokens(self):
+        """Vérifie que deux générations donnent des jetons différents."""
         _, raw1 = self.Token.action_generate("test-a")
         _, raw2 = self.Token.action_generate("test-b")
         self.assertNotEqual(raw1, raw2)
 
     def test_empty_name_rejected(self):
+        """Vérifie qu'un libellé vide est refusé."""
         with self.assertRaises(ValidationError):
             self.Token.action_generate("")
         with self.assertRaises(ValidationError):
             self.Token.action_generate("   ")
 
     def test_duplicate_name_rejected(self):
+        """Vérifie qu'un libellé déjà pris est refusé."""
         from psycopg2 import IntegrityError
 
         self.Token.action_generate("dup")
@@ -64,17 +70,20 @@ class TestDiverseMailGatewayToken(TransactionCase):
             self.Token.action_generate("dup")
 
     def test_name_is_trimmed(self):
+        """Vérifie que le libellé est nettoyé de ses espaces."""
         rec, _ = self.Token.action_generate("  trim-me  ")
         self.assertEqual(rec.name, "trim-me")
 
     # ---- Validation: happy path -------------------------------------------
 
     def test_validate_with_correct_token_returns_record(self):
+        """Vérifie qu'un jeton correct renvoie son enregistrement."""
         rec, raw = self.Token.action_generate("ok")
         result = self.Token.validate_token(raw, ip="10.0.0.1")
         self.assertEqual(result.id, rec.id)
 
     def test_validate_updates_last_used_fields(self):
+        """Vérifie que la validation met à jour la date, l'adresse et le compteur d'usage."""
         rec, raw = self.Token.action_generate("usage-tracking")
         self.assertFalse(rec.last_used_at)
         self.assertFalse(rec.last_used_ip)
@@ -105,20 +114,24 @@ class TestDiverseMailGatewayToken(TransactionCase):
     # ---- Validation: failure modes ----------------------------------------
 
     def test_validate_with_empty_token_returns_empty(self):
+        """Vérifie qu'un jeton vide ne valide rien."""
         result = self.Token.validate_token("")
         self.assertFalse(result)
 
     def test_validate_with_none_token_returns_empty(self):
+        """Vérifie qu'une valeur nulle ne valide rien."""
         # Python typing says str, but defensive against accidental None
         result = self.Token.validate_token(None)  # type: ignore[arg-type]
         self.assertFalse(result)
 
     def test_validate_with_wrong_token_returns_empty(self):
+        """Vérifie qu'un jeton inconnu ne valide rien."""
         self.Token.action_generate("real")
         result = self.Token.validate_token("totally-wrong-token-value")
         self.assertFalse(result)
 
     def test_validate_with_revoked_token_returns_empty(self):
+        """Vérifie qu'un jeton révoqué ne valide rien."""
         rec, raw = self.Token.action_generate("revoke-me")
         rec.action_revoke()
         self.assertFalse(rec.active)
@@ -126,6 +139,7 @@ class TestDiverseMailGatewayToken(TransactionCase):
         self.assertFalse(result)
 
     def test_validate_with_expired_token_returns_empty(self):
+        """Vérifie qu'un jeton expiré ne valide rien."""
         past = fields.Datetime.now() - timedelta(hours=1)
         rec, raw = self.Token.action_generate("expired", expires_at=past)
         result = self.Token.validate_token(raw)
@@ -136,6 +150,7 @@ class TestDiverseMailGatewayToken(TransactionCase):
         self.assertEqual(rec.use_count, 0)
 
     def test_validate_with_future_expiry_works(self):
+        """Vérifie qu'un jeton dont l'expiration est future valide."""
         future = fields.Datetime.now() + timedelta(hours=1)
         rec, raw = self.Token.action_generate("future", expires_at=future)
         result = self.Token.validate_token(raw)
@@ -167,12 +182,14 @@ class TestDiverseMailGatewayToken(TransactionCase):
     # ---- Revocation -------------------------------------------------------
 
     def test_action_revoke_sets_inactive(self):
+        """Vérifie que la révocation désactive le jeton."""
         rec, _ = self.Token.action_generate("revoke")
         self.assertTrue(rec.active)
         rec.action_revoke()
         self.assertFalse(rec.active)
 
     def test_action_revoke_works_on_recordset(self):
+        """Vérifie que la révocation traite tout un ensemble d'enregistrements."""
         rec1, _ = self.Token.action_generate("multi-1")
         rec2, _ = self.Token.action_generate("multi-2")
         (rec1 | rec2).action_revoke()

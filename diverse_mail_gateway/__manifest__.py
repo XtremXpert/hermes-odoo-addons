@@ -4,6 +4,7 @@
 {
     "name": "Mail Gateway — point d'entrée des courriels entrants",
     "version": "20.0.1.0.0",
+    "development_status": "Beta",
     "category": "Tools",
     "summary": (
         "Point d'entrée HTTP authentifié par jeton qui pousse le courriel brut "
@@ -11,6 +12,7 @@
     ),
     "author": "Benoît Vézina, Diverse-Cité",
     "website": "https://github.com/XtremXpert/hermes-odoo-addons",
+    "maintainers": ["XtremXpert"],
     "license": "AGPL-3",
     "depends": [
         "base",

@@ -8,6 +8,7 @@ from odoo.tests import tagged
 class TestNeutralize(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare un agent, un humain et un compte technique à neutraliser."""
         super().setUpClass()
         Users = cls.env["res.users"].with_context(no_reset_password=True)
         cls.agent = Users.create(
@@ -55,6 +56,7 @@ class TestNeutralize(TransactionCase):
         self.env.invalidate_all()
 
     def test_neutralize_deactivates_agents_and_drops_their_keys(self):
+        """Vérifie que la neutralisation désactive les agents et supprime leurs clés."""
         self._neutralize()
         self.assertFalse(self.agent.active)
         self.assertFalse(
@@ -62,6 +64,7 @@ class TestNeutralize(TransactionCase):
         )
 
     def test_neutralize_leaves_humans_alone(self):
+        """Vérifie que la neutralisation ne touche pas les comptes humains."""
         self._neutralize()
         self.assertTrue(self.human.active)
         self.assertTrue(
@@ -69,6 +72,7 @@ class TestNeutralize(TransactionCase):
         )
 
     def test_neutralize_deactivates_hermes_technical_accounts(self):
+        """Vérifie que les comptes techniques Hermes sans groupe sont aussi désactivés."""
         # hermes_n1_identities holds no hermes group, yet its key drives the proxy.
         self._neutralize()
         self.assertFalse(self.technical.active)

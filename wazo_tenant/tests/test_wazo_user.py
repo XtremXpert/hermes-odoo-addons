@@ -26,6 +26,7 @@ def _conf_side_effect(calls, fail_at=None):
     index = {"i": 0}
 
     def conf(method, path, params=None, body=None):
+        """Rejoue les réponses confd préparées, avec panne à l'étape demandée."""
         i = index["i"]
         index["i"] += 1
         if fail_at is not None and i == fail_at:
@@ -64,6 +65,7 @@ def _auth_side_effect():
     secours en cas de 409 sur le re-sync)."""
 
     def auth(method, path, params=None, body=None):
+        """Simule les réponses d'authd et vérifie les identifiants envoyés."""
         if (method, path) == ("POST", "/users"):
             assert body["username"] == "5550"
             assert body["password"]
@@ -95,6 +97,7 @@ FULL_CALLS = [
 class TestWazoUserSync(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare le contexte Wazo constant des tests de synchronisation."""
         super().setUpClass()
         # Contexte de test constant : le paramètre persistant de la base
         # (posé lors d'un sync live) ne doit pas contaminer l'assertion.
@@ -122,6 +125,7 @@ class TestWazoUserSync(TransactionCase):
         return conf_patch, auth_patch
 
     def test_sync_creates_all_remote_resources_in_order(self):
+        """Vérifie que la synchronisation crée les ressources distantes dans l'ordre."""
         wazo_user = self._create_wazo_user()
         conf_patch, auth_patch = self._patch_sync(FULL_CALLS)
         with conf_patch as conf, auth_patch as auth:
@@ -164,6 +168,7 @@ class TestWazoUserSync(TransactionCase):
         seen = {}
 
         def conf(method, path, params=None, body=None):
+            """Répond aux appels confd, dont la lecture des modèles SIP du tenant."""
             if path.startswith("/tenants/"):
                 return {
                     "global_sip_template_uuid": "uuid-global",
@@ -207,6 +212,7 @@ class TestWazoUserSync(TransactionCase):
         wazo_user = self._create_wazo_user()
 
         def conf(method, path, params=None, body=None):
+            """Répond aux appels confd en rendant l'endpoint sous forme d'objet."""
             if path.startswith("/tenants/"):
                 return {
                     "global_sip_template_uuid": "uuid-global",
@@ -250,6 +256,7 @@ class TestWazoUserSync(TransactionCase):
         wazo_user = self._create_wazo_user()
 
         def conf(method, path, params=None, body=None):
+            """Répond aux appels confd en rendant l'endpoint sous forme de nom."""
             if path.startswith("/tenants/"):
                 return {
                     "global_sip_template_uuid": "uuid-global",
@@ -275,6 +282,7 @@ class TestWazoUserSync(TransactionCase):
         self.assertEqual(wazo_user.remote_endpoint_name, "zo5qsdg5")
 
     def test_sync_reuses_existing_extension(self):
+        """Vérifie que la synchronisation reprend un poste déjà existant."""
         wazo_user = self._create_wazo_user()
         # Reprise : le poste existe déjà côté Wazo à cause d'une tentative
         # précédente — l'état 'error' est ce qui l'autorise (P4.2b). Dans
@@ -295,6 +303,7 @@ class TestWazoUserSync(TransactionCase):
         index = {"i": 0}
 
         def conf(method, path, params=None, body=None):
+            """Vérifie l'ordre des appels confd pendant la reprise."""
             i = index["i"]
             index["i"] += 1
             assert (method, path) == expected[i], "appel %d : attendu %r, reçu %r" % (
@@ -329,10 +338,12 @@ class TestWazoUserSync(TransactionCase):
         self.assertEqual(wazo_user.wazo_state, "synced")
 
     def test_sync_line_body_carries_extension_and_auth(self):
+        """Vérifie que le corps de la ligne porte le poste et l'authentification."""
         wazo_user = self._create_wazo_user()
         seen = {}
 
         def conf(method, path, params=None, body=None):
+            """Capture le corps de la ligne envoyée à confd."""
             i = seen.setdefault("i", 0)
             seen["i"] = i + 1
             if method == "GET":
@@ -361,6 +372,7 @@ class TestWazoUserSync(TransactionCase):
         self.assertEqual(body["endpoint_sip"]["auth_section_options"], [["username", "5550"]])
 
     def test_sync_failure_marks_error_and_keeps_ids_unset(self):
+        """Vérifie qu'un échec marque l'erreur sans identifiants distants."""
         wazo_user = self._create_wazo_user()
         # Échec à l'étape 3 (création de l'utilisateur) : l'échec est
         # consigné sur la ligne sans remontée d'exception, pour que l'état
@@ -375,11 +387,13 @@ class TestWazoUserSync(TransactionCase):
         self.assertFalse(wazo_user.remote_user_id)
 
     def test_extension_is_required(self):
+        """Vérifie que le poste est obligatoire."""
         wazo_user = self.env["wazo.user"].create({"name": "Sans poste", "extension": False})
         with self.assertRaises(UserError):
             wazo_user.action_sync_wazo()
 
     def test_double_sync_is_refused(self):
+        """Vérifie qu'une seconde synchronisation d'un usager est refusée."""
         wazo_user = self._create_wazo_user()
         conf_patch, auth_patch = self._patch_sync(FULL_CALLS)
         with conf_patch, auth_patch:
@@ -388,6 +402,7 @@ class TestWazoUserSync(TransactionCase):
             wazo_user.action_sync_wazo()
 
     def test_delete_wazo_removes_resources_in_safe_order(self):
+        """Vérifie que la suppression retire les ressources dans un ordre sûr."""
         wazo_user = self._create_wazo_user()
         conf_patch, auth_patch = self._patch_sync(FULL_CALLS)
         with conf_patch, auth_patch:
@@ -435,6 +450,7 @@ class TestWazoUserSync(TransactionCase):
         self.assertFalse(wazo_user.remote_sip_id)
 
     def test_retry_sync_after_error(self):
+        """Vérifie que la reprise après erreur repart de l'étape échouée."""
         wazo_user = self._create_wazo_user()
         conf_patch, auth_patch = self._patch_sync(FULL_CALLS, fail_at=5)
         with conf_patch, auth_patch:
@@ -456,6 +472,7 @@ class TestWazoUserSync(TransactionCase):
         index = {"i": 0}
 
         def conf(method, path, params=None, body=None):
+            """Vérifie l'ordre des appels pendant la reprise après erreur."""
             i = index["i"]
             index["i"] += 1
             assert (method, path) == expected[i]

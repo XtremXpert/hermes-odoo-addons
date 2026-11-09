@@ -16,6 +16,7 @@ DOMAINE_DES_DISPARUES = [
 class TestDisparues(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare le domaine des tests de fiches disparues."""
         super().setUpClass()
         cls.domain = cls.env["mailcow.domain"].search([("name", "=", "dc.com")], limit=1)
         if not cls.domain:
@@ -32,6 +33,7 @@ class TestDisparues(TransactionCase):
         )
 
     def test_la_synchronisation_note_la_date(self):
+        """Vérifie que la synchronisation note la date de dernière synchronisation."""
         entree = {
             "local_part": "vue",
             "domain": "dc.com",
@@ -54,11 +56,13 @@ class TestDisparues(TransactionCase):
         self.assertNotIn(jamais, self.env["mailcow.mailbox"].search(DOMAINE_DES_DISPARUES))
 
     def test_une_fiche_disparue_est_reconnue(self):
+        """Vérifie qu'une fiche vue puis absente est reconnue comme disparue."""
         disparue = self._boite("disparue", synced=False)
         disparue.last_synced_on = "2026-09-01 10:00:00"
         self.assertIn(disparue, self.env["mailcow.mailbox"].search(DOMAINE_DES_DISPARUES))
 
     def test_oublier_archive_sans_toucher_au_serveur(self):
+        """Vérifie qu'oublier archive sans appeler le serveur."""
         boite = self._boite("oubliee")
         with patch.object(MailcowClient, "_request") as appel:
             boite.action_forget_locally()
@@ -66,6 +70,7 @@ class TestDisparues(TransactionCase):
         appel.assert_not_called()
 
     def test_purger_supprime_definitivement(self):
+        """Vérifie que purger supprime définitivement la fiche locale."""
         boite = self._boite("purgee")
         with patch.object(MailcowClient, "_request") as appel:
             boite.action_purge_local()

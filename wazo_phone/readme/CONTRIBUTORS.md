@@ -1,0 +1,2 @@
+- Benoît Vézina
+- Diverse-Cité

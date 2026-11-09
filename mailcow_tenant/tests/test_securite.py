@@ -18,6 +18,7 @@ class FichesMailcow(TransactionCase):
 
     @classmethod
     def setUpClass(cls):
+        """Prépare les fiches Mailcow communes aux tests de droits."""
         super().setUpClass()
         cls.utilisateur = cls.env["res.users"].create(
             {
@@ -55,6 +56,7 @@ class TestDroitsParMethode(FichesMailcow):
     """Le bouton masqué ne protège pas la méthode : chaque appel RPC est vérifié."""
 
     def test_utilisateur_ne_supprime_ni_ne_synchronise_sur_le_serveur(self):
+        """Vérifie qu'un utilisateur ne supprime ni ne synchronise sur le serveur."""
         for fiche in (self.domaine, self.boite, self.alias):
             for methode in (
                 "action_delete_on_mailcow",
@@ -66,10 +68,12 @@ class TestDroitsParMethode(FichesMailcow):
                 self._refuse(self.utilisateur, fiche, methode)
 
     def test_utilisateur_ne_change_pas_de_mot_de_passe(self):
+        """Vérifie qu'un utilisateur ne change pas de mot de passe."""
         self._refuse(self.utilisateur, self.boite, "action_reset_password")
         self._refuse(self.utilisateur, self.boite, "action_create_app_password")
 
     def test_sans_groupe_aucun_appel_au_serveur(self):
+        """Vérifie que sans groupe, aucun appel au serveur n'est fait."""
         for fiche in (self.domaine, self.boite, self.alias):
             for methode in (
                 "action_create_on_mailcow",
@@ -81,11 +85,13 @@ class TestDroitsParMethode(FichesMailcow):
         self._refuse(self.sans_groupe, self.boite, "action_make_catch_all")
 
     def test_utilisateur_met_a_jour_sur_le_serveur(self):
+        """Vérifie qu'un utilisateur met à jour sur le serveur."""
         with patch.object(MailcowClient, "_request", return_value=[]) as appel:
             self.boite.with_user(self.utilisateur).action_update_on_mailcow()
         self.assertEqual(appel.call_args[0][1], "/edit/mailbox")
 
     def test_gestionnaire_supprime(self):
+        """Vérifie qu'un gestionnaire peut supprimer."""
         gestionnaire = self.env.ref("mailcow_tenant.group_mailcow_manager").user_ids[0]
         with patch.object(MailcowClient, "_request", return_value=[]) as appel:
             self.alias.with_user(gestionnaire).action_delete_on_mailcow()
@@ -98,6 +104,7 @@ class TestGroupeSynchronisation(FichesMailcow):
 
     @classmethod
     def setUpClass(cls):
+        """Prépare l'agent de synchronisation des tests de droits."""
         super().setUpClass()
         cls.agent = cls.env["res.users"].create(
             {
@@ -108,6 +115,7 @@ class TestGroupeSynchronisation(FichesMailcow):
         )
 
     def test_synchronise_et_previsualise_en_lecture_seule(self):
+        """Vérifie que l'agent synchronise et prévisualise sans écrire."""
         serveur = {"data": []}
         for fiche in (self.domaine, self.boite, self.alias):
             for methode in ("action_sync_all_from_mailcow", "action_sync_from_mailcow"):
@@ -119,6 +127,7 @@ class TestGroupeSynchronisation(FichesMailcow):
                 self.assertEqual({a[0][0] for a in appel.call_args_list}, {"GET"})
 
     def test_la_synchronisation_ecrit_en_local(self):
+        """Vérifie que la synchronisation de l'agent écrit en local."""
         serveur = {
             "data": [
                 {
@@ -134,6 +143,7 @@ class TestGroupeSynchronisation(FichesMailcow):
         self.assertEqual(self.domaine.description, "Relue sur le serveur")
 
     def test_apercu_lisible_par_l_agent(self):
+        """Vérifie que l'agent peut lire l'aperçu."""
         serveur = {"data": [{"domain_name": "neuf.test", "active": "1"}]}
         with patch.object(MailcowClient, "_request", return_value=serveur):
             action = (
@@ -144,6 +154,7 @@ class TestGroupeSynchronisation(FichesMailcow):
         self.assertFalse(self.env["mailcow.domain"].search([("name", "=", "neuf.test")]))
 
     def test_apercu_depuis_une_fiche(self):
+        """Vérifie que l'aperçu part d'une fiche."""
         serveur = {"data": [{"domain_name": "neuf.test", "active": "1"}]}
         with patch.object(MailcowClient, "_request", return_value=serveur):
             action = self.domaine.with_user(self.agent).action_preview_sync()
@@ -152,6 +163,7 @@ class TestGroupeSynchronisation(FichesMailcow):
         self._refuse(self.utilisateur, self.domaine, "action_preview_sync")
 
     def test_aucune_ecriture_sur_le_serveur_ni_mot_de_passe(self):
+        """Vérifie que l'agent n'écrit pas sur le serveur et ne voit pas de mot de passe."""
         for fiche in (self.domaine, self.boite, self.alias):
             for methode in (
                 "action_create_on_mailcow",
@@ -171,6 +183,7 @@ class TestGroupeSynchronisation(FichesMailcow):
         self._refuse(self.agent, self.domaine, "action_fetch_dkim")
 
     def test_aucune_ecriture_directe(self):
+        """Vérifie que l'agent ne modifie pas les fiches directement."""
         boite = self.boite.with_user(self.agent)
         self.assertEqual(boite.email, "info@droits.test")
         with self.assertRaises(AccessError):
@@ -183,6 +196,7 @@ class TestGroupeSynchronisation(FichesMailcow):
             )
 
     def test_utilisateur_ne_synchronise_toujours_pas_et_gestionnaire_si(self):
+        """Vérifie que l'utilisateur ne synchronise pas et que le gestionnaire le peut."""
         self._refuse(self.utilisateur, self.domaine, "action_sync_all_from_mailcow")
         gestionnaire = self.env.ref("mailcow_tenant.group_mailcow_manager").user_ids[0]
         self.assertTrue(gestionnaire.has_group("mailcow_tenant.group_mailcow_sync"))
@@ -194,6 +208,7 @@ class TestEcrituresNonRejouees(TransactionCase):
         return MailcowClient(self.env, base_url="https://exemple.test", api_key="clef-de-test")
 
     def test_une_ecriture_en_erreur_passagere_n_est_pas_rejouee(self):
+        """Vérifie qu'une écriture en erreur passagère n'est pas rejouée."""
         refus = urllib.error.HTTPError("https://exemple.test", 503, "Service Unavailable", {}, None)
         with patch("urllib.request.urlopen", side_effect=refus) as appel:
             with self.assertRaisesRegex(MailcowAPIError, "Résultat incertain"):
@@ -201,12 +216,14 @@ class TestEcrituresNonRejouees(TransactionCase):
         self.assertEqual(appel.call_count, 1)
 
     def test_une_ecriture_sans_reponse_n_est_pas_rejouee(self):
+        """Vérifie qu'une écriture sans réponse n'est pas rejouée."""
         with patch("urllib.request.urlopen", side_effect=TimeoutError("timed out")) as appel:
             with self.assertRaisesRegex(MailcowAPIError, "Résultat incertain"):
                 self._client()._request("POST", "/delete/alias", ["1"])
         self.assertEqual(appel.call_count, 1)
 
     def test_une_ecriture_refusee_n_est_pas_incertaine(self):
+        """Vérifie qu'une écriture refusée n'est pas marquée incertaine."""
         refus = urllib.error.HTTPError("https://exemple.test", 403, "Forbidden", {}, None)
         with patch("urllib.request.urlopen", side_effect=refus) as appel:
             with self.assertRaisesRegex(MailcowAPIError, "HTTP 403"):
@@ -214,6 +231,7 @@ class TestEcrituresNonRejouees(TransactionCase):
         self.assertEqual(appel.call_count, 1)
 
     def test_chaque_appel_a_un_delai(self):
+        """Vérifie que chaque appel fixe un délai."""
         with patch(
             "urllib.request.urlopen", return_value=FausseReponse('[{"type": "success"}]')
         ) as appel:
@@ -226,6 +244,7 @@ class TestCleDeLEnvironnement(TransactionCase):
     """La clé API vient de l'environnement (Vaultwarden), pas de la base."""
 
     def setUp(self):
+        """Prépare les paramètres Mailcow des tests de clé d'environnement."""
         super().setUp()
         self.icp = self.env["ir.config_parameter"].sudo()
         self.icp.set_str("mailcow.base_url", "https://mail.example.com")
@@ -233,17 +252,20 @@ class TestCleDeLEnvironnement(TransactionCase):
         self.icp.set_str("database.is_neutralized", "")
 
     def test_l_environnement_l_emporte_sur_la_base(self):
+        """Vérifie que la variable d'environnement l'emporte sur la base."""
         with patch.dict("os.environ", {"MAILCOW_API_KEY": "cle-de-vault"}):
             self.assertEqual(MailcowClient(self.env).api_key, "cle-de-vault")
             reglages = self.env["res.config.settings"].create({})
             self.assertTrue(reglages.mailcow_api_key_from_env)
 
     def test_sans_variable_la_base_sert_de_repli(self):
+        """Vérifie que la base sert de repli sans variable d'environnement."""
         with patch.dict("os.environ", {"MAILCOW_API_KEY": ""}):
             self.assertEqual(MailcowClient(self.env).api_key, "cle-en-base")
             self.assertFalse(self.env["res.config.settings"].create({}).mailcow_api_key_from_env)
 
     def test_base_neutralisee_ignore_l_environnement(self):
+        """Vérifie qu'une base neutralisée ignore la variable d'environnement."""
         self.icp.set_str("database.is_neutralized", "True")
         self.icp.set_str("mailcow.api_key", "")
         with patch.dict("os.environ", {"MAILCOW_API_KEY": "cle-de-vault"}):
@@ -253,6 +275,7 @@ class TestCleDeLEnvironnement(TransactionCase):
                 client._request("GET", "/get/domain/all")
 
     def test_la_cle_n_apparait_dans_aucune_erreur(self):
+        """Vérifie que la clé n'apparaît dans aucune erreur."""
         refus = urllib.error.HTTPError("https://mail.example.com", 401, "Unauthorized", {}, None)
         with patch.dict("os.environ", {"MAILCOW_API_KEY": "cle-de-vault"}):
             with patch("urllib.request.urlopen", side_effect=refus):

@@ -76,6 +76,7 @@ class TestProxmoxSync(TransactionCase):
     """La synchronisation rapatrie ce que le cluster déclare, au périmètre."""
 
     def setUp(self):
+        """Prépare un serveur Proxmox de test."""
         super().setUp()
         self.serveur = self.env["proxmox.server"].create(
             {"name": "pve1", "url": "https://pve.test:8006", "api_token": "root@pam!odoo=aa-11"}

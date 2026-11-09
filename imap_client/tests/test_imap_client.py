@@ -10,6 +10,7 @@ class TestImapClient(TransactionCase):
     """Le client rapatrie dossiers et messages."""
 
     def setUp(self):
+        """Prépare un compte IMAP de test."""
         super().setUp()
         self.compte = self.env["imap.account"].create(
             {

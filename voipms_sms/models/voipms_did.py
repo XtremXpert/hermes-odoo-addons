@@ -26,6 +26,17 @@ class VoIPMSDid(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        """Crée des DID en normalisant leur numéro et en refusant les doublons.
+
+        Args:
+            vals_list: liste des dictionnaires de valeurs des DID.
+
+        Returns:
+            recordset: les DID créés.
+
+        Raises:
+            UserError: si un numéro n'est pas NANP ou existe déjà.
+        """
         for vals in vals_list:
             try:
                 number = normalize_nanp(vals.get("number") or "")

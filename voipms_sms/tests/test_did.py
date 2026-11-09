@@ -13,11 +13,13 @@ from odoo.tests import tagged
 class TestVoIPMSDid(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare les identifiants VoIP.ms des tests de DID."""
         super().setUpClass()
         cls.env["ir.config_parameter"].sudo().set_str("voipms.api_username", "test-user")
         cls.env["ir.config_parameter"].sudo().set_str("voipms.api_token", "test-token")
 
     def test_sync_creates_remote_dids(self):
+        """Vérifie que la synchronisation crée les DID distants."""
         remote = {
             "status": "success",
             "did": [
@@ -37,10 +39,12 @@ class TestVoIPMSDid(TransactionCase):
         self.assertTrue(first.synced)
 
     def test_duplicate_number_rejected(self):
+        """Vérifie qu'un numéro en double est refusé."""
         self.env["voipms.did"].create({"number": "14184803381"})
         with self.assertRaises(UserError):
             self.env["voipms.did"].create({"number": "14184803381"})
 
     def test_number_normalized_on_create(self):
+        """Vérifie que le numéro est normalisé à la création."""
         did = self.env["voipms.did"].create({"number": "4184803381"})
         self.assertEqual(did.number, "14184803381")

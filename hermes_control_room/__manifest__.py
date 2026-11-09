@@ -2,8 +2,11 @@
 {
     "name": "Hermes — Salle de contrôle",
     "version": "20.0.1.0.0",
+    "development_status": "Beta",
+    "category": "Administration",
     "author": "Benoît Vézina, Diverse-Cité",
     "website": "https://github.com/XtremXpert/hermes-odoo-addons",
+    "maintainers": ["XtremXpert"],
     "license": "LGPL-3",
     "summary": "Tableau de bord d'exploitation : Proxmox, lu depuis les miroirs Odoo.",
     "depends": ["proxmox_tenant", "odoo_herd", "web"],

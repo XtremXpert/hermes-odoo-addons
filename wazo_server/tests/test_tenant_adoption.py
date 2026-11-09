@@ -37,6 +37,7 @@ class TestTenantAdoption(WazoServerTestBase):
     """L'adoption vue depuis Odoo : ce qui entre en base, et ce qui n'y touche pas."""
 
     def setUp(self):
+        """Prépare une racine de tenants fictive pour l'adoption."""
         super().setUp()
         # La base de développement porte des tenants réels : on vise une racine
         # fictive, pour que les fiches de ce test ne croisent jamais les vraies.
@@ -52,6 +53,7 @@ class TestTenantAdoption(WazoServerTestBase):
         appels = []
 
         def repondre(client, service, method, path, params=None, body=None, basic=None):
+            """Simule les services confd et auth du PBX pour l'adoption."""
             appels.append((service, method, path, client.tenant_id))
             if service == "confd" and path == "/contexts" and method == "GET":
                 # Les contextes vivent côté confd, et se lisent avec **son**
@@ -250,6 +252,7 @@ class TestTenantAdoption(WazoServerTestBase):
         appels, repondre = self._faux_pbx(arbre)
 
         def fiche_injoignable(client, service, method, path, params=None, body=None, basic=None):
+            """Simule une fiche de tenant illisible (404) pendant l'adoption."""
             if path.startswith("/tenants/") and method == "GET":
                 appels.append((service, method, path, client.tenant_id))
                 raise WazoAPIError("Erreur de l'API Wazo (GET %s) : HTTP 404." % path)

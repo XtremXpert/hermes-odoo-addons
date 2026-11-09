@@ -20,6 +20,7 @@ from odoo.tests.common import TransactionCase
 @tagged("post_install", "-at_install")
 class TestSoftphoneFrontend(TransactionCase):
     def setUp(self):
+        """Prépare les paramètres des tests de façade frontend."""
         super().setUp()
         self.icp = self.env["ir.config_parameter"].sudo()
         self.icp.search(
@@ -119,6 +120,7 @@ class TestSoftphoneFrontend(TransactionCase):
     # ------------------------------------------------------------------
 
     def test_call_log_empty_without_wazo_user(self):
+        """Vérifie que le journal d'appels est vide sans usager Wazo."""
         u = self.env["res.users"].create(
             {
                 "name": "Sans Wazo",

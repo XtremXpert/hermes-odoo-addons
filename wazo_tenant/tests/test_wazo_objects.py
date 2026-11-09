@@ -44,6 +44,7 @@ def _conf_reply(method, path, params=None, body=None):
 class TestWazoObjects(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare le contexte des lignes et les clients simulés."""
         super().setUpClass()
         cls.env["ir.config_parameter"].sudo().set_str("wazo.line_context", "default")
 
@@ -60,6 +61,7 @@ class TestWazoObjects(TransactionCase):
         return client, patcher
 
     def test_queue_sync_and_delete(self):
+        """Vérifie la synchronisation puis la suppression d'une file d'attente."""
         Queue = self.env["wazo.queue"]
         user = self.env["wazo.user"].create(
             {"name": "Agent", "wazo_state": "synced", "remote_user_uuid": "u-1"}
@@ -86,6 +88,7 @@ class TestWazoObjects(TransactionCase):
         self.assertFalse(queue.remote_queue_id)
 
     def test_conference_sync_and_delete(self):
+        """Vérifie la synchronisation puis la suppression d'une salle de conférence."""
         conference = self.env["wazo.conference"].create(
             {"name": "Salle conseil", "extension": "4000", "pin": "1234"}
         )
@@ -100,6 +103,7 @@ class TestWazoObjects(TransactionCase):
         self.assertEqual(conference.wazo_state, "new")
 
     def test_ivr_sync_and_delete(self):
+        """Vérifie la synchronisation puis la suppression d'un menu vocal."""
         ivr = self.env["wazo.ivr"].create({"name": "Accueil"})
         _client, patcher = self._with_mock()
         with patcher:
@@ -112,6 +116,7 @@ class TestWazoObjects(TransactionCase):
         self.assertEqual(ivr.wazo_state, "new")
 
     def test_voicemail_sync_refuses_associated_on_delete(self):
+        """Vérifie qu'une messagerie associée refuse la suppression (HTTP 400)."""
         from ..services.wazo_client import WazoAPIError
 
         voicemail = self.env["wazo.voicemail"].create({"name": "Boîte accueil", "number": "5000"})
@@ -126,6 +131,7 @@ class TestWazoObjects(TransactionCase):
         client = mock.MagicMock()
 
         def refuse(method, path, params=None, body=None):
+            """Refuse les suppressions pour simuler une messagerie associée."""
             if method == "DELETE":
                 raise WazoAPIError("HTTP 400. associée", status=400)
             return _conf_reply(method, path, params=params, body=body)
@@ -137,6 +143,7 @@ class TestWazoObjects(TransactionCase):
         self.assertIn("400", voicemail.error_message)
 
     def test_parking_sync_and_delete(self):
+        """Vérifie la synchronisation puis la suppression d'un parc."""
         parking = self.env["wazo.parking"].create(
             {"name": "Parc", "extension": "700", "slots_start": "701", "slots_end": "710"}
         )
@@ -151,6 +158,7 @@ class TestWazoObjects(TransactionCase):
         self.assertEqual(parking.wazo_state, "new")
 
     def test_parking_slots_must_be_ordered_numbers(self):
+        """Vérifie que les créneaux du parc sont des nombres ordonnés."""
         from odoo.exceptions import ValidationError
 
         with self.assertRaises(ValidationError):

@@ -13,6 +13,7 @@ from odoo.tests import tagged
 class TestPartnerClickToCall(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare la connexion ARI des tests de click-to-call."""
         super().setUpClass()
         cls.env["ir.config_parameter"].sudo().set_str(
             "asterisk_ari.base_url", "http://pbx:8088/ari"
@@ -21,6 +22,7 @@ class TestPartnerClickToCall(TransactionCase):
         cls.env["ir.config_parameter"].sudo().set_str("asterisk_ari.api_token", "tok")
 
     def test_click_to_call_creates_and_originates(self):
+        """Vérifie que le click-to-call crée l'appel et l'émet."""
         partner = self.env["res.partner"].create(
             {
                 "name": "Alice",
@@ -35,6 +37,7 @@ class TestPartnerClickToCall(TransactionCase):
         self.assertEqual(call.ari_call_id, "call-9")
 
     def test_click_to_call_requires_phone(self):
+        """Vérifie que le click-to-call exige un téléphone."""
         partner = self.env["res.partner"].create({"name": "NoNum"})
         with self.assertRaises(UserError):
             partner.action_click_to_call()

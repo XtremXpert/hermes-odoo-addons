@@ -15,12 +15,14 @@ REPONSE = [{"msg": "Task completed", "type": "success"}]
 class TestFormeDesEditions(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare le domaine des tests de forme des éditions."""
         super().setUpClass()
         cls.domain = cls.env["mailcow.domain"].search([("name", "=", "dc.com")], limit=1)
         if not cls.domain:
             cls.domain = cls.env["mailcow.domain"].create({"name": "dc.com"})
 
     def test_mise_a_jour_du_domaine(self):
+        """Vérifie la charge d'édition d'un domaine."""
         domaine = self.env["mailcow.domain"].create({"name": "forme.com", "synced": True})
         domaine.description = "modifiee"
         with patch.object(MailcowClient, "_request", return_value=REPONSE) as requete:
@@ -35,6 +37,7 @@ class TestFormeDesEditions(TransactionCase):
         )
 
     def test_mise_a_jour_d_une_boite(self):
+        """Vérifie la charge d'édition d'une boîte."""
         boite = self.env["mailcow.mailbox"].create(
             {
                 "local_part": "forme",
@@ -56,6 +59,7 @@ class TestFormeDesEditions(TransactionCase):
         self.assertNotIn("domain", charge["attr"])
 
     def test_mise_a_jour_d_un_alias(self):
+        """Vérifie la charge d'édition d'un alias."""
         cible = self.env["mailcow.email_address"].create({"address": "cible@dc.com"})
         alias = self.env["mailcow.alias"].create(
             {

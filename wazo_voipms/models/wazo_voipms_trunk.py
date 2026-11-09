@@ -685,5 +685,10 @@ class WazoVoipmsTrunk(models.Model):
         return True
 
     def action_retry(self):
+        """Relance la provision d'un trunk après un échec.
+
+        Returns:
+            Le résultat de ``action_provision``.
+        """
         self.ensure_one()
         return self.action_provision()

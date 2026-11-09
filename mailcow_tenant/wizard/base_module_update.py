@@ -14,6 +14,11 @@ class BaseModuleUpdate(models.TransientModel):
     _inherit = "base.module.update"
 
     def update_module(self):
+        """Met à jour les modules puis marque l'assistant terminé.
+
+        Rejoue le corps d'Odoo en ignorant les langues vides, qui font échouer
+        `get_base_langs`.
+        """
         # Rejoue le corps d'Odoo mais en ignorant les langues vides.
         self.ensure_one()
         updated, added = self.env["ir.module.module"].update_list()

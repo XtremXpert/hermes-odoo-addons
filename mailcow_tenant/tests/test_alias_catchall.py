@@ -17,12 +17,14 @@ class TestMailcowAliasFourreToutSynchronise(TransactionCase):
 
     @classmethod
     def setUpClass(cls):
+        """Prépare le domaine des tests de fourre-tout."""
         super().setUpClass()
         cls.domain = cls.env["mailcow.domain"].search([("name", "=", "dc.com")], limit=1)
         if not cls.domain:
             cls.domain = cls.env["mailcow.domain"].create({"name": "dc.com"})
 
     def test_fourre_tout_reste_synchronise(self):
+        """Vérifie qu'un fourre-tout reste synchronisé."""
         # Le fourre-tout existe déjà en local, nom d'alias non renseigné :
         # c'est la fiche que produit le formulaire.
         self.env["mailcow.alias"].create(

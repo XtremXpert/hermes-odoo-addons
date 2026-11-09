@@ -13,6 +13,7 @@ from odoo.tests import tagged
 @tagged("asterisk_ari", "post_install", "-at_install")
 class TestAsteriskSettings(TransactionCase):
     def test_settings_store_credentials(self):
+        """Vérifie que les réglages rangent les identifiants ARI."""
         settings = self.env["res.config.settings"].create({})
         settings.asterisk_base_url = "http://pbx:8088/ari"
         settings.asterisk_app_name = "odoo_click"
@@ -24,6 +25,7 @@ class TestAsteriskSettings(TransactionCase):
         self.assertEqual(icp.get_str("asterisk_ari.api_token"), "s3cret")
 
     def test_test_connection_success(self):
+        """Vérifie qu'un test de connexion réussi rend vrai."""
         self.env["ir.config_parameter"].sudo().set_str(
             "asterisk_ari.base_url", "http://pbx:8088/ari"
         )
@@ -36,6 +38,7 @@ class TestAsteriskSettings(TransactionCase):
         self.assertTrue(settings.asterisk_connection_ok)
 
     def test_test_connection_failure(self):
+        """Vérifie qu'un test de connexion en échec lève une erreur."""
         self.env["ir.config_parameter"].sudo().set_str(
             "asterisk_ari.base_url", "http://pbx:8088/ari"
         )

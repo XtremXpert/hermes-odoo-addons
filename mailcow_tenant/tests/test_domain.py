@@ -14,6 +14,7 @@ from odoo.tests import tagged
 class TestMailcowDomain(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare la connexion Mailcow des tests de domaine."""
         super().setUpClass()
         cls.env["ir.config_parameter"].sudo().set_str(
             "mailcow.base_url", "https://mail.example.com"
@@ -21,6 +22,7 @@ class TestMailcowDomain(TransactionCase):
         cls.env["ir.config_parameter"].sudo().set_str("mailcow.api_key", "test-api-key")
 
     def test_create_on_mailcow_sends_domain_and_marks_synced(self):
+        """Vérifie que la création envoie le domaine et le marque synchronisé."""
         domain = self.env["mailcow.domain"].create(
             {
                 "name": "dc.com",
@@ -56,6 +58,7 @@ class TestMailcowDomain(TransactionCase):
         self.assertTrue(domain.synced)
 
     def test_update_on_mailcow_sends_edit_payload(self):
+        """Vérifie que la mise à jour envoie la charge d'édition."""
         domain = self.env["mailcow.domain"].create({"name": "dc.com", "synced": True})
         domain.description = "Description mise à jour"
         with patch.object(
@@ -112,6 +115,7 @@ class TestMailcowDomain(TransactionCase):
         self.assertNotIn("max_quota_for_domain", attr)
 
     def test_delete_on_mailcow_unsyncs_and_archives(self):
+        """Vérifie que la suppression désynchronise et archive le domaine."""
         domain = self.env["mailcow.domain"].create({"name": "dc.com", "synced": True})
         with patch.object(
             MailcowClient,
@@ -126,6 +130,7 @@ class TestMailcowDomain(TransactionCase):
         self.assertFalse(domain.aliases.synced)
 
     def test_sync_from_mailcow_creates_updates_and_unsyncs_local_only(self):
+        """Vérifie que la synchronisation crée, met à jour et démarque les fiches locales seules."""
         local_only = self.env["mailcow.domain"].create({"name": "local-only.com", "synced": True})
         existing = self.env["mailcow.domain"].create(
             {
@@ -690,7 +695,7 @@ class TestMailcowDomain(TransactionCase):
         action = domaine.action_ouvrir_tableau_de_bord_domaine()
 
         self.assertEqual(action["type"], "ir.actions.client")
-        self.assertEqual(action["tag"], "mailcow_tenant.dashboard_domaine")
+        self.assertEqual(action["tag"], "mailcow.dashboard_domaine")
         # Sans la fiche, le composant ne saurait pas quel domaine afficher.
         self.assertEqual(action["res_id"], domaine.id)
         self.assertIn("bouton.test", action["name"])

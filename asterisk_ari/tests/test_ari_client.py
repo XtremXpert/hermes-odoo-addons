@@ -36,6 +36,7 @@ def _fake_cm(body=b""):
 class TestARIClient(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare la connexion ARI et les paramètres des tests du client."""
         super().setUpClass()
         cls.env["ir.config_parameter"].sudo().set_str(
             "asterisk_ari.base_url", "http://pbx:8088/ari"
@@ -50,10 +51,12 @@ class TestARIClient(TransactionCase):
         return result, urlopen.call_args[0][0]
 
     def test_auth_header_is_basic_b64(self):
+        """Vérifie que l'en-tête d'authentification est un Basic encodé."""
         expected = "Basic " + base64.b64encode(b"myapp:s3cret").decode()
         self.assertEqual(self.client._auth_header(), expected)
 
     def test_list_apps_get(self):
+        """Vérifie qu'un GET liste les applications ARI."""
         result, req = self._call_with("GET", "/apps", body=b'["myapp", "other"]')
         self.assertEqual(req.full_url, "http://pbx:8088/ari/apps")
         self.assertEqual(req.get_method(), "GET")
@@ -63,6 +66,7 @@ class TestARIClient(TransactionCase):
         self.assertEqual(result, ["myapp", "other"])
 
     def test_originate_posts_form_encoded(self):
+        """Vérifie qu'`originate` poste un corps encodé en formulaire."""
         result, req = self._call_with(
             "POST",
             "/calls",
@@ -92,16 +96,19 @@ class TestARIClient(TransactionCase):
         self.assertEqual(result, {})
 
     def test_hangup_deletes(self):
+        """Vérifie que le raccrochage est un DELETE."""
         _, req = self._call_with("DELETE", "/calls/abc-123", body=b"{}")
         self.assertEqual(req.full_url, "http://pbx:8088/ari/calls/abc-123")
         self.assertEqual(req.get_method(), "DELETE")
 
     def test_answer_posts(self):
+        """Vérifie que la réponse est un POST."""
         _, req = self._call_with("POST", "/calls/abc-123/answer", body=b"{}")
         self.assertEqual(req.full_url, "http://pbx:8088/ari/calls/abc-123/answer")
         self.assertEqual(req.get_method(), "POST")
 
     def test_http_error_raises_ari_error_with_code(self):
+        """Vérifie qu'une erreur HTTP devient `ARIError` avec son code."""
         err = urllib.error.HTTPError(
             "http://pbx:8088/ari/apps", 401, "Unauthorized", {}, io.BytesIO(b"Unauthorized")
         )
@@ -112,6 +119,7 @@ class TestARIClient(TransactionCase):
         self.assertIn("Unauthorized", str(ctx.exception))
 
     def test_url_error_raises_ari_error(self):
+        """Vérifie qu'une erreur réseau devient `ARIError`."""
         with patch(
             "urllib.request.urlopen", side_effect=urllib.error.URLError("connection refused")
         ):
@@ -120,16 +128,19 @@ class TestARIClient(TransactionCase):
         self.assertIn("connection refused", str(ctx.exception))
 
     def test_invalid_json_raises_ari_error(self):
+        """Vérifie qu'une réponse illisible devient `ARIError`."""
         with self.assertRaises(ARIError):
             self._call_with("GET", "/apps", body=b"<html>oops</html>")
 
     def test_missing_base_url_raises_config_error(self):
+        """Vérifie qu'une URL ARI absente lève une erreur de configuration."""
         self.env["ir.config_parameter"].sudo().set_str("asterisk_ari.base_url", "")
         fresh = ARI(self.env)
         with self.assertRaises(ARIConfigError):
             fresh.list_apps()
 
     def test_missing_token_raises_config_error(self):
+        """Vérifie qu'un jeton ARI absent lève une erreur de configuration."""
         self.env["ir.config_parameter"].sudo().set_str("asterisk_ari.api_token", "")
         fresh = ARI(self.env)
         with self.assertRaises(ARIConfigError):

@@ -26,6 +26,7 @@ VOIPMS_CTOR_DID = "odoo.addons.wazo_voipms.models.voipms_did.VoIPMSClient"
 class BridgeTestBase(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare les paramètres système et les modèles utilisés par les tests."""
         super().setUpClass()
         icp = cls.env["ir.config_parameter"].sudo()
         icp.set_str("voipms.api_username", "u")
@@ -70,6 +71,7 @@ class BridgeTestBase(TransactionCase):
 @tagged("wazo_voipms", "post_install", "-at_install")
 class TestTrunk(BridgeTestBase):
     def test_provision_creates_subaccount_then_wazo_chain(self):
+        """Vérifie que la provision crée le sous-compte VoIP.ms puis la chaîne Wazo."""
         trunk = self.Trunk.create({"name": "TestTrunk", "pop_host": "montreal1.voip.ms"})
         # Réponse mesurée en conditions réelles : « account » porte le nom
         # complet (numéro de compte + « _ » + nom), le mot de passe n'est
@@ -91,6 +93,7 @@ class TestTrunk(BridgeTestBase):
         self.assertIn("/outcalls/33/extensions/11", paths)
 
     def test_provision_with_existing_subaccount_skips_create(self):
+        """Vérifie qu'un sous-compte existant n'est pas recréé."""
         trunk = self.Trunk.create({"name": "T2", "voipms_username": "u1", "voipms_password": "p1"})
         voipms = self._voipms_mock()
         wazo = self._wazo_mock()
@@ -100,11 +103,25 @@ class TestTrunk(BridgeTestBase):
         self.assertEqual(trunk.state, "synced")
 
     def test_wazo_failure_marks_error_and_keeps_ids(self):
+        """Vérifie qu'un échec Wazo passe le trunk en erreur en gardant les
+        identifiants distants.
+        """
         trunk = self.Trunk.create({"name": "T3", "voipms_username": "u", "voipms_password": "p"})
         wazo = self._wazo_mock()
         calls = {"n": 0}
 
         def flaky(method, path, params=None, body=None):
+            """Simule un client Wazo dont le quatrième appel échoue.
+
+            Args:
+                method: Verbe HTTP de l'appel.
+                path: Chemin de l'appel.
+                params: Paramètres de requête.
+                body: Corps de la requête.
+
+            Returns:
+                La réponse simulée, sauf au quatrième appel qui lève une erreur.
+            """
             calls["n"] += 1
             # 1=GET /contexts, 2=POST /contexts, 3=POST endpoint, 4=le
             # trunk — c'est lui qui échoue.
@@ -120,12 +137,14 @@ class TestTrunk(BridgeTestBase):
         self.assertEqual(trunk.remote_endpoint_uuid, "uuid-ep")
 
     def test_provision_twice_refused(self):
+        """Vérifie qu'une seconde provision d'un trunk synchronisé est refusée."""
         trunk = self.Trunk.create({"name": "T4", "voipms_username": "u", "voipms_password": "p"})
         trunk.state = "synced"
         with self.assertRaises(UserError):
             trunk.action_provision()
 
     def test_unprovision_deletes_in_safe_order(self):
+        """Vérifie que la déprovision supprime les objets Wazo dans l'ordre attendu."""
         trunk = self.Trunk.create({"name": "T5", "voipms_username": "u", "voipms_password": "p"})
         trunk.write(
             {
@@ -145,6 +164,7 @@ class TestTrunk(BridgeTestBase):
         self.assertIn("/outcalls/8", deletes)
 
     def test_provision_iax_creates_endpoint_register_and_trunk(self):
+        """Vérifie que la provision IAX2 crée endpoint, register et trunk."""
         trunk = self.Trunk.create(
             {"name": "IaxTrunk", "protocol": "iax2", "pop_host": "montreal1.voip.ms"}
         )
@@ -169,6 +189,7 @@ class TestTrunk(BridgeTestBase):
         self.assertIn("/trunks/22/registers/iax/81", paths)
 
     def test_prefix_must_be_numeric(self):
+        """Vérifie qu'un préfixe sortant non numérique est refusé."""
         with self.assertRaises(ValidationError):
             self.Trunk.create({"name": "T6", "outbound_prefix": "abc"})
 
@@ -204,6 +225,7 @@ class TestDidRouting(BridgeTestBase):
         self.assertFalse(did.tenant_slug)
 
     def test_route_to_user(self):
+        """Vérifie le routage d'un DID vers un utilisateur Wazo synchronisé."""
         user = self.WazoUser.create(
             {"name": "Alice", "wazo_state": "synced", "remote_user_id": "5"}
         )
@@ -235,11 +257,13 @@ class TestDidRouting(BridgeTestBase):
         self.assertEqual(params["routing"], "sip:14184803381@wazo.example.com")
 
     def test_route_requires_destination(self):
+        """Vérifie qu'un routage sans destination est refusé."""
         did = self._make_did()
         with self.assertRaises(ValidationError):
             did.write({"wazo_destination_type": "user"})
 
     def test_route_to_unsynced_user_refused(self):
+        """Vérifie qu'un routage vers un utilisateur non synchronisé échoue."""
         user = self.WazoUser.create({"name": "Bob"})
         did = self._make_did()
         did.write({"wazo_destination_type": "user", "wazo_user_id": user.id})
@@ -251,6 +275,7 @@ class TestDidRouting(BridgeTestBase):
         self.assertIn("pas synchronisé", did.wazo_route_error)
 
     def test_route_via_iax_trunk_routes_to_account(self):
+        """Vérifie le routage via un trunk IAX2 vers le compte VoIP.ms."""
         trunk = self.Trunk.create(
             {
                 "name": "T-Iax",
@@ -291,6 +316,7 @@ class TestDidRouting(BridgeTestBase):
         self.assertEqual(len(register_calls), 0)
 
     def test_route_via_unprovisioned_iax_trunk_refused(self):
+        """Vérifie qu'un routage via un trunk IAX2 non provisionné est refusé."""
         trunk = self.Trunk.create(
             {"name": "T-Vide", "protocol": "iax2", "voipms_username": "u", "voipms_password": "p"}
         )
@@ -309,6 +335,7 @@ class TestDidRouting(BridgeTestBase):
         voipms._request.assert_not_called()
 
     def test_unroute_resets_both_sides(self):
+        """Vérifie que le déroutage remet à zéro les deux côtés."""
         did = self._make_did()
         did.write(
             {
@@ -334,6 +361,7 @@ class TestDidDestinationObjects(BridgeTestBase):
     synchronisée)."""
 
     def test_destination_payload_for_queue(self):
+        """Vérifie la charge utile de destination pour une file d'attente."""
         queue = self.env["wazo.queue"].create({"name": "Support", "extension": "3000"})
         queue.write({"wazo_state": "synced", "remote_queue_id": 61})
         did = self.Did.create({"number": "4184803381"})
@@ -341,6 +369,7 @@ class TestDidDestinationObjects(BridgeTestBase):
         self.assertEqual(did._destination_payload(), {"type": "queue", "queue_id": 61})
 
     def test_destination_requires_synced_target(self):
+        """Vérifie qu'une destination non synchronisée est refusée."""
         queue = self.env["wazo.queue"].create({"name": "Vide", "extension": "3000"})
         did = self.Did.create({"number": "4184803381"})
         did.write({"wazo_destination_type": "queue", "wazo_queue_id": queue.id})

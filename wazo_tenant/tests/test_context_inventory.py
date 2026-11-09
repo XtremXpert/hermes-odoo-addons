@@ -43,6 +43,7 @@ class TestContextInventory(WazoValidationTestBase):
         return self.env["wazo.extension.inventory"].search([]), appels, action
 
     def test_extension_attached_to_a_line_names_its_owner(self):
+        """Vérifie qu'un poste rattaché à une ligne nomme son propriétaire."""
         lignes, appels, _ = self._charger(
             [{"id": 12, "exten": "1005", "context": CONTEXTE, "lines": [{"id": 12}]}],
             users=UTILISATEUR_WAZO,
@@ -72,6 +73,7 @@ class TestContextInventory(WazoValidationTestBase):
         self.assertEqual(lignes.attachment_label, "")
 
     def test_extension_attached_to_a_group_is_labelled(self):
+        """Vérifie qu'un poste rattaché à un groupe porte le libellé du groupe."""
         lignes, _, _ = self._charger(
             [
                 {
@@ -106,6 +108,7 @@ class TestContextInventory(WazoValidationTestBase):
         self.assertEqual(lignes.odoo_reference, "wazo.user, %s" % utilisateur.name)
 
     def test_extension_unknown_to_odoo_has_no_reference(self):
+        """Vérifie qu'un poste inconnu d'Odoo n'a pas de référence."""
         lignes, _, _ = self._charger([{"id": 18, "exten": "5101", "context": CONTEXTE}])
         self.assertFalse(lignes.odoo_reference)
 
@@ -117,6 +120,7 @@ class TestContextInventory(WazoValidationTestBase):
         self.assertEqual(lignes.extension, "5101")
 
     def test_action_reopens_the_inventory_list(self):
+        """Vérifie que l'action rouvre la liste de l'inventaire."""
         _, _, action = self._charger([{"id": 18, "exten": "5101", "context": CONTEXTE}])
         self.assertEqual(action["res_model"], "wazo.extension.inventory")
         self.assertEqual(action["type"], "ir.actions.act_window")

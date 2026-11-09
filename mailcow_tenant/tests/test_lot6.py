@@ -17,7 +17,10 @@ CHEMIN_FABRIQUE = (
 
 class TestVersionDuServeur(TransactionCase):
     def test_le_test_de_connexion_annonce_la_version(self):
+        """Vérifie que le test de connexion annonce la version du serveur."""
+
         def repondre(methode, chemin, *args, **kwargs):
+            """Répond aux routes de version et de listage des domaines."""
             if chemin.endswith("/version"):
                 return [{"version": "2025-09b"}]
             return [{"domain_name": "dc.com"}]
@@ -36,6 +39,7 @@ class TestVersionDuServeur(TransactionCase):
 class TestMotDePasseApplication(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare la boîte et les secrets des tests de mot de passe applicatif."""
         super().setUpClass()
         cls.domain = cls.env["mailcow.domain"].search([("name", "=", "dc.com")], limit=1)
         if not cls.domain:
@@ -86,6 +90,7 @@ class TestMotDePasseApplication(TransactionCase):
         )
 
     def test_le_mot_de_passe_n_est_range_nulle_part(self):
+        """Vérifie que le mot de passe applicatif n'est stocké nulle part."""
         with patch(CHEMIN_FABRIQUE, return_value=SECRET):
             with patch.object(MailcowClient, "_request", return_value=self._reponse_reelle()):
                 self._assistant().action_create_app_password()
@@ -95,6 +100,7 @@ class TestMotDePasseApplication(TransactionCase):
         self.assertNotIn(SECRET, corps, "le mot de passe a été journalisé")
 
     def test_le_geste_est_journalise(self):
+        """Vérifie que la création d'un mot de passe applicatif est journalisée."""
         with patch(CHEMIN_FABRIQUE, return_value=SECRET):
             with patch.object(MailcowClient, "_request", return_value=self._reponse_reelle()):
                 self._assistant().action_create_app_password()
@@ -102,6 +108,7 @@ class TestMotDePasseApplication(TransactionCase):
         self.assertIn("wordpress", corps, "le geste n est pas noté dans le fil")
 
     def test_la_demande_porte_les_bons_champs(self):
+        """Vérifie que la demande porte les champs attendus."""
         with patch(CHEMIN_FABRIQUE, return_value=SECRET):
             with patch.object(
                 MailcowClient, "_request", return_value=self._reponse_reelle()
@@ -119,6 +126,7 @@ class TestMotDePasseApplication(TransactionCase):
         )
 
     def test_le_nom_est_obligatoire(self):
+        """Vérifie que le nom de l'application est obligatoire."""
         with patch.object(MailcowClient, "_request", return_value=self._reponse_reelle()) as appel:
             self._assistant(app_name="").action_create_app_password()
         self.assertFalse(appel.called, "un appel a été fait sans nom")

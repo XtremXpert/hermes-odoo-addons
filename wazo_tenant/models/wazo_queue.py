@@ -189,5 +189,10 @@ class WazoQueue(models.Model):
         return True
 
     def action_retry_sync(self):
+        """Relance la synchronisation de la file après un échec.
+
+        Returns:
+            dict: action de synchronisation de la fiche.
+        """
         self.ensure_one()
         return self.action_sync_wazo()

@@ -59,6 +59,7 @@ class _RingGroupBase(WazoValidationTestBase):
         route = self._router(appels, **router_kwargs)
 
         def conf(method, path, params=None, body=None):
+            """Capture les appels confd et les rejoue par le routeur simulé."""
             corps.append((method, path, body))
             return route(method, path, params=params, body=body)
 
@@ -75,15 +76,18 @@ class TestRingGroupRules(_RingGroupBase):
     """Le poste d'un groupe ne heurte ni un groupe, ni un utilisateur."""
 
     def test_group_number_must_be_digits(self):
+        """Vérifie qu'un numéro de groupe non numérique est refusé."""
         with self.assertRaises(ValidationError):
             self._create_group("20-05")
 
     def test_group_number_is_unique_among_groups(self):
+        """Vérifie qu'un numéro de groupe est unique parmi les groupes."""
         self._create_group("2005")
         with self.assertRaises(ValidationError):
             self._create_group("2005", name="Groupe Support")
 
     def test_group_number_cannot_collide_with_a_user_extension(self):
+        """Vérifie qu'un poste de groupe ne collisionne pas avec celui d'un usager."""
         self._create_user("2005")
         with self.assertRaises(ValidationError):
             self._create_group("2005")
@@ -101,10 +105,12 @@ class TestRingGroupRules(_RingGroupBase):
             self._create_group("2005", name="Réception (accueil)")
 
     def test_group_name_is_bounded_to_128_characters(self):
+        """Vérifie que le libellé d'un groupe est borné à 128 caractères."""
         with self.assertRaises(ValidationError):
             self._create_group("2005", name="G" * 129)
 
     def test_group_name_accepts_the_allowed_characters(self):
+        """Vérifie que les caractères autorisés du libellé sont acceptés."""
         groupe = self._create_group("2005", name="Groupe Accueil_1.2 - bleu")
         self.assertEqual(groupe.name, "Groupe Accueil_1.2 - bleu")
 
@@ -122,6 +128,7 @@ class TestRingGroupSync(_RingGroupBase):
     """Création côté Wazo : trois appels, puis les membres."""
 
     def test_group_requires_a_number(self):
+        """Vérifie qu'un groupe sans numéro refuse la synchronisation."""
         groupe = self._create_group(False)
         with self.assertRaises(UserError):
             groupe.action_sync_wazo()
@@ -149,6 +156,7 @@ class TestRingGroupSync(_RingGroupBase):
         self.assertEqual(groupe.remote_extension_id, 10)
 
     def test_group_body_carries_label_and_strategy(self):
+        """Vérifie que le corps du groupe porte libellé et stratégie."""
         groupe = self._create_group("2005", ring_strategy="linear", user_timeout=20, retry_delay=7)
         _, corps, _ = self._sync_capturing(groupe)
         corps_group = [c for c in corps if c[1] == "/groups"][0][2]
@@ -161,6 +169,7 @@ class TestRingGroupSync(_RingGroupBase):
         self.assertNotIn("name", corps_group)
 
     def test_extension_body_carries_number_and_context(self):
+        """Vérifie que le poste envoyé porte numéro et contexte."""
         groupe = self._create_group("2005")
         _, corps, _ = self._sync_capturing(groupe)
         corps_extension = [c for c in corps if c[:2] == ("POST", "/extensions")][0][2]
@@ -201,6 +210,7 @@ class TestRingGroupSync(_RingGroupBase):
         )
 
     def test_member_priority_defaults_to_ten(self):
+        """Vérifie que la priorité d'un membre vaut 10 par défaut."""
         membre = self._synced_user("1000", "user-uuid-1")
         groupe = self._create_group("2005", member_ids=self._membres(membre))
         self.assertEqual(groupe.member_ids.priority, 10)
@@ -212,6 +222,7 @@ class TestRingGroupSync(_RingGroupBase):
             self._create_group("2005", member_ids=self._membres(membre) + self._membres(membre))
 
     def test_group_without_members_sends_no_member_call(self):
+        """Vérifie qu'un groupe sans membre n'envoie pas d'appel de membres."""
         groupe = self._create_group("2005")
         appels, _, resultat = self._sync_capturing(groupe)
         self.assertTrue(resultat)
@@ -226,6 +237,7 @@ class TestRingGroupSync(_RingGroupBase):
         self.assertIn("synchronis", str(ctx.exception).lower())
 
     def test_double_sync_is_refused(self):
+        """Vérifie qu'une seconde synchronisation d'un groupe est refusée."""
         groupe = self._create_group("2005")
         self._sync_capturing(groupe)
         with self.assertRaises(UserError):
@@ -238,6 +250,7 @@ class TestRingGroupSync(_RingGroupBase):
         self.assertIn("postes", str(ctx.exception).lower())
 
     def test_group_number_outside_any_range_is_refused(self):
+        """Vérifie qu'un numéro de groupe hors plage est refusé."""
         groupe = self._create_group("5101")
         ctx, _ = self._expect_refusal(groupe)
         self.assertIn("groupes", str(ctx.exception).lower())
@@ -249,6 +262,7 @@ class TestRingGroupSync(_RingGroupBase):
         self.assertIn("attribu", str(ctx.exception).lower())
 
     def test_delete_removes_group_then_extension(self):
+        """Vérifie que la suppression retire le groupe puis son poste."""
         groupe = self._create_group("2005")
         self._sync_capturing(groupe)
         appels = []
@@ -303,6 +317,7 @@ class TestMemberUuidRecovery(_RingGroupBase):
     """
 
     def test_uuid_is_read_from_the_line_when_missing(self):
+        """Vérifie que l'UUID est relu depuis la ligne quand il manque."""
         utilisateur = self._create_user("1006")
         utilisateur.write({"wazo_state": "synced", "remote_user_id": "9", "remote_line_id": 12})
         appels = []

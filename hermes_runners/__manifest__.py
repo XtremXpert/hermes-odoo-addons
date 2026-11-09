@@ -2,8 +2,11 @@
 {
     "name": "Hermes — Runners",
     "version": "20.0.1.0.0",
+    "development_status": "Beta",
+    "category": "Administration",
     "author": "Benoît Vézina, Diverse-Cité",
     "website": "https://github.com/XtremXpert/hermes-odoo-addons",
+    "maintainers": ["XtremXpert"],
     "license": "LGPL-3",
     "summary": "État des runners GitHub Actions auto-hébergés (ARC), lu depuis les clusters.",
     "depends": ["odoo_herd", "web"],

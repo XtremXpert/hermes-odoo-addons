@@ -60,6 +60,7 @@ class TestTokenRotation(WazoServerTestBase):
         appels = []
 
         def repondre(client, service, method, path, params=None, body=None, basic=None):
+            """Simule les services auth et confd de la rotation de jeton."""
             appels.append((service, method, path, body or {}, client.tenant_id, basic))
             if service != "auth":
                 raise WazoAPIError("Appel inattendu : %s %s" % (method, path))
@@ -88,6 +89,7 @@ class TestTokenRotation(WazoServerTestBase):
     # ------------------------------------------------------------------
 
     def test_rotation_replaces_the_token(self):
+        """Vérifie que la rotation remplace le jeton."""
         tenant = self._tenant_cree()
         self._tourne(tenant)
         self.assertEqual(tenant.api_token, NOUVEAU)
@@ -103,6 +105,7 @@ class TestTokenRotation(WazoServerTestBase):
         self.assertEqual(creations[0][3].get("expiration"), DIX_ANS)
 
     def test_rotation_records_the_new_expiration(self):
+        """Vérifie que la rotation enregistre la nouvelle expiration."""
         tenant = self._tenant_cree()
         self._tourne(tenant)
         self.assertEqual(tenant.token_expires_at.strftime("%Y-%m-%dT%H:%M:%S.%f"), EXPIRATION)
@@ -130,6 +133,7 @@ class TestTokenRotation(WazoServerTestBase):
 
     @mute_logger("odoo.addons.wazo_server.models.wazo_server_tenant")
     def test_a_failed_revocation_keeps_the_new_token_and_says_so(self):
+        """Vérifie qu'une révocation ratée garde le nouveau jeton et le signale."""
         tenant = self._tenant_cree()
         self._tourne(tenant, revocation_ratee=True)
         self.assertEqual(tenant.api_token, NOUVEAU)
@@ -143,6 +147,7 @@ class TestTokenRotation(WazoServerTestBase):
     # ------------------------------------------------------------------
 
     def test_rotation_refuses_a_tenant_that_does_not_exist(self):
+        """Vérifie que la rotation refuse un tenant inexistant."""
         brouillon = self._create_tenant()
         with self.assertRaises(UserError) as capture:
             brouillon.action_rotate_token()
@@ -160,6 +165,7 @@ class TestTokenRotation(WazoServerTestBase):
     # ------------------------------------------------------------------
 
     def test_the_handover_sheet_carries_the_new_token(self):
+        """Vérifie que la fiche de remise porte le nouveau jeton."""
         tenant = self._tenant_cree()
         self._tourne(tenant)
         fiche = tenant.handover_text
@@ -171,6 +177,7 @@ class TestTokenRotation(WazoServerTestBase):
     # ------------------------------------------------------------------
 
     def test_a_plain_user_cannot_rotate(self):
+        """Vérifie qu'un usager ordinaire ne renouvelle pas le jeton."""
         tenant = self._tenant_cree()
         ordinaire = self.env["res.users"].create(
             {"name": "Utilisateur ordinaire", "login": "ordinaire_p7"}

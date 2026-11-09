@@ -17,6 +17,7 @@ class TestJobMixin(TransactionCase):
 
     @classmethod
     def setUpClass(cls):
+        """Prépare le cluster, l'instance et les modèles de job utilisés par les tests."""
         super().setUpClass()
         cls.cluster = cls.env["k8s.cluster"].create(
             {
@@ -43,6 +44,7 @@ class TestJobMixin(TransactionCase):
         cls.Upgrade = type(cls.env["k8s.odoo.upgrade"])
 
     def setUp(self):
+        """Active le mode registre pour que le callback post-commit partage la transaction."""
         super().setUp()
         # The post-commit callback opens its own cursor: in registry test mode
         # it shares this test's transaction and sees the records created here.
@@ -72,9 +74,11 @@ class TestJobMixin(TransactionCase):
         record.invalidate_recordset(["write_date", "create_date"])
 
     def test_custom_resource_waits_for_the_commit(self):
+        """Vérifie que la ressource personnalisée n'est créée qu'après le commit."""
         created = []
 
         def trigger(rec):
+            """Simule la création du job en enregistrant l'identifiant et en posant son nom."""
             created.append(rec.id)
             rec.upgrade_job_name = "shop-upgrade-abcde"
 
@@ -113,9 +117,13 @@ class TestJobMixin(TransactionCase):
         self.assertEqual(upgrade.job_name, "shop-up-1")
 
     def test_creation_error_fails_the_job(self):
+        """Vérifie qu'une erreur de création passe le job à l'état échoué."""
         with (
             patch.object(
-                self.Upgrade, "_trigger_upgrade", autospec=True, side_effect=RuntimeError("API down")
+                self.Upgrade,
+                "_trigger_upgrade",
+                autospec=True,
+                side_effect=RuntimeError("API down"),
             ),
             mute_logger("odoo.addons.odoo_herd.models.k8s_job_mixin"),  # the failure is the point
         ):
@@ -141,6 +149,7 @@ class TestJobMixin(TransactionCase):
         return api
 
     def test_lost_webhook_is_recovered_from_the_cluster(self):
+        """Vérifie qu'un webhook perdu est rattrapé en relisant le cluster."""
         with patch.object(self.Upgrade, "_trigger_upgrade", autospec=True):
             upgrade = self._upgrade()
         upgrade.write({"upgrade_job_name": "shop-upgrade-abcde", "state": "running"})
@@ -157,6 +166,7 @@ class TestJobMixin(TransactionCase):
         self.assertEqual(upgrade.state, "completed")
 
     def test_recent_jobs_are_left_to_the_webhook(self):
+        """Vérifie qu'un job récent est laissé au webhook, sans interroger le cluster."""
         with patch.object(self.Upgrade, "_trigger_upgrade", autospec=True):
             upgrade = self._upgrade()
         upgrade.write({"upgrade_job_name": "shop-upgrade-abcde", "state": "running"})
@@ -165,6 +175,7 @@ class TestJobMixin(TransactionCase):
         self.assertEqual(upgrade.state, "running")
 
     def test_failed_and_vanished_jobs(self):
+        """Vérifie que les jobs échoués ou disparus du cluster sont marqués en échec."""
         with patch.object(self.Upgrade, "_trigger_upgrade", autospec=True):
             failed, vanished = self._upgrade(), self._upgrade()
         failed.write({"upgrade_job_name": "shop-upgrade-1", "state": "running"})
@@ -179,6 +190,7 @@ class TestJobMixin(TransactionCase):
         self.assertEqual(vanished.state, "failed")
 
     def test_job_never_created(self):
+        """Vérifie qu'un job jamais créé finit en échec après le délai de création."""
         with patch.object(self.Upgrade, "_trigger_upgrade", autospec=True):
             upgrade = self._upgrade()
         self._age(upgrade, 20)
@@ -186,6 +198,7 @@ class TestJobMixin(TransactionCase):
         self.assertEqual(upgrade.state, "failed")
 
     def test_backup_completion_keeps_the_object_key(self):
+        """Vérifie qu'une sauvegarde terminée conserve la clé de l'objet stocké."""
         Backup = type(self.env["k8s.odoo.backup"])
         with patch.object(Backup, "_create_backup_job_cr", autospec=True):
             backup = self.env["k8s.odoo.backup"].create(

@@ -21,6 +21,7 @@ from odoo.tests.common import TransactionCase
 @tagged("post_install", "-at_install")
 class TestSoftphoneConfig(TransactionCase):
     def setUp(self):
+        """Prépare les paramètres du softphone sans résidu."""
         super().setUp()
         self.icp = self.env["ir.config_parameter"].sudo()
         # Ne laisse pas de paramètres en place.
@@ -117,11 +118,13 @@ class TestSoftphoneConfig(TransactionCase):
     # ------------------------------------------------------------------
 
     def test_domain_uses_pbx_domain(self):
+        """Vérifie que le domaine utilise `wazo.pbx_domain`."""
         self.icp.set_str("wazo.pbx_domain", "pbx.example.com")
         wiz = self._synced_wizo()
         self.assertEqual(wiz._softphone_domain(), "pbx.example.com")
 
     def test_domain_defaults_to_asterisk(self):
+        """Vérifie que le domaine vaut « asterisk » par défaut."""
         wiz = self._synced_wizo()
         self.assertEqual(wiz._softphone_domain(), "asterisk")
 
@@ -130,10 +133,12 @@ class TestSoftphoneConfig(TransactionCase):
     # ------------------------------------------------------------------
 
     def test_enabled_by_default(self):
+        """Vérifie que le softphone est activé par défaut."""
         wiz = self._synced_wizo()
         self.assertTrue(wiz._softphone_enabled())
 
     def test_disabled_by_param(self):
+        """Vérifie que le paramètre désactive le softphone."""
         self.icp.set_bool("wazo.softphone_enabled", False)
         wiz = self._synced_wizo()
         self.assertFalse(wiz._softphone_enabled())
@@ -160,6 +165,7 @@ class TestSoftphoneConfig(TransactionCase):
         self.assertEqual(wiz.get_softphone_config(), {})
 
     def test_config_empty_when_disabled(self):
+        """Vérifie que la configuration est vide quand le softphone est désactivé."""
         self.icp.set_bool("wazo.softphone_enabled", False)
         wiz = self._synced_wizo()
         self.assertEqual(wiz.get_softphone_config(), {})

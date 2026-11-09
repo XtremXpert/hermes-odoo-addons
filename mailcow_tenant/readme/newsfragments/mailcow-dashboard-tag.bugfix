@@ -1,0 +1,3 @@
+Corrige le bouton « Tableau de bord » du domaine : l'action client visait
+`mailcow_tenant.dashboard_domaine`, tag qu'aucun composant n'enregistre (le
+composant OWL est `mailcow.dashboard_domaine`), donc le bouton échouait.

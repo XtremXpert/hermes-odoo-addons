@@ -129,6 +129,16 @@ class MailGatewayController(http.Controller):
         readonly=False,
     )
     def process(self) -> Response:
+        """Remet un courriel brut à `mail.thread.message_process`.
+
+        Vérifie le HTTPS, le jeton puis le corps RFC 5322. Répond 200 avec
+        l'identifiant du fil, 400 pour un corps illisible, 401 pour un jeton
+        invalide, 403 en HTTP clair, 422 quand aucune route ne correspond et 500
+        pour une erreur interne.
+
+        Returns:
+            odoo.http.Response: réponse JSON avec l'identifiant du fil.
+        """
         if not self._tls_check_passes():
             return _json_response(
                 {"ok": False, "error": "forbidden", "detail": "HTTPS required"},

@@ -20,10 +20,26 @@ CODE_TTL = timedelta(seconds=60)
 
 
 def digest(value):
+    """Calcule l'empreinte sha256 hexadécimale d'une valeur.
+
+    Args:
+        value: Texte à hacher.
+
+    Returns:
+        Empreinte sha256 en hexadécimal.
+    """
     return hashlib.sha256(value.encode()).hexdigest()
 
 
 def s256(verifier):
+    """Calcule le défi PKCE S256 d'un vérificateur.
+
+    Args:
+        verifier: Vérificateur PKCE.
+
+    Returns:
+        Défi encodé en base64url, sans remplissage.
+    """
     return (
         base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
     )

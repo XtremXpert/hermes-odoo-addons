@@ -1,8 +1,12 @@
 {
     "name": "Hermes — activité dans Discussion",
+    "summary": "Réponses des agents Hermes et indicateur d'activité dans Discussion",
     "version": "20.0.1.2.1",
+    "development_status": "Beta",
+    "category": "Productivity",
     "author": "Benoît Vézina, Diverse-Cité",
     "website": "https://github.com/XtremXpert/hermes-odoo-addons",
+    "maintainers": ["XtremXpert"],
     "license": "AGPL-3",
     "depends": ["mail", "hermes_n1_audit"],
     "data": ["data/presence_cron.xml"],

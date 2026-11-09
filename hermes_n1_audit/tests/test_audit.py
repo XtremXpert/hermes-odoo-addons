@@ -10,6 +10,7 @@ from odoo.tests import tagged
 class TestAudit(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare l'agent, l'administrateur et le contact utilisés par les tests."""
         super().setUpClass()
         cls.admin = cls.env.ref("base.user_admin")
         cls.bot = (
@@ -46,6 +47,7 @@ class TestAudit(TransactionCase):
         cls.service = cls.env["hermes.n1.change"].with_user(cls.bot)
 
     def arguments(self, **extra):
+        """Construit les arguments d'un appel `modifier` de référence."""
         return dict(
             {
                 "model": "res.partner",
@@ -61,6 +63,7 @@ class TestAudit(TransactionCase):
         )
 
     def test_write_and_note_are_atomic_and_attributed(self):
+        """Vérifie que l'écriture et sa note sont atomiques et attribuées."""
         result = self.service.modifier(**self.arguments())
         self.assertEqual(self.contact.city, "Après")
         note = self.env["mail.message"].browse(result["chatter_message_id"])
@@ -73,6 +76,7 @@ class TestAudit(TransactionCase):
         self.assertNotIn("<script>", note.body)
 
     def test_chatter_failure_rolls_back_even_when_caught(self):
+        """Vérifie que l'échec du chatter annule tout, même quand l'erreur est interceptée."""
         with patch.object(
             type(self.contact), "message_post", side_effect=UserError("No chatter")
         ) as post:
@@ -86,6 +90,7 @@ class TestAudit(TransactionCase):
         )
 
     def test_replay_does_not_write_or_post_twice(self):
+        """Vérifie qu'un rejeu ne réécrit pas et ne reposte pas."""
         first = self.service.modifier(**self.arguments())
         second = self.service.modifier(**self.arguments())
         self.assertEqual(first["audit_id"], second["audit_id"])
@@ -93,6 +98,7 @@ class TestAudit(TransactionCase):
         self.assertTrue(second["deja_applique"])
 
     def test_stale_values_and_forbidden_fields_leave_object_unchanged(self):
+        """Vérifie qu'un conflit de valeurs ou un champ interdit laisse l'objet intact."""
         for changes in [
             {"expected": {"city": "Stale"}},
             {"values": {"user_id": self.admin.id}, "expected": {"user_id": False}},
@@ -103,6 +109,7 @@ class TestAudit(TransactionCase):
         self.assertEqual(self.contact.city, "Avant")
 
     def test_untrusted_caller_and_forged_source_are_denied(self):
+        """Vérifie qu'un appelant non agent ou une source forgée est refusé."""
         with self.assertRaises(AccessError):
             self.env["hermes.n1.change"].with_user(self.admin).modifier(**self.arguments())
         with self.assertRaises(AccessError):
@@ -111,6 +118,7 @@ class TestAudit(TransactionCase):
             self.service.modifier(**self.arguments(channel_id=0))
 
     def test_audit_is_immutable(self):
+        """Vérifie que le journal refuse toute écriture et toute suppression."""
         result = self.service.modifier(**self.arguments())
         audit = self.env["hermes.n1.change"].browse(result["audit_id"])
         with self.assertRaises(AccessError):
@@ -119,6 +127,7 @@ class TestAudit(TransactionCase):
             audit.unlink()
 
     def test_no_chatter_or_model_outside_policy_is_not_editable(self):
+        """Vérifie qu'un modèle hors politique ou sans chatter n'est pas modifiable."""
         self.assertEqual(self.service.capabilities("res.users")["modifiable"], [])
         self.assertIn("city", self.service.capabilities("res.partner")["modifiable"])
         from ..models.change import WRITE_FIELDS
@@ -127,6 +136,7 @@ class TestAudit(TransactionCase):
             self.assertEqual(self.service.capabilities("res.country")["modifiable"], [])
 
     def business_source(self):
+        """Construit le contexte Discuss d'un appel à la façade métier."""
         return {
             key: value
             for key, value in self.arguments().items()
@@ -134,6 +144,7 @@ class TestAudit(TransactionCase):
         }
 
     def test_business_discovery_rejects_technical_models(self):
+        """Vérifie que la façade métier refuse les modèles techniques."""
         for model in ["ir.config_parameter", "hermes.n3.operation"]:
             with self.assertRaises(AccessError):
                 self.service.explorer(model=model, **self.business_source())
@@ -146,6 +157,7 @@ class TestAudit(TransactionCase):
         self.assertIn("user_id", info["editable"])
 
     def test_website_page_markup_is_editable_without_exposing_views(self):
+        """Vérifie que l'arch d'une page site est modifiable sans exposer les vues."""
         if "website.page" not in self.env:
             self.skipTest("website is not installed")
         page_info = self.service.explorer(model="website.page", **self.business_source())
@@ -155,6 +167,7 @@ class TestAudit(TransactionCase):
             self.service.explorer(model="ir.ui.view", **self.business_source())
 
     def test_business_create_is_audited_and_idempotent(self):
+        """Vérifie qu'une création métier est tracée et rejouable."""
         args = dict(
             model="res.partner",
             values={"name": "Création métier N1"},
@@ -168,6 +181,7 @@ class TestAudit(TransactionCase):
         self.assertTrue(first["chatter_message_id"])
 
     def test_business_without_chatter_has_central_audit(self):
+        """Vérifie qu'un objet sans chatter est tracé dans le journal central."""
         country = self.env["res.country"].create({"name": "Pays test N1", "code": "XZ"})
         result = self.service.corriger_metier(
             model="res.country",
@@ -182,6 +196,7 @@ class TestAudit(TransactionCase):
         self.assertEqual(note.model, "hermes.n1.change")
 
     def test_business_read_blocks_nested_filters_and_hidden_fields(self):
+        """Vérifie que la lecture refuse les filtres imbriqués et les champs masqués."""
         for domain in [[["user_ids.password", "=", "x"]], [["name", "any", []]]]:
             with self.assertRaises(UserError):
                 self.service.lire_metier(
@@ -198,6 +213,7 @@ class TestAudit(TransactionCase):
             )
 
     def test_business_write_rolls_back_if_journal_fails(self):
+        """Vérifie que l'échec du journal annule l'écriture métier."""
         with patch.object(
             type(self.contact), "message_post", side_effect=UserError("Journal indisponible")
         ):
@@ -214,6 +230,7 @@ class TestAudit(TransactionCase):
         self.assertEqual(self.contact.city, "Avant")
 
     def test_business_rejects_untrusted_source(self):
+        """Vérifie que la façade métier refuse une source non fiable."""
         with self.assertRaises(AccessError):
             self.service.lire_metier(
                 model="res.partner",
@@ -221,6 +238,7 @@ class TestAudit(TransactionCase):
             )
 
     def test_project_html_and_task_assignment_use_requester_rights(self):
+        """Vérifie que le HTML projet et l'affectation suivent les droits du demandeur."""
         if "project.project" not in self.env:
             self.skipTest("project is not installed")
         info = self.service.explorer(model="project.project", **self.business_source())
@@ -269,6 +287,7 @@ class TestAudit(TransactionCase):
             )
 
     def test_archive_and_delete_are_audited_and_replayable(self):
+        """Vérifie que l'archivage et la suppression sont tracés et rejouables."""
         row = self.service.lire_metier(
             model="res.partner",
             domain=[["id", "=", self.contact.id]],
@@ -307,6 +326,7 @@ class TestAudit(TransactionCase):
         self.assertEqual(result["audit_id"], self.service.agir_metier(**args)["audit_id"])
 
     def test_actions_reject_stale_values_arbitrary_methods_and_technical_models(self):
+        """Vérifie que les actions refusent valeurs périmées et méthodes arbitraires."""
         args = dict(
             model="res.partner",
             record_id=self.contact.id,
@@ -326,6 +346,7 @@ class TestAudit(TransactionCase):
         self.assertTrue(self.contact.active)
 
     def test_requester_acl_is_used_without_elevating_business_operations(self):
+        """Vérifie que l'ACL du demandeur s'applique sans élever les droits."""
         # The real source verifier is covered above. A restricted actor here proves
         # the operation itself cannot inherit the bot/admin's permissions.
         user = (
@@ -349,6 +370,7 @@ class TestAudit(TransactionCase):
                 )
 
     def test_delete_rolls_back_when_journal_is_unavailable(self):
+        """Vérifie que la suppression est annulée si le journal est indisponible."""
         country = self.env["res.country"].create({"name": "Pays protégé N1", "code": "XZ"})
         expected = country.read(["write_date"], load=None)[0]
         expected.pop("id")
@@ -367,6 +389,7 @@ class TestAudit(TransactionCase):
         self.assertTrue(country.exists())
 
     def test_action_detects_another_write_within_the_same_second(self):
+        """Vérifie que l'action détecte une autre écriture dans la même seconde."""
         expected = self.service.lire_metier(
             model="res.partner",
             domain=[["id", "=", self.contact.id]],
@@ -391,6 +414,7 @@ class TestAudit(TransactionCase):
         self.assertTrue(self.contact.active)
 
     def test_delete_previously_audited_chatter_preserves_original_note(self):
+        """Vérifie que la suppression d'un chatter déjà audité conserve la note d'origine."""
         changed = self.service.corriger_metier(
             model="res.partner",
             record_id=self.contact.id,
@@ -431,6 +455,7 @@ class TestAudit(TransactionCase):
             note.unlink()
 
     def test_project_cascade_preserves_child_audit_note(self):
+        """Vérifie que la cascade projet conserve la note d'audit de l'enfant."""
         if "project.project" not in self.env:
             self.skipTest("project is not installed")
         project = self.env["project.project"].create({"name": "Cascade audit N1"})
@@ -448,6 +473,7 @@ class TestAudit(TransactionCase):
         self.assertEqual((note.model, note.res_id), ("hermes.n1.change", audit.id))
 
     def test_denied_message_delete_cannot_move_the_audit_note(self):
+        """Vérifie qu'une suppression refusée ne déplace pas la note d'audit."""
         changed = self.service.modifier(**self.arguments())
         note = self.env["mail.message"].browse(changed["chatter_message_id"])
         with patch.object(type(note), "check_access", side_effect=AccessError("Denied")):
@@ -456,6 +482,7 @@ class TestAudit(TransactionCase):
         self.assertEqual((note.model, note.res_id), ("res.partner", self.contact.id))
 
     def test_failed_delete_journal_rolls_back_note_reparenting(self):
+        """Vérifie que l'échec du journal annule le déplacement de la note."""
         changed = self.service.modifier(**self.arguments())
         note = self.env["mail.message"].browse(changed["chatter_message_id"])
         expected = self.service.lire_metier(

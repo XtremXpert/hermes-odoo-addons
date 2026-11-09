@@ -33,6 +33,23 @@ class HermesDashboardSso(http.Controller):
         code_challenge_method=None,
         **kwargs,
     ):
+        """Émet un code d'autorisation SSO pour un administrateur.
+
+        Args:
+            level: Niveau Hermes demandé.
+            redirect_uri: URL de retour, qui doit être le callback du niveau.
+            state: État à renvoyer tel quel au client.
+            code_challenge: Défi PKCE du client.
+            code_challenge_method: Méthode du défi, ``S256`` uniquement.
+            **kwargs: Paramètres supplémentaires ignorés.
+
+        Returns:
+            Redirection vers le callback avec le code et l'état.
+
+        Raises:
+            Forbidden: Demandeur sans droit administrateur.
+            BadRequest: Paramètres manquants ou invalides.
+        """
         if not request.env.user.has_group("base.group_system"):
             raise Forbidden()
         if (
@@ -61,6 +78,14 @@ class HermesDashboardSso(http.Controller):
         sitemap=False,
     )
     def token(self, **kwargs):
+        """Échange un code d'autorisation contre l'identité SSO.
+
+        Args:
+            **kwargs: Paramètres de la requête.
+
+        Returns:
+            Réponse JSON avec l'identité, ou une erreur ``invalid_grant`` en 400.
+        """
         try:
             body = json.loads(request.httprequest.get_data() or b"{}")
         except ValueError:

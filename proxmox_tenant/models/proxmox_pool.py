@@ -31,6 +31,11 @@ class ProxmoxPool(models.Model):
 
     @api.model
     def action_sync_all_from_proxmox(self):
+        """Synchronise tous les pools depuis Proxmox.
+
+        Raises:
+            AccessError: Utilisateur sans le groupe de synchronisation.
+        """
         self._exiger("sync")
         return self.sudo()._sync_all_from_proxmox()
 
