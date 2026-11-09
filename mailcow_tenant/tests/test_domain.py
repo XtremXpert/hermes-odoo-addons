@@ -695,7 +695,7 @@ class TestMailcowDomain(TransactionCase):
         action = domaine.action_ouvrir_tableau_de_bord_domaine()
 
         self.assertEqual(action["type"], "ir.actions.client")
-        self.assertEqual(action["tag"], "mailcow_tenant.dashboard_domaine")
+        self.assertEqual(action["tag"], "mailcow.dashboard_domaine")
         # Sans la fiche, le composant ne saurait pas quel domaine afficher.
         self.assertEqual(action["res_id"], domaine.id)
         self.assertIn("bouton.test", action["name"])
