@@ -12,7 +12,7 @@ Two hard guarantees we promise to operators:
 
 2. **Only admins can read or modify tokens.** The endpoint deliberately
    bypasses Odoo's ACLs (auth='none' + sudo on validate_token), so the
-   safety net is the model's own ``ir.model.access`` row + the security
+   safety net is the model's own ``ir.access`` row + the security
    group. We verify that a regular Internal User cannot search, read,
    create or write tokens.
 
