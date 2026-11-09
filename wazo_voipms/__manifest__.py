@@ -7,7 +7,7 @@
     "development_status": "Beta",
     "depends": ["wazo_tenant", "voipms_sms"],
     "data": [
-        "security/ir.model.access.csv",
+        "security/ir.access.csv",
         "views/wazo_voipms_trunk_views.xml",
         "views/wazo_setup_wizard_views.xml",
         "views/voipms_did_views.xml",

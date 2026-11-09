@@ -9,7 +9,7 @@
     "maintainers": ["XtremXpert"],
     "license": "AGPL-3",
     "depends": ["mail"],
-    "data": ["security/groups.xml", "security/ir.model.access.csv"],
+    "data": ["security/groups.xml", "security/ir.access.csv"],
     "installable": True,
     "application": False,
 }

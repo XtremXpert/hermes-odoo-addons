@@ -13,7 +13,7 @@
     # module_loader.js et le client web mourrait sans un bruit.
     "depends": ["wazo_tenant", "wazo_voipms", "web"],
     "data": [
-        "security/ir.model.access.csv",
+        "security/ir.access.csv",
         "views/wazo_server_tenant_views.xml",
         "views/wazo_tenant_selection_views.xml",
         "views/wazo_server_menus.xml",

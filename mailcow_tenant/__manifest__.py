@@ -8,7 +8,7 @@
     "depends": ["base", "mail"],
     "data": [
         "security/mailcow_groups.xml",
-        "security/ir.model.access.csv",
+        "security/ir.access.csv",
         "views/mailcow_email_address_views.xml",
         "views/mailcow_domain_views.xml",
         "views/mailcow_mailbox_views.xml",

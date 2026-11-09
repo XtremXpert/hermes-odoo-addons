@@ -12,7 +12,7 @@
     "depends": ["proxmox_tenant", "mail"],
     "data": [
         "security/proxmox_server_groups.xml",
-        "security/ir.model.access.csv",
+        "security/ir.access.csv",
         "views/proxmox_tenant_views.xml",
         "views/proxmox_menus.xml",
     ],

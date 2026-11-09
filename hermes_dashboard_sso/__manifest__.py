@@ -12,6 +12,6 @@
     # Les codes ne sont lus et écrits que par les deux routes, en sudo. L'ACL
     # ne donne accès qu'au groupe technique (convention OCA : un modèle sans
     # ACL est un oubli, pas un choix).
-    "data": ["security/ir.model.access.csv"],
+    "data": ["security/ir.access.csv"],
     "installable": True,
 }

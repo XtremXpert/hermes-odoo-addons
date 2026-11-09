@@ -12,7 +12,7 @@
     "depends": ["base"],
     "data": [
         "security/asterisk_ari_groups.xml",
-        "security/ir.model.access.csv",
+        "security/ir.access.csv",
         "views/asterisk_call_views.xml",
         "views/asterisk_ari_menus.xml",
         "views/res_partner_views.xml",

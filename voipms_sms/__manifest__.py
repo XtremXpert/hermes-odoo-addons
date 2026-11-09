@@ -8,7 +8,7 @@
     "depends": ["base"],
     "data": [
         "security/voipms_sms_groups.xml",
-        "security/ir.model.access.csv",
+        "security/ir.access.csv",
         "views/voipms_did_views.xml",
         "views/voipms_sms_out_views.xml",
         "views/voipms_sms_menus.xml",

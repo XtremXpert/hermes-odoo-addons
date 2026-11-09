@@ -12,7 +12,7 @@
     "depends": ["mail"],
     "data": [
         "security/imap_groups.xml",
-        "security/ir.model.access.csv",
+        "security/ir.access.csv",
         "views/imap_reply_views.xml",
         "views/imap_message_views.xml",
         "views/imap_folder_views.xml",
