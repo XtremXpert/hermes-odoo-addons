@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
-from odoo.tests import TransactionCase, tagged
+from odoo.tests import TransactionCase
+from odoo.tests import tagged
 
 
 @tagged("post_install", "-at_install")
@@ -12,26 +13,28 @@ class TestNeutralizeGuard(TransactionCase):
         cls.cron = cls.env["ir.cron"].search([], limit=1)
         if not cls.cron:
             # Une base sans aucun cron ne prouve rien : on en crée un minimal.
-            cls.cron = cls.env["ir.cron"].create({
-                "name": "neutralize_guard test",
-                "state": "code",
-                "code": "pass",
-                "interval_number": 1,
-                "interval_type": "days",
-            })
+            cls.cron = cls.env["ir.cron"].create(
+                {
+                    "name": "neutralize_guard test",
+                    "state": "code",
+                    "code": "pass",
+                    "interval_number": 1,
+                    "interval_type": "days",
+                }
+            )
 
     def setUp(self):
         super().setUp()
-        self.addCleanup(self.icp.set_param, "database.is_neutralized", False)
+        self.addCleanup(self.icp.set_bool, "database.is_neutralized", False)
 
     def test_flags_the_neutralized_database(self):
-        self.icp.set_param("database.is_neutralized", True)
+        self.icp.set_bool("database.is_neutralized", True)
         self.assertTrue(self.cron._is_neutralized())
-        self.icp.set_param("database.is_neutralized", False)
+        self.icp.set_bool("database.is_neutralized", False)
         self.assertFalse(self.cron._is_neutralized())
 
     def test_callback_refuses_on_a_neutralized_database(self):
-        self.icp.set_param("database.is_neutralized", True)
+        self.icp.set_bool("database.is_neutralized", True)
         action = self.cron.ir_actions_server_id
         with patch.object(type(action), "run") as run:
             result = self.cron._callback(self.cron.name, action.id)
@@ -39,7 +42,7 @@ class TestNeutralizeGuard(TransactionCase):
         run.assert_not_called()
 
     def test_callback_delegates_on_a_normal_database(self):
-        self.icp.set_param("database.is_neutralized", False)
+        self.icp.set_bool("database.is_neutralized", False)
         action = self.cron.ir_actions_server_id
         parent = type(self.cron).__mro__[1]
         with patch.object(parent, "_callback") as delegated:

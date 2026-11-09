@@ -27,8 +27,6 @@ class IrCron(models.Model):
         appel programmatique, puisque les trois passent par ici.
         """
         if self._is_neutralized():
-            _logger.info(
-                "Cron %s ignoré : base neutralisée (%s).", cron_name, PARAM
-            )
+            _logger.info("Cron %s ignoré : base neutralisée (%s).", cron_name, PARAM)
             return False
         return super()._callback(cron_name, server_action_id)
