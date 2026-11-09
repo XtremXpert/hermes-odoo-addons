@@ -17,6 +17,7 @@ class FausseReponse:
 
     # Une fausse réponse HTTP, pas un modèle Odoo : il n'y a pas de super() à appeler.
     def read(self):  # pylint: disable=method-required-super
+        """Rend le corps simulé de la réponse."""
         return self._corps
 
     def __enter__(self):
@@ -29,6 +30,7 @@ class FausseReponse:
 class TestListageVide(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare le domaine des tests de listage vide."""
         super().setUpClass()
         cls.domain = cls.env["mailcow.domain"].search([("name", "=", "dc.com")], limit=1)
         if not cls.domain:
@@ -59,6 +61,7 @@ class TestQuotaEnTexte(TransactionCase):
     """Un quota qui arrive en texte ne doit pas faire lever la synchronisation."""
 
     def test_le_domaine_lit_un_quota_textuel(self):
+        """Vérifie qu'un quota renvoyé en texte est lu."""
         remote = {
             "data": [{"domain_name": "texte.com", "active": "1", "def_quota_for_mbox": "209715200"}]
         }
@@ -73,6 +76,7 @@ class TestReprises(TransactionCase):
         return MailcowClient(self.env, base_url="https://exemple.test", api_key="clef-de-test")
 
     def test_reprend_apres_un_refus_passager(self):
+        """Vérifie que la synchronisation reprend après un refus passager."""
         refus = urllib.error.HTTPError("https://exemple.test", 503, "Service Unavailable", {}, None)
         with patch(
             "urllib.request.urlopen", side_effect=[refus, FausseReponse('[{"type": "success"}]')]

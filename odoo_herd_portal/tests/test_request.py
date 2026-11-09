@@ -53,6 +53,7 @@ class HerdRequestMixin(HerdPortalMixin):
         Request = type(env["k8s.odoo.instance.request"])
 
         def create_instance(req, staging=False):
+            """Crée une instance mockée pour une demande, en staging ou en production."""
             name = f"{req.instance_name}-staging" if staging else req.instance_name
             vals = {
                 "cluster_id": req.template_id.herd_cluster_id.id,
@@ -66,6 +67,7 @@ class HerdRequestMixin(HerdPortalMixin):
             return env["k8s.odoo.instance"].sudo().create(vals)
 
         def rpc(req, instance, service, method, *args):
+            """Enregistre l'appel RPC simulé et retourne un identifiant d'administrateur."""
             self.rpc_calls.append((instance.name, service, method, args))
             if method == "authenticate":
                 return self.rpc_uid
@@ -96,14 +98,17 @@ class HerdRequestMixin(HerdPortalMixin):
 class TestHerdRequest(HerdRequestMixin, TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare les clients, l'offre et le gestionnaire des tests de demande."""
         super().setUpClass()
         cls._herd_request_setup()
 
     def setUp(self):
+        """Installe les mocks du cluster et des appels RPC."""
         super().setUp()
         self._request_mocks()
 
     def test_name_rules(self):
+        """Vérifie les règles de nom d'instance : longueur, caractères et tirets."""
         Request = self.env["k8s.odoo.instance.request"]
         for bad in ("ab", "1shop", "Shop!", "shop-", "my--shop", "a" * 31):
             with self.assertRaises(ValidationError, msg=bad):
@@ -114,6 +119,7 @@ class TestHerdRequest(HerdRequestMixin, TransactionCase):
         self.assertEqual(Request._herd_clean_name("  My-Shop2 "), "my-shop2")
 
     def test_name_already_taken(self):
+        """Vérifie qu'un nom ou un hôte déjà pris est refusé."""
         with self.assertRaises(ValidationError):
             self._ask(name="shop")  # existing production of the test cluster
         self.prod.current_ingress_hosts = "taken.clients.example.com, www.shop.example.com"
@@ -121,6 +127,7 @@ class TestHerdRequest(HerdRequestMixin, TransactionCase):
             self._ask(name="taken")
 
     def test_request_rules(self):
+        """Vérifie les valeurs d'une demande acceptée : état, client et hôte."""
         req = self._ask()
         self.assertEqual(req.state, "requested")
         self.assertEqual(req.partner_id, self.other_client)
@@ -140,12 +147,14 @@ class TestHerdRequest(HerdRequestMixin, TransactionCase):
         self.assertFalse(Request._herd_can_request(self.client_user))
 
     def test_unpublished_offer_refused(self):
+        """Vérifie qu'une offre non publiée est refusée."""
         self.offer.herd_portal_published = False
         self.assertFalse(self.env["k8s.odoo.instance.request"]._herd_can_request(self.newcomer))
         with self.assertRaises(UserError):
             self._ask()
 
     def test_only_a_human_manager_approves(self):
+        """Vérifie que seul un gestionnaire humain approuve."""
         req = self._ask()
         for user in (self.newcomer, self.approver, self.agent):
             with self.assertRaises(AccessError):
@@ -156,6 +165,7 @@ class TestHerdRequest(HerdRequestMixin, TransactionCase):
         self.assertEqual(req.state, "requested")
 
     def test_full_flow(self):
+        """Vérifie le flux complet d'une demande jusqu'à la création de la production."""
         req = self._ask()
         req.with_user(self.manager).action_herd_approve()
         self.assertEqual(req.state, "creating")
@@ -201,6 +211,7 @@ class TestHerdRequest(HerdRequestMixin, TransactionCase):
 
     @mute_logger("odoo.addons.odoo_herd_portal.models.k8s_odoo_instance_request")
     def test_unsecured_database_stays_unreachable(self):
+        """Vérifie qu'une base non sécurisée reste injoignable."""
         req = self._ask()
         req.with_user(self.manager).action_herd_approve()
         self.rpc_uid = False  # admin/admin refused
@@ -230,11 +241,13 @@ class TestHerdRequest(HerdRequestMixin, TransactionCase):
         self.assertTrue(req.staging_id)
 
     def test_requester_needs_an_email(self):
+        """Vérifie que le demandeur doit avoir une adresse courriel."""
         self.newcomer.email = False
         with self.assertRaises(UserError):
             self._ask()
 
     def test_failed_init(self):
+        """Vérifie qu'une initialisation échouée est signalée et traitée par le cron."""
         req = self._ask()
         req.with_user(self.manager).action_herd_approve()
         req.production_id.phase = "InitFailed"
@@ -242,6 +255,7 @@ class TestHerdRequest(HerdRequestMixin, TransactionCase):
         self.assertEqual(req.state, "failed")
 
     def test_refuse_and_cancel(self):
+        """Vérifie le refus et l'annulation d'une demande."""
         req = self._ask()
         with self.assertRaises(AccessError):
             req.with_user(self.newcomer).action_herd_refuse()
@@ -255,6 +269,7 @@ class TestHerdRequest(HerdRequestMixin, TransactionCase):
         self.assertEqual(req2.state, "refused")
 
     def test_phase_change_wakes_the_cron(self):
+        """Vérifie qu'un changement de phase réveille le cron."""
         req = self._ask()
         req.with_user(self.manager).action_herd_approve()
         cron = self.env.ref("odoo_herd_portal.cron_herd_requests")
@@ -266,6 +281,7 @@ class TestHerdRequest(HerdRequestMixin, TransactionCase):
             self.assertFalse(trigger.called)
 
     def test_wizard_database_name(self):
+        """Vérifie que le wizard de création reprend le nom de la base demandée."""
         wizard = self.env["k8s.create.instance.wizard"].new(
             dict(
                 self.offer.get_template_values(),
@@ -287,10 +303,12 @@ class TestHerdRequest(HerdRequestMixin, TransactionCase):
 class TestHerdRequestPortal(HerdRequestMixin, HttpCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare les comptes et l'offre des tests du portail de demande."""
         super().setUpClass()
         cls._herd_request_setup()
 
     def setUp(self):
+        """Installe les mocks du cluster et des appels RPC."""
         super().setUp()
         self._request_mocks()
 
@@ -303,6 +321,7 @@ class TestHerdRequestPortal(HerdRequestMixin, HttpCase):
         return response.json()["result"]
 
     def test_newcomer_requests_from_the_portal(self):
+        """Vérifie qu'un nouvel arrivant demande une base depuis le portail."""
         self.authenticate("herd_stranger", "herd_stranger")
         self.assertEqual(self._counters(), {"herd_instance_count": 0})
         page = self.url_open("/my/odoo")
@@ -329,6 +348,7 @@ class TestHerdRequestPortal(HerdRequestMixin, HttpCase):
         self.assertEqual(self._counters(), {"herd_instance_count": 0})
 
     def test_bad_name_comes_back_with_the_error(self):
+        """Vérifie qu'un nom invalide revient dans le formulaire avec l'erreur."""
         self.authenticate("herd_stranger", "herd_stranger")
         response = self.url_open(
             "/my/odoo/new/submit",
@@ -343,16 +363,19 @@ class TestHerdRequestPortal(HerdRequestMixin, HttpCase):
         self.assertFalse(self.env["k8s.odoo.instance.request"].search([]))
 
     def test_client_with_a_database_gets_no_offer(self):
+        """Vérifie qu'un client ayant déjà une base ne voit pas l'offre."""
         self.authenticate("herd_client_user", "herd_client_user")
         self.assertNotIn('href="/my/odoo/new"', self.url_open("/my/odoo").text)
         self.assertNotIn("/my/odoo/new", self.url_open("/my/odoo/new").url)
 
     def test_card_hidden_without_offer(self):
+        """Vérifie que la carte du portail est masquée sans offre."""
         self.offer.herd_portal_published = False
         self.authenticate("herd_stranger", "herd_stranger")
         self.assertEqual(self._counters(), {})
 
     def test_cannot_cancel_another_clients_request(self):
+        """Vérifie qu'un client ne peut pas annuler la demande d'un autre."""
         req = self._ask()
         self.authenticate("herd_client_user", "herd_client_user")
         self.url_open(f"/my/odoo/request/{req.id}/cancel", data={"csrf_token": self.csrf_token()})

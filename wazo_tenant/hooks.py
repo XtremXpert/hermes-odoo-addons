@@ -32,6 +32,11 @@ MOVED_PREFIXES = (
 
 
 def adopt_wazo_phone_xmlids(env):
+    """Adopte les xmlids déplacés de `wazo_phone` vers `wazo_tenant`.
+
+    Args:
+        env: environnement Odoo de l'installation ou de la mise à jour.
+    """
     # Odoo 20 passe un Environment : le curseur vit sous env.cr.
     env.cr.execute(
         """

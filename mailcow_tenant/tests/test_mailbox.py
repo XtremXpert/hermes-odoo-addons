@@ -13,6 +13,7 @@ from odoo.tests import tagged
 class TestMailcowMailbox(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare la connexion Mailcow des tests de boîte."""
         super().setUpClass()
         cls.env["ir.config_parameter"].sudo().set_str(
             "mailcow.base_url", "https://mail.example.com"
@@ -21,6 +22,7 @@ class TestMailcowMailbox(TransactionCase):
         cls.domain = cls.env["mailcow.domain"].create({"name": "dc.com"})
 
     def test_email_is_computed(self):
+        """Vérifie que l'adresse de la boîte est calculée."""
         mailbox = self.env["mailcow.mailbox"].create(
             {
                 "local_part": "info",
@@ -30,6 +32,7 @@ class TestMailcowMailbox(TransactionCase):
         self.assertEqual(mailbox.email, "info@dc.com")
 
     def test_create_generates_password_shown_once_and_never_stored(self):
+        """Vérifie que la création fabrique un mot de passe affiché une fois et non stocké."""
         self.assertNotIn("password", self.env["mailcow.mailbox"]._fields)
         mailbox = self.env["mailcow.mailbox"].create(
             {
@@ -47,6 +50,7 @@ class TestMailcowMailbox(TransactionCase):
         self.assertNotIn(envoye, " ".join(mailbox.message_ids.mapped("body")))
 
     def test_failed_create_shows_no_password(self):
+        """Vérifie qu'une création en échec n'affiche aucun mot de passe."""
         mailbox = self.env["mailcow.mailbox"].create(
             {
                 "local_part": "info",
@@ -59,6 +63,7 @@ class TestMailcowMailbox(TransactionCase):
         self.assertFalse(mailbox.synced)
 
     def test_create_on_mailcow_sends_payload_and_marks_synced(self):
+        """Vérifie que la création envoie la charge et marque la boîte synchronisée."""
         mailbox = self.env["mailcow.mailbox"].create(
             {
                 "local_part": "info",
@@ -95,6 +100,7 @@ class TestMailcowMailbox(TransactionCase):
         self.assertTrue(mailbox.synced)
 
     def test_update_on_mailcow_does_not_send_password(self):
+        """Vérifie que la mise à jour n'envoie pas de mot de passe."""
         mailbox = self.env["mailcow.mailbox"].create(
             {
                 "local_part": "info",
@@ -120,6 +126,7 @@ class TestMailcowMailbox(TransactionCase):
         self.assertEqual(payload["attr"]["quota"], 50)
 
     def test_delete_on_mailcow_unsyncs_and_archives(self):
+        """Vérifie que la suppression désynchronise et archive la boîte."""
         mailbox = self.env["mailcow.mailbox"].create(
             {
                 "local_part": "info",
@@ -140,6 +147,7 @@ class TestMailcowMailbox(TransactionCase):
         self.assertFalse(mailbox.active)
 
     def test_sync_from_mailbox_creates_and_unsyncs_local_only(self):
+        """Vérifie que la synchronisation crée les boîtes et démarque les fiches locales seules."""
         local_only = self.env["mailcow.mailbox"].create(
             {
                 "local_part": "local",
@@ -196,6 +204,7 @@ class TestMailcowMailbox(TransactionCase):
         self.assertFalse(local_only.synced)
 
     def test_reset_password_sends_generated_password_shown_once(self):
+        """Vérifie que la réinitialisation envoie un mot de passe affiché une fois."""
         mailbox = self.env["mailcow.mailbox"].create(
             {
                 "local_part": "info",

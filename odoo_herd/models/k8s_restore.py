@@ -63,6 +63,17 @@ class K8sOdooRestore(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        """Crée des restaurations en complétant nom et jeton de webhook.
+
+        Le nom vient de la séquence `k8s.odoo.restore` s'il est absent ou « New », et
+        un jeton `secrets.token_urlsafe(32)` est généré s'il manque.
+
+        Args:
+            vals_list (list[dict]): valeurs des enregistrements à créer.
+
+        Returns:
+            k8s.odoo.restore: enregistrements créés.
+        """
         for vals in vals_list:
             if not vals.get("name") or vals.get("name") == "New":
                 vals["name"] = self.env["ir.sequence"].next_by_code("k8s.odoo.restore") or "New"
@@ -190,6 +201,12 @@ class K8sOdooRestore(models.Model):
             raise UserError(_("Failed to create restore job: %s") % str(e))
 
     def mark_running(self, start_time=None, job_name=None):
+        """Passe les restaurations à l'état « running ».
+
+        Args:
+            start_time (datetime, optional): heure de début fournie par le job.
+            job_name (str, optional): nom du job Kubernetes.
+        """
         for record in self:
             vals = {"state": "running"}
             if start_time:
@@ -199,6 +216,12 @@ class K8sOdooRestore(models.Model):
             record.write(vals)
 
     def mark_completed(self, completion_time=None, message=None):
+        """Passe les restaurations à l'état « completed ».
+
+        Args:
+            completion_time (datetime, optional): heure de fin du job.
+            message (str, optional): message à conserver sur la fiche.
+        """
         for record in self:
             vals = {"state": "completed"}
             if completion_time:
@@ -208,6 +231,12 @@ class K8sOdooRestore(models.Model):
             record.write(vals)
 
     def mark_failed(self, message=None, completion_time=None):
+        """Passe les restaurations à l'état « failed ».
+
+        Args:
+            message (str, optional): cause de l'échec.
+            completion_time (datetime, optional): heure de fin du job.
+        """
         for record in self:
             vals = {"state": "failed"}
             if completion_time:

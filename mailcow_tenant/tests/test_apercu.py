@@ -13,6 +13,7 @@ from ..services.mailcow_client import MailcowClient
 class TestApercu(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare le domaine des tests d'aperçu."""
         super().setUpClass()
         cls.domain = cls.env["mailcow.domain"].search([("name", "=", "dc.com")], limit=1)
         if not cls.domain:
@@ -29,6 +30,7 @@ class TestApercu(TransactionCase):
         }
 
     def test_l_apercu_ne_change_rien_et_n_ecrit_pas_au_serveur(self):
+        """Vérifie que l'aperçu ne change rien et n'écrit pas au serveur."""
         existante = self.env["mailcow.mailbox"].create(
             {
                 "local_part": "existante",
@@ -48,6 +50,7 @@ class TestApercu(TransactionCase):
         )
 
     def test_l_apercu_nomme_les_fiches_et_les_champs(self):
+        """Vérifie que l'aperçu nomme les fiches et les champs concernés."""
         connue = self.env["mailcow.mailbox"].create(
             {
                 "local_part": "connue",
@@ -80,6 +83,7 @@ class TestApercu(TransactionCase):
         self.assertTrue(disparue.synced, "une fiche a été marquée disparue")
 
     def test_un_serveur_identique_n_annonce_rien_pour_cette_fiche(self):
+        """Vérifie qu'une fiche identique au serveur n'annonce aucun changement."""
         self.env["mailcow.mailbox"].create(
             {"local_part": "calme", "domain_id": self.domain.id, "name": "pareil", "synced": True}
         )
@@ -92,6 +96,7 @@ class TestApercu(TransactionCase):
         )
 
     def test_le_bouton_ouvre_un_apercu(self):
+        """Vérifie que le bouton ouvre un aperçu."""
         with patch.object(MailcowClient, "_request", return_value=[self._entree("nimporte")]):
             action = self.env["mailcow.mailbox"].action_preview_sync_from_mailcow()
         self.assertEqual(action["res_model"], "mailcow.sync.preview")

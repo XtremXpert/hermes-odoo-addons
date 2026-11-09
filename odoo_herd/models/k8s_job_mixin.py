@@ -55,6 +55,11 @@ class K8sJobMixin(models.AbstractModel):
         su = self.env.su
 
         def create_custom_resources():
+            """Crée les ressources personnalisées après validation de la transaction.
+
+            Appelée par `cr.postcommit` : ouvre un curseur neuf et rejoue la création
+            avec la même identité et les mêmes droits que l'appelant.
+            """
             with registry.cursor() as cr:
                 env = api.Environment(cr, uid, context, su=su)
                 env[model].browse(ids).exists()._k8s_job_create_now()

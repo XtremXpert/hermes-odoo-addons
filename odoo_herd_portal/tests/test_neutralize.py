@@ -11,6 +11,7 @@ class TestHerdNeutralize(TransactionCase):
 
     @classmethod
     def setUpClass(cls):
+        """Prépare un compte CI et son staging pour le test de neutralisation."""
         super().setUpClass()
         cls.ci = new_test_user(
             cls.env,
@@ -29,6 +30,7 @@ class TestHerdNeutralize(TransactionCase):
         self.env.invalidate_all()
 
     def test_neutralize_disables_staging_operators_and_their_keys(self):
+        """Vérifie que la neutralisation désactive les opérateurs et supprime leurs clés."""
         self._neutralize()
         self.assertFalse(self.ci.active)
         Keys = self.env["res.users.apikeys"].sudo()

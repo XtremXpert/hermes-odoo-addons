@@ -35,6 +35,12 @@ MOVED_PREFIXES = (
 
 
 def migrate(cr, version):
+    """Adopte les xmlids déplacés de `wazo_phone` avant la mise à jour.
+
+    Args:
+        cr: curseur de la base.
+        version: version du module avant la mise à jour.
+    """
     cr.execute(
         """
         UPDATE ir_model_data

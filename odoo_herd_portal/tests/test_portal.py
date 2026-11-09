@@ -15,10 +15,12 @@ from .common import totp_now
 class TestHerdPortal(HerdPortalMixin, HttpCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare la production, son staging et les comptes du portail."""
         super().setUpClass()
         cls._herd_setup()
 
     def setUp(self):
+        """Installe les mocks du cluster et l'image live des instances."""
         super().setUp()
         self.patch_image = self._herd_mocks()
 
@@ -29,6 +31,7 @@ class TestHerdPortal(HerdPortalMixin, HttpCase):
         return self.url_open(self._url(suffix), data=dict(data, csrf_token=self.csrf_token()))
 
     def test_client_sees_production_and_staging(self):
+        """Vérifie que le client voit sa production et son staging sur le portail."""
         self.authenticate("herd_client_user", "herd_client_user")
         response = self.url_open("/my/odoo")
         self.assertEqual(response.status_code, 200)
@@ -40,12 +43,14 @@ class TestHerdPortal(HerdPortalMixin, HttpCase):
         self.assertNotIn("kubeconfig", response.text)
 
     def test_stranger_gets_not_found(self):
+        """Vérifie qu'un étranger reçoit une page absente (404)."""
         self.authenticate("herd_stranger", "herd_stranger")
         self.assertEqual(self.url_open(self._url()).status_code, 404)
         response = self._post("/resync", staging_id=self.staging.id)
         self.assertEqual(response.status_code, 404)
 
     def test_actions_refuse_get(self):
+        """Vérifie que les actions en POST refusent une requête GET."""
         self.authenticate("herd_approver", "herd_approver")
         response = self.url_open(self._url("/resync"), allow_redirects=False)
         self.assertNotEqual(response.status_code, 200)
@@ -69,6 +74,7 @@ class TestHerdPortal(HerdPortalMixin, HttpCase):
         self.assertEqual(promotion.image, promotion.production_image)
 
     def test_approver_confirms_with_emailed_code(self):
+        """Vérifie que l'approbateur confirme avec le code reçu par courriel."""
         self.authenticate("herd_client_user", "herd_client_user")
         self._post(
             "/promote",
@@ -97,6 +103,7 @@ class TestHerdPortal(HerdPortalMixin, HttpCase):
         self.assertEqual(promotion.confirmed_by_id, self.approver)
 
     def test_resync_from_portal(self):
+        """Vérifie qu'un resync lancé depuis le portail crée la resynchronisation."""
         self.authenticate("herd_client_user", "herd_client_user")
         self._post("/resync", staging_id=self.staging.id)
         refresh = self.env["k8s.odoo.staging.refresh"].search(
@@ -106,6 +113,7 @@ class TestHerdPortal(HerdPortalMixin, HttpCase):
         self.assertEqual(refresh.source_instance_id, self.prod)
 
     def test_operator_webhook_advances_the_promotion(self):
+        """Vérifie que le webhook de l'opérateur fait avancer la promotion."""
         promotion = self.env["k8s.odoo.promotion"].browse(
             self.env["k8s.odoo.promotion"]
             .with_user(self.agent)
@@ -140,6 +148,7 @@ class TestHerdPortal(HerdPortalMixin, HttpCase):
         )
 
     def test_totp_approver_confirms_with_the_app_code(self):
+        """Vérifie que l'approbateur confirme avec le code TOTP de son application."""
         self._herd_enable_totp(self.approver)
         promotion = self._agent_request()
         self._authenticate_2fa("herd_approver")
@@ -163,6 +172,7 @@ class TestHerdPortal(HerdPortalMixin, HttpCase):
         self.assertEqual(promotion.confirmed_by_id, self.approver)
 
     def test_totp_code_cannot_be_replayed(self):
+        """Vérifie qu'un code TOTP ne peut pas être rejoué."""
         self._herd_enable_totp(self.approver)
         first = self._agent_request()
         self._authenticate_2fa("herd_approver")
@@ -181,6 +191,7 @@ class TestHerdPortal(HerdPortalMixin, HttpCase):
         self.assertEqual(second.state, "requested")
 
     def test_required_2fa_shows_how_to_enable_it(self):
+        """Vérifie que l'exigence de 2FA explique comment l'activer."""
         self.prod.herd_require_2fa = True
         self._agent_request()
         self.authenticate("herd_approver", "herd_approver")

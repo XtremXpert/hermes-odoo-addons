@@ -15,6 +15,11 @@ n'existent pas.
 
 
 def adopt_mailcow_admin_xmlids(env):
+    """Adopte les xmlids déplacés de `mailcow_admin` vers `mailcow_tenant`.
+
+    Args:
+        env: environnement Odoo de l'installation ou de la mise à jour.
+    """
     # Odoo 20 passe un Environment : le curseur vit sous env.cr.
     # Tout ce qui n'est pas le tableau de bord (il reste dans ``mailcow``).
     env.cr.execute(

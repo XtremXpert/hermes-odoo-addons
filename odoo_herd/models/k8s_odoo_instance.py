@@ -620,6 +620,18 @@ class K8sOdooInstance(models.Model):
             raise UserError(_(error_msg))
 
     def write(self, vals):
+        """Écrit des instances et mémorise les clés de spec modifiées.
+
+        Une écriture sur un champ éditable, hors synchronisation depuis le cluster,
+        ajoute son nom à `edited_fields` pour que la synchronisation sache quoi
+        renvoyer au cluster.
+
+        Args:
+            vals (dict): valeurs à écrire.
+
+        Returns:
+            bool: résultat de l'écriture du modèle parent.
+        """
         res = super().write(vals)
         edited = EDITABLE_SPEC_KEYS.keys() & set(vals)
         # A sync from the cluster writes "spec" with the values it reads.

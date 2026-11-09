@@ -101,6 +101,17 @@ class K8sOdooStagingRefresh(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        """Crée des resynchronisations en complétant nom et jeton de webhook.
+
+        Le nom vient de la séquence `k8s.odoo.staging.refresh` s'il est absent ou
+        « New », et un jeton `secrets.token_urlsafe(32)` est généré s'il manque.
+
+        Args:
+            vals_list (list[dict]): valeurs des enregistrements à créer.
+
+        Returns:
+            k8s.odoo.staging.refresh: enregistrements créés.
+        """
         for vals in vals_list:
             if not vals.get("name") or vals.get("name") == "New":
                 vals["name"] = (
@@ -228,6 +239,16 @@ class K8sOdooStagingRefresh(models.Model):
             raise UserError(_("Failed to create staging refresh job: %s") % str(e))
 
     def mark_running(self, start_time=None, status=None):
+        """Passe les resynchronisations à l'état « running ».
+
+        Le dictionnaire `status` alimente les champs des jobs et du staging quand les
+        clés `dbJobName`, `filestoreJobName`, `neutralizeJobName`, `tempDbName`,
+        `sourceSnapshot` ou `rollbackSnapshot` sont présentes.
+
+        Args:
+            start_time (datetime, optional): heure de début fournie par le job.
+            status (dict, optional): statut détaillé envoyé par l'opérateur.
+        """
         status = status or {}
         for record in self:
             vals = {"state": "running"}
@@ -246,6 +267,13 @@ class K8sOdooStagingRefresh(models.Model):
             record.write(vals)
 
     def mark_completed(self, completion_time=None, message=None, status=None):
+        """Passe les resynchronisations à l'état « completed ».
+
+        Args:
+            completion_time (datetime, optional): heure de fin du job.
+            message (str, optional): message à conserver sur la fiche.
+            status (dict, optional): statut détaillé envoyé par l'opérateur.
+        """
         status = status or {}
         for record in self:
             vals = {"state": "completed"}
@@ -266,6 +294,13 @@ class K8sOdooStagingRefresh(models.Model):
             record.write(vals)
 
     def mark_failed(self, message=None, completion_time=None, status=None):
+        """Passe les resynchronisations à l'état « failed ».
+
+        Args:
+            message (str, optional): cause de l'échec.
+            completion_time (datetime, optional): heure de fin du job.
+            status (dict, optional): statut détaillé envoyé par l'opérateur.
+        """
         status = status or {}
         for record in self:
             vals = {"state": "failed"}

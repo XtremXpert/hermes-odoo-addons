@@ -127,6 +127,19 @@ class MailcowSyncMixin(models.AbstractModel):
     def web_search_read(
         self, domain, specification, offset=0, limit=None, order=None, count_limit=None
     ):
+        """Rafraîchit la copie locale si elle est vieille, puis lit la liste.
+
+        Args:
+            domain: domaine de recherche.
+            specification: champs demandés par la vue.
+            offset: index de la première ligne.
+            limit: nombre maximum de lignes.
+            order: ordre de tri.
+            count_limit: limite du comptage.
+
+        Returns:
+            dict: résultat de `web_search_read` du modèle.
+        """
         # L'ouverture d'une liste rafraîchit le local si la copie est vieille :
         # plus besoin de « Tout synchroniser » à la main.
         self._rafraichir_si_obsolete()

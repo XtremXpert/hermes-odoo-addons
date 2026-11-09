@@ -11,6 +11,7 @@ from odoo.tools.misc import mute_logger
 class TestOdooInstanceProductionRef(TransactionCase):
     @classmethod
     def setUpClass(cls):  # type: ignore[misc]
+        """Prépare le cluster nécessaire aux tests de référence à la production."""
         super().setUpClass()
         env: Any = cls.env
         cls.cluster = cast(
@@ -39,6 +40,7 @@ class TestOdooInstanceProductionRef(TransactionCase):
 
     @mute_logger("odoo.sql_db")
     def test_production_with_source_ref_raises(self):
+        """Vérifie qu'une production avec une référence source est refusée."""
         prod = self._make_instance(name="prod-a", environment="production")
         with self.assertRaises(UserError):
             self._make_instance(
@@ -48,6 +50,7 @@ class TestOdooInstanceProductionRef(TransactionCase):
             )
 
     def test_staging_with_source_ref_saves_cleanly(self):
+        """Vérifie qu'un staging avec une référence source s'enregistre sans erreur."""
         prod = self._make_instance(name="prod-c", environment="production")
         staging = self._make_instance(
             name="stg-c",

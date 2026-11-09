@@ -11,12 +11,14 @@ REPONSE = [{"msg": "Task completed", "type": "success"}]
 class TestJournal(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare le domaine et le gestionnaire des tests de journal."""
         super().setUpClass()
         cls.domain = cls.env["mailcow.domain"].search([("name", "=", "dc.com")], limit=1)
         if not cls.domain:
             cls.domain = cls.env["mailcow.domain"].create({"name": "dc.com"})
 
     def test_la_creation_poussee_laisse_une_trace(self):
+        """Vérifie que la création poussée laisse une trace dans le fil."""
         boite = self.env["mailcow.mailbox"].create(
             {
                 "local_part": "trace",
@@ -30,6 +32,7 @@ class TestJournal(TransactionCase):
         self.assertIn("trace@dc.com", corps, "la fiche n est pas nommée")
 
     def test_la_modification_poussee_laisse_une_trace(self):
+        """Vérifie que la modification poussée laisse une trace dans le fil."""
         boite = self.env["mailcow.mailbox"].create(
             {"local_part": "trace2", "domain_id": self.domain.id, "synced": True}
         )
@@ -39,6 +42,7 @@ class TestJournal(TransactionCase):
         self.assertIn("Mise à jour", corps, "aucune mention de mise à jour")
 
     def test_la_suppression_laisse_une_trace(self):
+        """Vérifie que la suppression laisse une trace dans le fil."""
         boite = self.env["mailcow.mailbox"].create(
             {"local_part": "trace3", "domain_id": self.domain.id, "synced": True}
         )
@@ -48,6 +52,7 @@ class TestJournal(TransactionCase):
         self.assertIn("supprim", corps.lower(), "aucune trace de la suppression")
 
     def test_l_auteur_est_l_utilisateur_courant(self):
+        """Vérifie que l'auteur de la trace est l'utilisateur courant."""
         boite = self.env["mailcow.mailbox"].create(
             {"local_part": "trace4", "domain_id": self.domain.id}
         )

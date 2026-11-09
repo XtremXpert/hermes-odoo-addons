@@ -12,6 +12,7 @@ from odoo.tests import tagged
 class TestTenantDashboard(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare les modèles du tableau de bord des tests."""
         super().setUpClass()
         cls.Dashboard = cls.env["wazo.tenant.dashboard"]
         cls.User = cls.env["wazo.user"]
@@ -37,6 +38,7 @@ class TestTenantDashboard(TransactionCase):
         )
 
     def test_empty_dashboard_counts_zeros(self):
+        """Vérifie qu'un tableau de bord vide compte des zéros."""
         data = self.Dashboard.get_tenant_dashboard()
         self.assertEqual(data["users"]["total"], 0)
         self.assertEqual(data["groups"]["total"], 0)
@@ -44,6 +46,7 @@ class TestTenantDashboard(TransactionCase):
         self.assertFalse(data["calls"]["last_cdr"])
 
     def test_user_and_group_states(self):
+        """Vérifie les compteurs d'état des usagers et des groupes."""
         self.User.create({"name": "Alice", "wazo_state": "synced"})
         self.User.create({"name": "Bob", "wazo_state": "error"})
         group = self.Group.create({"name": "Accueil", "wazo_state": "synced"})
@@ -57,6 +60,7 @@ class TestTenantDashboard(TransactionCase):
         self.assertEqual(group.member_count, 0)
 
     def test_calls_window_and_recent(self):
+        """Vérifie la fenêtre d'activité et les appels récents."""
         self._cdr(minutes_ago=10, answered=True)
         self._cdr(minutes_ago=20, answered=False)
         self._cdr(minutes_ago=10 * 24 * 60, answered=True)  # hors fenêtre

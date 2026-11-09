@@ -12,6 +12,7 @@ class TestDeploymentStrategy(TransactionCase):
 
     @classmethod
     def setUpClass(cls):
+        """Prépare le cluster et les valeurs communs aux tests de stratégie de déploiement."""
         super().setUpClass()
         env: Any = cls.env
         # Create test cluster with required fields
@@ -141,6 +142,7 @@ class TestCreateInstanceWizardDeploymentStrategy(TransactionCase):
 
     @classmethod
     def setUpClass(cls):
+        """Prépare le cluster et le wizard nécessaires aux tests de stratégie du wizard."""
         super().setUpClass()
         env: Any = cls.env
         cls.cluster = cast(
