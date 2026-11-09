@@ -68,7 +68,7 @@ def introduire(dossier: Path, genre: str) -> str:
         cible = dossier / "asterisk_ari" / "security" / "casse.xml"
         cible.write_text("<odoo><data>\n")
     elif genre == "csv":
-        cible = dossier / "mailcow_tenant" / "security" / "ir.access.csv"
+        cible = dossier / "mailcow_tenant" / "security" / "ir.model.access.csv"
         regle = "regle_cassee,un modele,trop,peu,de,champs,ici"
         cible.write_text(cible.read_text().rstrip("\n") + "\n" + regle + "\n")
     else:
