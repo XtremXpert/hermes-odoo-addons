@@ -22,6 +22,7 @@ IMPORT = re.compile(r'from\s+"(@[a-z0-9_]+)/[^"]*"')
 
 class TestAssetDependencies(TransactionCase):
     def test_le_javascript_importe_seulement_des_modules_declares(self):
+        """Vérifie que le JavaScript n'importe que des modules déclarés."""
         racine = Path(__file__).resolve().parents[1]
         manifeste = ast.literal_eval((racine / "__manifest__.py").read_text())
         déclarées = set(manifeste.get("depends", []))

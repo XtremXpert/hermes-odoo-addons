@@ -14,6 +14,7 @@ REPONSE = [{"msg": "Task completed", "type": "success"}]
 class TestBoutonFourreTout(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare le domaine des tests du bouton fourre-tout."""
         super().setUpClass()
         cls.domain = cls.env["mailcow.domain"].search([("name", "=", "dc.com")], limit=1)
         if not cls.domain:
@@ -34,6 +35,7 @@ class TestBoutonFourreTout(TransactionCase):
         )
 
     def test_cree_le_fourre_tout_absent(self):
+        """Vérifie que le bouton crée le fourre-tout absent."""
         boite = self._boite()
         with patch.object(MailcowClient, "_request", return_value=REPONSE):
             boite.action_make_catch_all()
@@ -42,6 +44,7 @@ class TestBoutonFourreTout(TransactionCase):
         self.assertTrue(self._fourre_tout().synced)
 
     def test_reoriente_un_fourre_tout_existant(self):
+        """Vérifie que le bouton réoriente un fourre-tout existant."""
         boite = self._boite()
         autre = self.env["mailcow.email_address"].create({"address": "autre@dc.com"})
         existant = self.env["mailcow.alias"].create(
@@ -60,6 +63,7 @@ class TestBoutonFourreTout(TransactionCase):
         self.assertTrue(existant.synced)
 
     def test_refuse_une_boite_absente_du_serveur(self):
+        """Vérifie que le bouton refuse une boîte absente du serveur."""
         boite = self._boite(local="fantome", synced=False)
         with self.assertRaises(UserError):
             boite.action_make_catch_all()

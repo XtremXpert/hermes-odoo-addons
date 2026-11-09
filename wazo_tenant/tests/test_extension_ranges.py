@@ -192,6 +192,7 @@ class TestInRanges(_RangeTestBase):
     """Appartenance d'un numéro aux bornes rendues par l'API."""
 
     def test_number_inside_a_subrange_matches(self):
+        """Vérifie qu'un numéro d'une sous-plage est reconnu."""
         self.assertTrue(
             in_ranges("1006", [{"start": "1000", "end": "1000"}, {"start": "1006", "end": "1010"}])
         )
@@ -210,6 +211,7 @@ class TestInRanges(_RangeTestBase):
         )
 
     def test_boundaries_are_included(self):
+        """Vérifie que les bornes des plages sont incluses."""
         plages = [{"start": "1000", "end": "1999"}]
         self.assertTrue(in_ranges("1000", plages))
         self.assertTrue(in_ranges("1999", plages))
@@ -217,6 +219,7 @@ class TestInRanges(_RangeTestBase):
         self.assertFalse(in_ranges("2000", plages))
 
     def test_empty_ranges_match_nothing(self):
+        """Vérifie qu'aucune plage ne correspond quand la liste est vide."""
         self.assertFalse(in_ranges("1000", []))
 
     def test_zero_padded_numbers_are_compared_numerically(self):

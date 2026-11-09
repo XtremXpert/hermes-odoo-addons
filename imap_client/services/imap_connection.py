@@ -60,5 +60,6 @@ class IMAPConnexion:
         self.srv.uid("store", uid.encode(), "+FLAGS", "\\Seen")
 
     def quitter(self):
+        """Déconnecte la session IMAP en ignorant les erreurs de fermeture."""
         with contextlib.suppress(Exception):
             self.srv.logout()

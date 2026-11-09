@@ -19,6 +19,7 @@ class TestHerdConfirmBackend(HerdPortalMixin, HttpCase):
 
     @classmethod
     def setUpClass(cls):
+        """Prépare la production, son staging et un approbateur administrateur."""
         super().setUpClass()
         cls._herd_setup()
         cls.admin_approver = new_test_user(
@@ -33,6 +34,7 @@ class TestHerdConfirmBackend(HerdPortalMixin, HttpCase):
         cls.prod.herd_approver_ids += cls.agent
 
     def setUp(self):
+        """Installe les mocks du cluster et des ressources personnalisées."""
         super().setUp()
         self.patch_image = self._herd_mocks()
 
@@ -47,6 +49,7 @@ class TestHerdConfirmBackend(HerdPortalMixin, HttpCase):
         return self.env[action["res_model"]].with_user(user).browse(action["res_id"])
 
     def test_only_human_approvers_open_it(self):
+        """Vérifie que la confirmation refuse un gestionnaire qui n'est pas approbateur."""
         promotion = self._request()
         manager = new_test_user(
             self.env,
@@ -60,6 +63,7 @@ class TestHerdConfirmBackend(HerdPortalMixin, HttpCase):
             promotion.with_user(self.agent).action_herd_open_confirm()  # approver, but an agent
 
     def test_emailed_code(self):
+        """Vérifie la confirmation par code reçu par courriel."""
         promotion = self._request()
         wizard = self._wizard(promotion, self.admin_approver)
         self.assertEqual(wizard.method, "email")
@@ -91,6 +95,7 @@ class TestHerdConfirmBackend(HerdPortalMixin, HttpCase):
             self.authenticate("herd_admin_approver", "herd_admin_approver")
 
         def call(model, method, args, kwargs=None):
+            """Appelle une méthode par `/web/dataset/call_kw`, comme le client web."""
             response = self.url_open(
                 f"/web/dataset/call_kw/{model}/{method}",
                 data=json.dumps(

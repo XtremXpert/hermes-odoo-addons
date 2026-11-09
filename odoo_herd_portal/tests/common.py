@@ -12,6 +12,7 @@ TOTP_SECRET = base64.b32encode(b"herd-portal-totp-key").decode()
 
 
 def totp_now(offset=0):
+    """Calcule le code TOTP courant, décalé de `offset` pas de temps."""
     from odoo.addons.auth_totp.models.totp import TIMESTEP
     from odoo.addons.auth_totp.models.totp import hotp
 

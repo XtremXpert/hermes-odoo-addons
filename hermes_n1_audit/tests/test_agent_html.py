@@ -15,6 +15,7 @@ DOSSIER = (
 @tagged("post_install", "-at_install")
 class TestAgentHtml(BaseCase):
     def test_inline_labels_become_sections(self):
+        """Vérifie que les libellés en ligne deviennent des sections en gras."""
         html = str(agent_html(DOSSIER))
         for title in ("Objectif", "Impact", "Risques", "Validation", "Retour arrière"):
             self.assertIn(f"<strong>{title}</strong>", html)
@@ -23,6 +24,7 @@ class TestAgentHtml(BaseCase):
         self.assertIn('href="https://github.com/XtremXpert/maison"', html)
 
     def test_lines_lists_code_and_bold(self):
+        """Vérifie que listes, code et gras sont rendus en HTML."""
         html = str(agent_html("Plan :\n- lancer `kubectl get`\n- **vérifier**\nfin"))
         self.assertIn(
             "<ul><li>lancer <code>kubectl get</code></li><li><strong>vérifier</strong></li></ul>",
@@ -31,6 +33,7 @@ class TestAgentHtml(BaseCase):
         self.assertIn("<p>fin</p>", html)
 
     def test_agent_text_is_escaped(self):
+        """Vérifie que le HTML fourni par l'agent est échappé."""
         html = str(
             agent_html(
                 "<script>alert(1)</script> <img src=x onerror=alert(1)> "
@@ -44,6 +47,7 @@ class TestAgentHtml(BaseCase):
         self.assertIn('href="http://a.b/c"', html)
 
     def test_values_table_shows_html_as_text(self):
+        """Vérifie qu'un tableau de valeurs affiche le HTML en texte court."""
         html = str(
             values_table(
                 {"description": False},

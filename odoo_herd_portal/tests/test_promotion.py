@@ -29,10 +29,12 @@ freezegun.configure(extend_ignore_list=["kubernetes"])
 class TestHerdPromotion(HerdPortalMixin, TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare la production, son staging et les comptes des tests de promotion."""
         super().setUpClass()
         cls._herd_setup()
 
     def setUp(self):
+        """Installe les mocks du cluster et récupère le modèle de promotion."""
         super().setUp()
         self.patch_image = self._herd_mocks()
         self.Promotion = self.env["k8s.odoo.promotion"]
@@ -50,6 +52,7 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
 
     # --- the full flow -------------------------------------------------
     def test_full_flow_backup_image_modules(self):
+        """Vérifie le flux complet : sauvegarde, image et mise à jour des modules."""
         promotion = self._request(modules="sale,project_task_code")
         self.assertEqual(promotion.image, DIGEST_B)
         self.assertTrue(promotion.requested_by_agent)
@@ -108,6 +111,7 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
         self.assertEqual(self._request(modules_install="sale").modules_install, "sale")
 
     def test_without_modules_no_upgrade_job(self):
+        """Vérifie qu'une promotion sans module ne crée pas de job de mise à jour."""
         promotion = self._request()
         self._confirm(promotion)
         promotion.backup_id.mark_completed()
@@ -115,6 +119,7 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
         self.assertFalse(promotion.upgrade_id)
 
     def test_failed_backup_leaves_production_untouched(self):
+        """Vérifie qu'une sauvegarde échouée laisse la production intacte."""
         promotion = self._request()
         self._confirm(promotion)
         promotion.backup_id.mark_failed(message="S3 unreachable")
@@ -124,6 +129,7 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
         self.assertEqual(self.prod.image, DIGEST_A)
 
     def test_failed_upgrade_keeps_previous_image_for_rollback(self):
+        """Vérifie qu'une mise à jour échouée garde l'image précédente."""
         promotion = self._request(modules="sale")
         self._confirm(promotion)
         promotion.backup_id.mark_completed()
@@ -132,6 +138,7 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
         self.assertIn(DIGEST_A, promotion.message)
 
     def test_scheduled_promotion_waits_for_its_time(self):
+        """Vérifie qu'une promotion planifiée attend son heure."""
         when = fields.Datetime.now() + timedelta(hours=2)
         promotion = self._request(scheduled_at=when)
         self._confirm(promotion)
@@ -144,6 +151,7 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
         self.assertEqual(promotion.state, "backing_up")
 
     def test_stuck_promotion_times_out(self):
+        """Vérifie qu'une promotion bloquée expire."""
         promotion = self._request()
         self._confirm(promotion)
         with freeze_time(fields.Datetime.now() + timedelta(hours=7)):
@@ -153,6 +161,7 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
 
     # --- the human gate ------------------------------------------------
     def test_agent_can_never_confirm(self):
+        """Vérifie qu'un agent ne peut jamais confirmer, même approbateur."""
         self.prod.herd_approver_ids |= self.agent
         promotion = self._request()
         with self.assertRaises(AccessError):
@@ -162,11 +171,13 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
         self.assertEqual(promotion.state, "requested")
 
     def test_client_user_who_is_not_approver_cannot_confirm(self):
+        """Vérifie qu'un client non approbateur ne peut pas confirmer."""
         promotion = self._request(user=self.client_user)
         with self.assertRaises(AccessError):
             promotion._herd_send_code(self.client_user)
 
     def test_wrong_code_and_attempt_limit(self):
+        """Vérifie qu'un code faux est refusé et que le nombre d'essais est limité."""
         promotion = self._request()
         promotion._herd_send_code(self.approver)
         for _attempt in range(5):
@@ -179,6 +190,7 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
         self.assertEqual(promotion.state, "requested")
 
     def test_expired_code(self):
+        """Vérifie qu'un code expiré est refusé."""
         promotion = self._request()
         promotion._herd_send_code(self.approver)
         with freeze_time(fields.Datetime.now() + timedelta(minutes=11)):
@@ -186,6 +198,7 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
                 promotion._herd_confirm(self.approver, f"{CODE:06d}")
 
     def test_code_is_not_readable(self):
+        """Vérifie que l'empreinte du code n'est pas lisible par un agent."""
         promotion = self._request()
         promotion._herd_send_code(self.approver)
         with self.assertRaises(AccessError):
@@ -195,6 +208,7 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
         self.assertFalse([b for b in messages if str(CODE) in b])
 
     def test_change_before_confirmation_voids_the_code(self):
+        """Vérifie qu'une modification avant confirmation annule le code."""
         promotion = self._request()
         promotion._herd_send_code(self.approver)
         promotion.sudo().modules = "sale"
@@ -202,6 +216,7 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
             promotion._herd_confirm(self.approver, f"{CODE:06d}")
 
     def test_confirmed_promotion_is_frozen(self):
+        """Vérifie qu'une promotion confirmée est figée."""
         promotion = self._request()
         self._confirm(promotion)
         with self.assertRaises(UserError):
@@ -210,11 +225,13 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
             promotion.sudo().write({"modules": "base"})
 
     def test_promotion_never_starts_unconfirmed(self):
+        """Vérifie qu'une promotion non confirmée ne démarre jamais."""
         promotion = self._request()
         with self.assertRaises(AccessError):
             promotion._herd_start()
 
     def test_confirmation_is_not_reachable_over_rpc(self):
+        """Vérifie que la confirmation n'est pas joignable par RPC."""
         from odoo.orm.models import get_public_method
 
         for method in ("_herd_confirm", "_herd_send_code", "_herd_start"):
@@ -222,17 +239,20 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
                 get_public_method(self.Promotion, method)
 
     def test_agent_has_no_write_access_on_promotions(self):
+        """Vérifie qu'un agent n'a aucun droit d'écriture sur les promotions."""
         promotion = self._request()
         with self.assertRaises(AccessError):
             promotion.with_user(self.agent).write({"state": "scheduled"})
 
     # --- what agents may and may not do --------------------------------
     def test_tag_image_is_refused(self):
+        """Vérifie qu'une image épinglée par tag est refusée."""
         self.staging.image = "ghcr.io/client/shop:latest"
         with self.assertRaises(ValidationError):
             self._request()
 
     def test_agent_needs_a_staging_opened_to_agents(self):
+        """Vérifie qu'un agent n'opère que sur un staging ouvert aux agents."""
         self.staging.herd_agent_allowed = False
         with self.assertRaises(AccessError):
             self._request()
@@ -240,6 +260,7 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
             self.Promotion.with_user(self.agent).herd_resync_staging(self.staging.id)
 
     def test_resync_is_neutralized_from_its_own_production(self):
+        """Vérifie qu'un resync d'agent part de sa production et neutralise le staging."""
         refresh_id = self.Promotion.with_user(self.agent).herd_resync_staging(self.staging.id)
         refresh = self.env["k8s.odoo.staging.refresh"].browse(refresh_id)
         self.assertTrue(refresh.neutralize)
@@ -272,12 +293,14 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
         self.assertTrue(restore.neutralize)
 
     def test_resync_never_targets_production(self):
+        """Vérifie qu'un resync ne cible jamais une production."""
         with self.assertRaises((AccessError, UserError)):
             self.Promotion.with_user(self.agent).herd_resync_staging(self.prod.id)
         with self.assertRaises(UserError):
             self.Promotion.with_user(self.approver).herd_resync_staging(self.prod.id)
 
     def test_agent_deploys_staging_but_never_production(self):
+        """Vérifie qu'un agent déploie sur un staging, jamais sur une production."""
         Promotion = self.Promotion.with_user(self.agent)
         Promotion.herd_deploy_staging(self.staging.id, DIGEST_A)
         self.patch_image.assert_called_once_with(self.staging, DIGEST_A)
@@ -288,6 +311,7 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
 
     # --- delivery of a staging by the CI ---------------------------------
     def test_staging_modules_update_waits_for_the_rollout(self):
+        """Vérifie que la mise à jour des modules attend la fin du déploiement."""
         Promotion = self.Promotion.with_user(self.agent)
         self.rolled_out = False
         Promotion.herd_deploy_staging(self.staging.id, DIGEST_A, modules=["sale", "project"])
@@ -313,6 +337,7 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
         self.assertEqual(status["upgrade_state"], "completed")
 
     def test_cron_starts_the_staging_update_after_the_rollout(self):
+        """Vérifie que le cron lance la mise à jour après le déploiement."""
         self.rolled_out = False
         self.Promotion.with_user(self.agent).herd_deploy_staging(
             self.staging.id, DIGEST_A, modules="sale"
@@ -324,6 +349,7 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
         self.assertEqual(self.staging.herd_deploy_upgrade_id.modules, "sale")
 
     def test_staging_delivery_never_reaches_a_production(self):
+        """Vérifie qu'une livraison de staging n'atteint jamais une production."""
         Promotion = self.Promotion.with_user(self.agent)
         with self.assertRaises(AccessError):
             Promotion.herd_deploy_staging(self.prod.id, DIGEST_B, modules="sale")
@@ -336,10 +362,12 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
             self.staging.with_user(self.agent).sudo().write({"herd_deploy_modules": "base"})
 
     def test_staging_status_refuses_a_stranger(self):
+        """Vérifie que l'état d'un staging est refusé à un étranger."""
         with self.assertRaises(AccessError):
             self.Promotion.with_user(self.stranger).herd_staging_status(self.staging.id)
 
     def test_replace_cancels_only_the_callers_own_requests(self):
+        """Vérifie qu'un remplacement n'annule que les demandes de son auteur."""
         other_agent = new_test_user(
             self.env,
             login="herd_agent_n2",
@@ -355,12 +383,14 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
         self.assertEqual((human + n2).mapped("state"), ["requested", "requested"])
 
     def test_replace_never_touches_a_confirmed_promotion(self):
+        """Vérifie qu'un remplacement ne touche jamais une promotion confirmée."""
         first = self._request(modules="sale")
         self._confirm(first)
         self._request(modules="project", replace=True)
         self.assertEqual(first.state, "backing_up")
 
     def test_agent_cannot_change_a_production_even_with_sudo(self):
+        """Vérifie qu'un agent ne modifie pas une production, même en sudo."""
         prod = self.prod.with_user(self.agent).sudo()
         with self.assertRaises(AccessError):
             prod.write({"image": DIGEST_B})
@@ -370,6 +400,7 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
             self.staging.with_user(self.agent).sudo().write({"environment": "production"})
 
     def test_stranger_cannot_operate(self):
+        """Vérifie qu'un étranger ne peut ni demander ni resynchroniser."""
         with self.assertRaises(AccessError):
             self._request(user=self.stranger)
         with self.assertRaises(AccessError):
@@ -383,6 +414,7 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
         self.staging.herd_ci_user_ids = self.agent
 
     def test_ci_account_requests_and_reads_status_on_a_closed_staging(self):
+        """Vérifie qu'un compte CI demande et lit l'état sur un staging fermé aux agents."""
         self._ci_staging()
         promotion = self._request(modules="sale")
         self.assertEqual(promotion.state, "requested")
@@ -391,6 +423,7 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
         self.assertEqual(status["production_image"], self.prod._herd_live_image())
 
     def test_ci_account_gets_nothing_else_on_a_closed_staging(self):
+        """Vérifie qu'un compte CI n'obtient rien d'autre sur un staging fermé."""
         self._ci_staging()
         promotion = self._request(modules="sale")
         Promotion = self.Promotion.with_user(self.agent)
@@ -403,6 +436,7 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
         self.patch_image.assert_not_called()
 
     def test_ci_account_can_never_confirm(self):
+        """Vérifie qu'un compte CI ne peut jamais confirmer."""
         self._ci_staging()
         self.prod.herd_approver_ids |= self.agent
         promotion = self._request(modules="sale")
@@ -411,6 +445,7 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
         self.assertEqual(promotion.state, "requested")
 
     def test_other_agents_stay_out_of_a_ci_staging(self):
+        """Vérifie qu'un autre agent reste exclu d'un staging réservé à la CI."""
         self._ci_staging()
         n2 = new_test_user(
             self.env,
@@ -423,12 +458,11 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
             self.Promotion.with_user(n2).herd_staging_status(self.staging.id)
 
     def test_ci_account_is_limited_to_its_stagings(self):
+        """Vérifie qu'un compte CI est limité à ses stagings."""
         self._ci_staging()
         other = self.staging.copy({"name": "shop-staging-2", "herd_ci_user_ids": False})
         with self.assertRaises(AccessError):
-            self.Promotion.with_user(self.agent).herd_request_promotion(
-                other.id, modules="sale"
-            )
+            self.Promotion.with_user(self.agent).herd_request_promotion(other.id, modules="sale")
         # never a production, even if it were listed
         self.prod.herd_ci_user_ids = self.agent
         with self.assertRaises(AccessError):
@@ -437,6 +471,7 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
             )
 
     def test_agent_cannot_list_itself_as_ci_account(self):
+        """Vérifie qu'un agent ne peut pas se déclarer compte CI."""
         self.staging.herd_agent_allowed = False
         with self.assertRaises(AccessError):
             self.staging.with_user(self.agent).sudo().write(
@@ -445,6 +480,7 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
 
     # --- overlapping and stale promotions -------------------------------
     def test_second_promotion_refused_while_one_runs(self):
+        """Vérifie qu'une seconde promotion est refusée pendant qu'une autre tourne."""
         first = self._request()
         second = self._request(user=self.client_user)
         self._confirm(first)
@@ -457,6 +493,7 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
         )
 
     def test_stale_promotion_never_rolls_production_back(self):
+        """Vérifie qu'une promotion périmée ne fait jamais reculer la production."""
         old = self._request(scheduled_at=fields.Datetime.now() + timedelta(hours=2))
         self._confirm(old)
         # meanwhile, a newer image reached production
@@ -469,6 +506,7 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
 
     # --- only spec.image reaches the cluster ----------------------------
     def test_image_patch_sends_only_the_image(self):
+        """Vérifie que le correctif d'image n'envoie que l'image."""
         from odoo.addons.odoo_herd_portal.models.k8s_odoo_instance import K8sOdooInstance
 
         api = MagicMock()
@@ -490,6 +528,7 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
 
     # --- the code never leaks to agents ---------------------------------
     def test_agent_cannot_find_the_code_in_messages(self):
+        """Vérifie que le code n'apparaît pas dans les messages visibles de l'agent."""
         promotion = self._request()
         # keep the outgoing mail, as if sending had failed
         with patch.object(type(self.env["mail.mail"]), "send"):
@@ -507,6 +546,7 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
 
     # --- two-factor authentication ------------------------------------
     def test_totp_user_cannot_fall_back_to_email(self):
+        """Vérifie qu'un approbateur TOTP ne peut pas retomber sur le courriel."""
         self._herd_enable_totp(self.approver)
         promotion = self._request()
         self.assertEqual(promotion._herd_confirm_method(self.approver), "totp")
@@ -514,6 +554,7 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
             promotion._herd_send_code(self.approver)
 
     def test_required_2fa_refuses_approver_without_it(self):
+        """Vérifie que l'exigence de 2FA refuse un approbateur qui ne l'a pas."""
         self.prod.herd_require_2fa = True
         promotion = self._request()
         self.assertFalse(promotion._herd_confirm_method(self.approver))
@@ -524,12 +565,14 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
         self.assertEqual(promotion.state, "requested")
 
     def test_agent_cannot_lower_the_2fa_requirement(self):
+        """Vérifie qu'un agent ne peut pas abaisser l'exigence de 2FA."""
         self.prod.herd_require_2fa = True
         with self.assertRaises(AccessError):
             self.prod.with_user(self.agent).sudo().write({"herd_require_2fa": False})
 
     # --- new modules to install ----------------------------------------
     def test_install_only_promotion_runs_the_upgrade_job(self):
+        """Vérifie qu'une promotion d'installation seule lance le job de mise à jour."""
         promotion = self._request(modules_install=["project_task_pull_request"])
         self._confirm(promotion)
         promotion.backup_id.mark_completed()
@@ -540,6 +583,7 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
         self.assertEqual(promotion.state, "done")
 
     def test_update_and_install_in_one_job(self):
+        """Vérifie qu'une mise à jour et une installation partent dans un seul job."""
         promotion = self._request(
             modules="sale", modules_install="project_task_code,project_task_pull_request"
         )
@@ -551,10 +595,12 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
         )
 
     def test_invalid_module_to_install_is_refused(self):
+        """Vérifie qu'un nom de module à installer invalide est refusé."""
         with self.assertRaises(ValidationError):
             self._request(modules_install="good_module,rm -rf")
 
     def test_modules_to_install_are_frozen_after_confirmation(self):
+        """Vérifie que les modules à installer sont figés après confirmation."""
         promotion = self._request(modules_install="project_task_code")
         self._confirm(promotion)
         with self.assertRaises(UserError):
@@ -562,6 +608,7 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
 
     # --- the live image, never a stale stored field --------------------
     def test_request_freezes_the_image_the_cluster_runs(self):
+        """Vérifie que la demande fige l'image réellement exécutée par le cluster."""
         live = "ghcr.io/client/shop@sha256:" + "d" * 64
         self.live_images[self.staging.id] = live  # stored field still says DIGEST_B
         promotion = self._request()
@@ -569,6 +616,7 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
         self.assertEqual(promotion.production_image, DIGEST_A)
 
     def test_start_compares_with_the_live_production_image(self):
+        """Vérifie que le démarrage compare à l'image live de la production."""
         promotion = self._request(scheduled_at=fields.Datetime.now() + timedelta(hours=1))
         self._confirm(promotion)
         # production changed on the cluster, stored field untouched
@@ -580,6 +628,7 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
         self.patch_image.assert_not_called()
 
     def test_unreadable_cluster_refuses_the_request(self):
+        """Vérifie qu'un cluster illisible fait refuser la demande."""
         self.live_images[self.staging.id] = None
         type(self.env["k8s.odoo.instance"])._herd_live_image.side_effect = lambda inst: (
             _ for _ in ()
@@ -588,6 +637,7 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
             self._request()
 
     def test_sync_to_cluster_never_sends_a_production_image(self):
+        """Vérifie qu'une synchronisation n'envoie jamais une image de production."""
         self.prod.image = DIGEST_B
         with self.assertRaises(UserError):
             self.prod._build_patch_data()

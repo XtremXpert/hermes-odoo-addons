@@ -19,6 +19,7 @@ from odoo.tests import tagged
 class WazoClientTestBase(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare les réglages Wazo communs aux tests du client."""
         super().setUpClass()
         cls.env["ir.config_parameter"].sudo().set_str("wazo.url", "https://wazo.example.com")
         cls.env["ir.config_parameter"].sudo().set_str("wazo.api_key", "test-api-token")
@@ -53,24 +54,29 @@ class WazoClientTestBase(TransactionCase):
 @tagged("wazo_tenant", "post_install", "-at_install")
 class TestWazoClientRequest(WazoClientTestBase):
     def test_builds_url_with_service_prefix(self):
+        """Vérifie que l'URL porte le préfixe du service confd."""
         request = self._call_with("GET", "/users", params={"limit": 1})
         self.assertEqual(request.full_url, "https://wazo.example.com/api/confd/1.1/users?limit=1")
 
     def test_auth_token_header_is_sent_with_exact_case(self):
+        """Vérifie que l'en-tête `X-Auth-Token` garde sa casse."""
         request = self._call_with("GET", "/users")
         headers = {k.lower(): v for k, v in request.header_items()}
         self.assertEqual(headers["x-auth-token"], "test-api-token")
 
     def test_tenant_header_is_sent(self):
+        """Vérifie que l'en-tête `Wazo-Tenant` est envoyé."""
         request = self._call_with("GET", "/users")
         headers = {k.lower(): v for k, v in request.header_items()}
         self.assertEqual(headers["wazo-tenant"], "uuid-tenant-1")
 
     def test_post_sends_json_body(self):
+        """Vérifie qu'un POST envoie un corps JSON."""
         request = self._call_with("POST", "/users", body={"firstname": "Jean"})
         self.assertEqual(request.data, json.dumps({"firstname": "Jean"}).encode("utf-8"))
 
     def test_call_logd_uses_call_logd_prefix(self):
+        """Vérifie que `call_logd` vise le préfixe `/api/call-logd`."""
         with patch("urllib.request.urlopen", side_effect=self._fake_urlopen(b"{}")) as urlopen:
             WazoClient(self.env).call_logd(
                 "GET", "/cdr", params={"start": "2026-09-19T00:00:00+00:00"}
@@ -81,12 +87,14 @@ class TestWazoClientRequest(WazoClientTestBase):
         )
 
     def test_auth_uses_auth_prefix(self):
+        """Vérifie que `auth` vise le préfixe `/api/auth`."""
         with patch("urllib.request.urlopen", side_effect=self._fake_urlopen(b"{}")) as urlopen:
             WazoClient(self.env).auth("POST", "/users", body={"username": "5550"})
         request = urlopen.call_args[0][0]
         self.assertEqual(request.full_url, "https://wazo.example.com/api/auth/0.1/users")
 
     def test_http_error_raises_wazo_api_error(self):
+        """Vérifie qu'une erreur HTTP devient `WazoAPIError`."""
         error_body = b'{"message": "Forbidden", "error": "Forbidden"}'
         with patch(
             "urllib.request.urlopen",
@@ -103,21 +111,25 @@ class TestWazoClientRequest(WazoClientTestBase):
         self.assertIn("403", str(ctx.exception))
 
     def test_network_error_raises_wazo_api_error(self):
+        """Vérifie qu'une erreur réseau devient `WazoAPIError`."""
         with patch("urllib.request.urlopen", side_effect=OSError("no route to host")):
             with self.assertRaises(WazoAPIError):
                 WazoClient(self.env).conf("GET", "/users")
 
     def test_invalid_json_raises_wazo_api_error(self):
+        """Vérifie qu'une réponse illisible devient `WazoAPIError`."""
         with patch("urllib.request.urlopen", side_effect=self._fake_urlopen(b"not-json")):
             with self.assertRaises(WazoAPIError):
                 WazoClient(self.env).conf("GET", "/users")
 
     def test_missing_credentials_raise_wazo_api_error(self):
+        """Vérifie que des identifiants absents lèvent `WazoAPIError`."""
         self.env["ir.config_parameter"].sudo().set_str("wazo.url", "")
         with self.assertRaises(WazoAPIError):
             WazoClient(self.env).conf("GET", "/users")
 
     def test_credentials_can_be_overridden_per_call(self):
+        """Vérifie que les identifiants peuvent être remplacés à l'appel."""
         client = WazoClient(
             self.env, url="https://other.example.com", api_key="other-token", tenant_id=""
         )
@@ -130,6 +142,7 @@ class TestWazoClientRequest(WazoClientTestBase):
         self.assertNotIn("wazo-tenant", headers)
 
     def test_empty_response_returns_none(self):
+        """Vérifie qu'une réponse vide rend `None`."""
         with patch("urllib.request.urlopen", side_effect=self._fake_urlopen(b"")):
             self.assertIsNone(WazoClient(self.env).conf("GET", "/users"))
 
@@ -161,11 +174,13 @@ class TestWazoClientSSL(TransactionCase):
         return urlopen.call_args.kwargs
 
     def test_ssl_verified_by_default(self):
+        """Vérifie que le certificat TLS est vérifié par défaut."""
         kwargs = self._urlopen_kwargs(True)
         # Pas de contexte détendu : urlopen vérifie par défaut.
         self.assertIsNone(kwargs.get("context"))
 
     def test_ssl_unverified_when_explicitly_allowed(self):
+        """Vérifie que la vérification TLS se désactive sur demande."""
         import ssl
 
         kwargs = self._urlopen_kwargs(False)

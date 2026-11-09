@@ -13,7 +13,34 @@ de l'OCA.
 
 [//]: # (addons)
 
-This part will be replaced when running the oca-gen-addons-table script from OCA/maintainer-tools.
+Available addons
+----------------
+addon | version | maintainers | summary
+--- | --- | --- | ---
+[asterisk_ari](asterisk_ari/) | 20.0.1.0.0 | <a href='https://github.com/XtremXpert'><img src='https://github.com/XtremXpert.png' width='32' height='32' style='border-radius:50%;' alt='XtremXpert'/></a> | Click-to-call et suivi d'appels via Asterisk ARI (FreePBX)
+[base_module_type_official](base_module_type_official/) | 20.0.1.0.0 | <a href='https://github.com/XtremXpert'><img src='https://github.com/XtremXpert.png' width='32' height='32' style='border-radius:50%;' alt='XtremXpert'/></a> | Rend aux modules enregistrés au démarrage leur type « official », sans lequel l'écran Applications ne les montre jamais
+[diverse_mail_gateway](diverse_mail_gateway/) | 20.0.1.0.0 | <a href='https://github.com/XtremXpert'><img src='https://github.com/XtremXpert.png' width='32' height='32' style='border-radius:50%;' alt='XtremXpert'/></a> | Point d'entrée HTTP authentifié par jeton qui pousse le courriel brut dans Odoo, sans compte utilisateur.
+[hermes_activity](hermes_activity/) | 20.0.1.2.1 | <a href='https://github.com/XtremXpert'><img src='https://github.com/XtremXpert.png' width='32' height='32' style='border-radius:50%;' alt='XtremXpert'/></a> | Réponses des agents Hermes et indicateur d'activité dans Discussion
+[hermes_control_room](hermes_control_room/) | 20.0.1.0.0 | <a href='https://github.com/XtremXpert'><img src='https://github.com/XtremXpert.png' width='32' height='32' style='border-radius:50%;' alt='XtremXpert'/></a> | Tableau de bord d'exploitation : Proxmox, lu depuis les miroirs Odoo.
+[hermes_dashboard_sso](hermes_dashboard_sso/) | 20.0.1.0.0 | <a href='https://github.com/XtremXpert'><img src='https://github.com/XtremXpert.png' width='32' height='32' style='border-radius:50%;' alt='XtremXpert'/></a> | Les tableaux de bord Hermes N1-N3 s'ouvrent avec la session Odoo d'un administrateur
+[hermes_n1_audit](hermes_n1_audit/) | 20.0.3.1.2 | <a href='https://github.com/XtremXpert'><img src='https://github.com/XtremXpert.png' width='32' height='32' style='border-radius:50%;' alt='XtremXpert'/></a> | Façade d'écriture pour l'agent N1 et journal immuable des modifications
+[hermes_n1_website](hermes_n1_website/) | 20.0.1.3.0 | <a href='https://github.com/XtremXpert'><img src='https://github.com/XtremXpert.png' width='32' height='32' style='border-radius:50%;' alt='XtremXpert'/></a> | N1 crée une page web, en lit et en modifie le corps, en HTML assaini, avec contrôle de version et trace
+[hermes_n3_access](hermes_n3_access/) | 20.0.1.0.0 | <a href='https://github.com/XtremXpert'><img src='https://github.com/XtremXpert.png' width='32' height='32' style='border-radius:50%;' alt='XtremXpert'/></a> | Compte de l'agent d'infrastructure Hermes N3 (API seulement), neutralisé sur les copies
+[hermes_runners](hermes_runners/) | 20.0.1.0.0 | <a href='https://github.com/XtremXpert'><img src='https://github.com/XtremXpert.png' width='32' height='32' style='border-radius:50%;' alt='XtremXpert'/></a> | État des runners GitHub Actions auto-hébergés (ARC), lu depuis les clusters.
+[imap_client](imap_client/) | 20.0.1.0.0 | <a href='https://github.com/XtremXpert'><img src='https://github.com/XtremXpert.png' width='32' height='32' style='border-radius:50%;' alt='XtremXpert'/></a> | Boîtes IMAP, dossiers et messages reçus dans Odoo
+[mailcow](mailcow/) | 20.0.1.0.0 | <a href='https://github.com/XtremXpert'><img src='https://github.com/XtremXpert.png' width='32' height='32' style='border-radius:50%;' alt='XtremXpert'/></a> | Côté usager de Mailcow : vue d'ensemble du serveur
+[mailcow_server](mailcow_server/) | 20.0.1.0.0 | <a href='https://github.com/XtremXpert'><img src='https://github.com/XtremXpert.png' width='32' height='32' style='border-radius:50%;' alt='XtremXpert'/></a> | Entretien du serveur Mailcow (exploitant de la plateforme)
+[mailcow_tenant](mailcow_tenant/) | 20.0.2.1.0 | <a href='https://github.com/XtremXpert'><img src='https://github.com/XtremXpert.png' width='32' height='32' style='border-radius:50%;' alt='XtremXpert'/></a> | Exploitation d'un serveur Mailcow : domaines, boîtes, alias
+[neutralize_guard](neutralize_guard/) | 20.0.1.0.0 | <a href='https://github.com/XtremXpert'><img src='https://github.com/XtremXpert.png' width='32' height='32' style='border-radius:50%;' alt='XtremXpert'/></a> | Sur une base neutralisée, aucun cron ne s'exécute — même déclenché à la main
+[odoo_herd](odoo_herd/) | 20.0.1.9.1 | <a href='https://github.com/XtremXpert'><img src='https://github.com/XtremXpert.png' width='32' height='32' style='border-radius:50%;' alt='XtremXpert'/></a> | Manage your herd of Odoo instances across Kubernetes clusters
+[odoo_herd_portal](odoo_herd_portal/) | 20.0.1.7.0 | <a href='https://github.com/XtremXpert'><img src='https://github.com/XtremXpert.png' width='32' height='32' style='border-radius:50%;' alt='XtremXpert'/></a> | Client portal for an Odoo production and its staging: staging resync, human-confirmed promotion to production, new database requests
+[proxmox_server](proxmox_server/) | 20.0.1.0.0 | <a href='https://github.com/XtremXpert'><img src='https://github.com/XtremXpert.png' width='32' height='32' style='border-radius:50%;' alt='XtremXpert'/></a> | Plateforme Proxmox VE : cycle de vie des tenants
+[proxmox_tenant](proxmox_tenant/) | 20.0.1.0.0 | <a href='https://github.com/XtremXpert'><img src='https://github.com/XtremXpert.png' width='32' height='32' style='border-radius:50%;' alt='XtremXpert'/></a> | Cluster Proxmox VE : noeuds, machines, pools, stockage — perimetre par pool
+[voipms_sms](voipms_sms/) | 20.0.1.0.1 | <a href='https://github.com/XtremXpert'><img src='https://github.com/XtremXpert.png' width='32' height='32' style='border-radius:50%;' alt='XtremXpert'/></a> | Envoyer des SMS via l'API VoIP.ms
+[wazo_phone](wazo_phone/) | 20.0.4.0.0 | <a href='https://github.com/XtremXpert'><img src='https://github.com/XtremXpert.png' width='32' height='32' style='border-radius:50%;' alt='XtremXpert'/></a> | Connecteur Wazo Platform : utilisateurs, extensions et journal d'appels
+[wazo_server](wazo_server/) | 20.0.2.1.0 | <a href='https://github.com/XtremXpert'><img src='https://github.com/XtremXpert.png' width='32' height='32' style='border-radius:50%;' alt='XtremXpert'/></a> | Création et encadrement des tenants Wazo
+[wazo_tenant](wazo_tenant/) | 20.0.3.0.0 | <a href='https://github.com/XtremXpert'><img src='https://github.com/XtremXpert.png' width='32' height='32' style='border-radius:50%;' alt='XtremXpert'/></a> | Exploitation d'un tenant Wazo : utilisateurs, postes, groupes, CDR
+[wazo_voipms](wazo_voipms/) | 20.0.1.0.0 | <a href='https://github.com/XtremXpert'><img src='https://github.com/XtremXpert.png' width='32' height='32' style='border-radius:50%;' alt='XtremXpert'/></a> | Trunk SIP VoIP.ms pour Wazo : appels sortants et routage des DIDs
 
 [//]: # (end addons)
 

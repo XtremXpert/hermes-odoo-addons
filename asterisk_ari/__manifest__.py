@@ -4,9 +4,11 @@
     "category": "Productivity",
     "summary": """Click-to-call et suivi d'appels via Asterisk ARI (FreePBX)""",
     "version": "20.0.1.0.0",
+    "development_status": "Beta",
     "license": "LGPL-3",
     "author": "Diverse-Cité",
     "website": "https://github.com/XtremXpert/hermes-odoo-addons",
+    "maintainers": ["XtremXpert"],
     "depends": ["base"],
     "data": [
         "security/asterisk_ari_groups.xml",

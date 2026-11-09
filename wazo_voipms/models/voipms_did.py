@@ -78,11 +78,27 @@ class VoIPMSDid(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        """Crée des DID et leur rattache le tenant de leur trunk.
+
+        Args:
+            vals_list: Valeurs des enregistrements à créer.
+
+        Returns:
+            Les enregistrements créés.
+        """
         enregistrements = super().create(vals_list)
         enregistrements._remplir_tenant()
         return enregistrements
 
     def write(self, vals):
+        """Écrit les DID et rafraîchit leur tenant sans récursion.
+
+        Args:
+            vals: Valeurs modifiées.
+
+        Returns:
+            Le résultat de l'écriture.
+        """
         resultat = super().write(vals)
         # Ne pas rappeler le remplissage sur sa propre écriture : c'est ce
         # qui bouclait.

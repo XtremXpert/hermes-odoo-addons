@@ -33,6 +33,7 @@ UTILISATEUR = "9c57eb12-1111-2222-3333-444455556666"
 class WazoServerTestBase(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare la connexion Wazo et les modèles des tests de provisionnement."""
         super().setUpClass()
         icp = cls.env["ir.config_parameter"].sudo()
         icp.set_str("wazo.url", "https://wazo.example.com")
@@ -65,6 +66,7 @@ class WazoServerTestBase(TransactionCase):
         appels, jetons = [], []
 
         def repondre(client, service, method, path, params=None, body=None, basic=None):
+            """Simule les appels du PBX, avec panne injectée sur une route."""
             body = body or {}
             appels.append((service, method, path, body, client.tenant_id))
             if erreur_sur and (service, path) == tuple(erreur_sur):
@@ -170,10 +172,12 @@ class TestTenantCreation(WazoServerTestBase):
                 self._create_tenant(slug=mauvais)
 
     def test_slug_of_ten_characters_is_accepted(self):
+        """Vérifie qu'un slug de dix caractères est accepté."""
         tenant = self._create_tenant(slug="alphabeta1")
         self.assertEqual(tenant.context_name, "ctx-alphabeta1-internal")
 
     def test_creation_calls_the_api_in_order(self):
+        """Vérifie que la création appelle les API dans l'ordre."""
         tenant = self._create_tenant()
         appels, _, repondre = self._faux_serveur()
         with self._patch(repondre):
@@ -260,6 +264,7 @@ class TestTenantCreation(WazoServerTestBase):
         self.assertIn("HTTP 400", tenant.error_message)
 
     def test_credentials_are_kept_for_the_tenant(self):
+        """Vérifie que les identifiants du tenant sont conservés."""
         tenant = self._create_tenant()
         _appels, _jetons, repondre = self._faux_serveur()
         with self._patch(repondre):
@@ -273,6 +278,7 @@ class TestTenantCreation(WazoServerTestBase):
         self.assertEqual(tenant.remote_context_name, "ctx-alpha-internal-abcdef")
 
     def test_creation_is_refused_twice(self):
+        """Vérifie qu'une seconde création du tenant est refusée."""
         tenant = self._create_tenant()
         _appels, _, repondre = self._faux_serveur()
         with self._patch(repondre):
@@ -313,6 +319,7 @@ class TestTenantDeletion(WazoServerTestBase):
         self.assertEqual(appel[4], NOUVEAU)
 
     def test_empty_tenant_is_deleted_in_order(self):
+        """Vérifie qu'un tenant vide est supprimé dans l'ordre."""
         tenant = self._tenant_cree()
         appels, _, repondre = self._faux_serveur()
         with self._patch(repondre):
@@ -357,6 +364,7 @@ class TestTenantResume(WazoServerTestBase):
         return tenant
 
     def test_resume_does_not_create_a_second_tenant(self):
+        """Vérifie que la reprise ne crée pas un second tenant."""
         tenant = self._tenant_interrompu()
         appels, _, repondre = self._faux_serveur()
         with self._patch(repondre):
@@ -377,6 +385,7 @@ class TestTenantResume(WazoServerTestBase):
         self.assertIn(("confd", "POST", "/contexts"), sequence)
 
     def test_resume_adopts_a_context_that_already_exists(self):
+        """Vérifie que la reprise adopte un contexte déjà existant."""
         tenant = self._tenant_interrompu()
         appels, _, repondre = self._faux_serveur(contextes_distants=[self.CONTEXTE_EXISTANT])
         with self._patch(repondre):
@@ -469,6 +478,7 @@ class TestTenantHandover(WazoServerTestBase):
         )
 
     def test_handover_gathers_every_coordinate(self):
+        """Vérifie que la fiche de remise rassemble toutes les coordonnées."""
         tenant = self._tenant_cree()
         bloc = tenant.handover_text
         self.assertIn("https://wazo.example.com", bloc)
@@ -492,10 +502,12 @@ class TestTenantHandover(WazoServerTestBase):
             self.assertIn(libelle, bloc)
 
     def test_handover_says_so_before_creation(self):
+        """Vérifie que la fiche de remise le dit avant création."""
         tenant = self._create_tenant()
         self.assertIn("n'existe pas encore", tenant.handover_text)
 
     def test_handover_is_reserved_to_managers(self):
+        """Vérifie que la fiche de remise est réservée aux gestionnaires."""
         from odoo.exceptions import AccessError
 
         tenant = self._tenant_cree()

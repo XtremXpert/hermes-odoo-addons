@@ -22,7 +22,7 @@ MOVED_PREFIXES = (
     "wazo_cdr%",  # journal d'appels
     "wazo_extension%",  # mixin, inventaire des postes
     "wazo_res_config_settings_view",  # vue de connexion (sans _phone)
-    "access_wazo_%",  # règles ir.model.access déplacées
+    "access_wazo_%",  # règles d'accès (ir.access en 20.0) déplacées
     "model_wazo_%",  # ir.model des modèles déplacés
     "field_wazo_%",  # champs de ces modèles
     "field_res_partner__wazo_%",  # wazo_user_id sur le contact
@@ -35,6 +35,12 @@ MOVED_PREFIXES = (
 
 
 def migrate(cr, version):
+    """Adopte les xmlids déplacés de `wazo_phone` avant la mise à jour.
+
+    Args:
+        cr: curseur de la base.
+        version: version du module avant la mise à jour.
+    """
     cr.execute(
         """
         UPDATE ir_model_data

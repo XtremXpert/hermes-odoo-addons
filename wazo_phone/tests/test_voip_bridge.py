@@ -24,6 +24,7 @@ class TestVoipBridge(TransactionCase):
     WEBRTC_ENDPOINT_OPTION = ("allow", "opus,g722,alaw,ulaw,vp9,vp8,h264")
 
     def setUp(self):
+        """Prépare le contact et l'usager Wazo des tests du pont."""
         super().setUp()
         self.partner = self.env["res.partner"].create({"name": "Utilisateur Pont Test"})
         self.user = self.env["res.users"].create(
@@ -85,11 +86,13 @@ class TestVoipBridge(TransactionCase):
         )
 
     def test_voip_user_values_without_provider(self):
+        """Vérifie les valeurs d'usager voip sans provider."""
         wiz = self.wizo
         values = wiz._voip_user_values(self.env["ir.model"].browse())
         self.assertEqual(values, {})
 
     def test_voip_user_values_without_sip(self):
+        """Vérifie les valeurs d'usager voip sans identifiants SIP."""
         wiz = self.env["wazo.user"].create(
             {
                 "name": "Sans identifiants SIP",
@@ -201,6 +204,7 @@ class TestVoipBridge(TransactionCase):
         """Une erreur d'écriture ne doit jamais casser la synchro."""
 
         def boom(self, user, values):
+            """Simule une erreur d'application des identifiants voip."""
             raise RuntimeError("boom")
 
         self.patch(type(self.wizo), "_get_or_create_voip_provider", lambda self: self.env.user)
@@ -321,6 +325,7 @@ class TestVoipBridge(TransactionCase):
             tenant_id = "tenant-uuid"
 
             def conf(self, method, path, params=None, body=None):
+                """Répond à la lecture des modèles SIP du tenant."""
                 seen["call"] = (method, path)
                 return {
                     "global_sip_template_uuid": "uuid-global",
@@ -340,18 +345,21 @@ class TestVoipBridge(TransactionCase):
             tenant_id = False
 
             def conf(self, *args, **kwargs):
+                """Échoue si un appel est fait alors qu'aucun tenant n'est disponible."""
                 raise AssertionError("aucun appel attendu sans tenant")
 
         class _Broken:
             tenant_id = "tenant-uuid"
 
             def conf(self, *args, **kwargs):
+                """Lève une erreur d'API pour simuler un tenant cassé."""
                 raise WazoAPIError("HTTP 500. boom")
 
         class _Unexpected:
             tenant_id = "tenant-uuid"
 
             def conf(self, *args, **kwargs):
+                """Rend une réponse inattendue (liste vide)."""
                 return []
 
         for client in (_NoTenant(), _Broken(), _Unexpected()):

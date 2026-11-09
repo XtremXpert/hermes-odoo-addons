@@ -120,6 +120,14 @@ class K8sOdooInstanceRequest(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        """Crée des demandes en attribuant un nom pris à la séquence.
+
+        Args:
+            vals_list (list[dict]): valeurs des enregistrements à créer.
+
+        Returns:
+            k8s.odoo.instance.request: enregistrements créés.
+        """
         for vals in vals_list:
             if vals.get("name", "New") == "New":
                 vals["name"] = (
@@ -213,6 +221,24 @@ class K8sOdooInstanceRequest(models.Model):
     # ------------------------------------------------------------------
     @api.model
     def herd_request_database(self, template_id, instance_name):
+        """Dépose une demande de base de données pour l'usager courant.
+
+        Vérifie que le demandeur est un humain, qu'il a un courriel, qu'il n'a pas
+        déjà de base ni de demande en cours, que l'offre est publiée et que le nom est
+        disponible ; notifie ensuite les gestionnaires humains.
+
+        Args:
+            template_id (int): identifiant de l'offre choisie.
+            instance_name (str): nom d'instance demandé.
+
+        Returns:
+            int: identifiant de la demande créée.
+
+        Raises:
+            odoo.exceptions.AccessError: demandeur non humain.
+            odoo.exceptions.UserError: courriel manquant, base existante, demande en
+                cours, offre inconnue ou nom indisponible.
+        """
         user = self.env.user
         if user._is_public() or herd_is_agent(user):
             raise AccessError(_("Only a client's human user can request a database."))
@@ -256,6 +282,18 @@ class K8sOdooInstanceRequest(models.Model):
 
     @api.model
     def herd_cancel_database_request(self, request_id):
+        """Annule une demande en attente, par son client ou un gestionnaire.
+
+        Args:
+            request_id (int): identifiant de la demande.
+
+        Returns:
+            bool: True quand l'annulation est enregistrée.
+
+        Raises:
+            odoo.exceptions.AccessError: demande inconnue ou appartenant à un autre.
+            odoo.exceptions.UserError: demande déjà traitée.
+        """
         req = self.sudo().browse(int(request_id)).exists()
         user = self.env.user
         mine = req and req.partner_id == user.partner_id.commercial_partner_id
@@ -271,6 +309,18 @@ class K8sOdooInstanceRequest(models.Model):
     # Backend buttons (a human cluster manager)
     # ------------------------------------------------------------------
     def action_herd_approve(self):
+        """Approuve des demandes en attente et crée leur production.
+
+        Args:
+            Aucun.
+
+        Returns:
+            bool: True quand toutes les demandes ont été approuvées.
+
+        Raises:
+            odoo.exceptions.AccessError: approbateur non gestionnaire humain.
+            odoo.exceptions.UserError: demande déjà traitée ou nom indisponible.
+        """
         self._herd_check_manager()
         for req in self:
             if req.state != "requested":
@@ -284,6 +334,15 @@ class K8sOdooInstanceRequest(models.Model):
         return True
 
     def action_herd_refuse(self):
+        """Refuse des demandes en attente et prévient leur auteur.
+
+        Returns:
+            bool: True quand toutes les demandes ont été refusées.
+
+        Raises:
+            odoo.exceptions.AccessError: approbateur non gestionnaire humain.
+            odoo.exceptions.UserError: demande déjà traitée.
+        """
         self._herd_check_manager()
         for req in self:
             if req.state != "requested":
@@ -414,6 +473,17 @@ class K8sOdooInstanceRequest(models.Model):
         user, partner = self.requested_by_id, self.partner_id
 
         def call(model, method, *args, **kw):
+            """Écrit sur la base fraîche par RPC, avec les droits de son administrateur.
+
+            Args:
+                model (str): modèle Odoo visé.
+                method (str): méthode à appeler.
+                *args: arguments positionnels de la méthode.
+                **kw: arguments nommés de la méthode.
+
+            Returns:
+                object: résultat de l'appel RPC.
+            """
             return self._herd_rpc(
                 prod, "object", "execute_kw", db, uid, FRESH_PASSWORD, model, method, list(args), kw
             )

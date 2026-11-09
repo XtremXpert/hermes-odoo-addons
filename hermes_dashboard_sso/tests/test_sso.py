@@ -12,6 +12,7 @@ from ..models.sso_code import s256
 class TestDashboardSso(HttpCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare un administrateur, un membre et un vérificateur PKCE."""
         super().setUpClass()
         Users = cls.env["res.users"].with_context(no_reset_password=True)
         cls.admin = Users.create(
@@ -33,6 +34,16 @@ class TestDashboardSso(HttpCase):
         cls.verifier = "v" * 50
 
     def authorize(self, level="n2", redirect=None, challenge=None):
+        """Appelle le point d'autorisation sans suivre la redirection.
+
+        Args:
+            level: Niveau Hermes demandé.
+            redirect: URL de retour, ou callback du niveau par défaut.
+            challenge: Défi PKCE, ou défi calculé depuis le vérificateur.
+
+        Returns:
+            La réponse HTTP et l'URL de retour attendue.
+        """
         base = self.base_url()
         redirect = redirect or f"{base}/hermes/{level}/auth/callback"
         return self.url_open(
@@ -50,6 +61,17 @@ class TestDashboardSso(HttpCase):
         ), redirect
 
     def token(self, code, level="n2", redirect=None, verifier=None):
+        """Appelle le point d'échange avec un code et un vérificateur.
+
+        Args:
+            code: Code d'autorisation.
+            level: Niveau Hermes demandé.
+            redirect: URL de retour, ou callback du niveau par défaut.
+            verifier: Vérificateur PKCE, ou vérificateur du test.
+
+        Returns:
+            La réponse HTTP du point d'échange.
+        """
         body = {
             "code": code,
             "code_verifier": verifier or self.verifier,
@@ -61,6 +83,7 @@ class TestDashboardSso(HttpCase):
         )
 
     def test_admin_code_exchanges_once_for_the_identity(self):
+        """Vérifie qu'un code administrateur s'échange une seule fois contre l'identité."""
         self.authenticate("sso_admin", "sso_admin_pw_1234")
         response, redirect = self.authorize()
         self.assertEqual(response.status_code, 303)
@@ -80,6 +103,7 @@ class TestDashboardSso(HttpCase):
         self.assertEqual(self.token(code).status_code, 400)  # single use
 
     def test_only_administrators_and_only_the_dashboard_callback(self):
+        """Vérifie que seuls les administrateurs et le callback du tableau de bord sont acceptés."""
         self.authenticate("sso_member", "sso_member_pw_1234")
         self.assertEqual(self.authorize()[0].status_code, 403)
         self.authenticate("sso_admin", "sso_admin_pw_1234")
@@ -93,6 +117,7 @@ class TestDashboardSso(HttpCase):
         self.assertEqual(self.token(code, level="n2").status_code, 400)  # code bound to its level
 
     def test_code_is_refused_after_the_user_loses_administrator_rights(self):
+        """Vérifie qu'un code est refusé après la perte des droits administrateur."""
         self.authenticate("sso_admin", "sso_admin_pw_1234")
         response, _ = self.authorize()
         code = parse_qs(urlsplit(response.headers["Location"]).query)["code"][0]

@@ -14,23 +14,28 @@ from odoo.tools import mute_logger
 @tagged("wazo_tenant", "post_install", "-at_install")
 class TestParseWazoDatetime(TransactionCase):
     def test_aware_datetime_converted_to_naive_utc(self):
+        """Vérifie qu'un horodatage avec fuseau est converti en UTC naïf."""
         value = _parse_wazo_datetime("2026-09-20T10:30:00+00:00")
         self.assertEqual(value, datetime(2026, 9, 20, 10, 30))
         self.assertIsNone(value.tzinfo)
 
     def test_non_utc_offset_converted_to_utc(self):
+        """Vérifie qu'un décalage non UTC est ramené à UTC."""
         value = _parse_wazo_datetime("2026-09-20T06:00:00-04:00")
         self.assertEqual(value, datetime(2026, 9, 20, 10, 0))
 
     def test_naive_datetime_kept(self):
+        """Vérifie qu'un horodatage naïf est conservé tel quel."""
         value = _parse_wazo_datetime("2026-09-20T10:00:00")
         self.assertEqual(value, datetime(2026, 9, 20, 10, 0))
 
     def test_empty_value_returns_false(self):
+        """Vérifie qu'une valeur vide rend `False`."""
         self.assertFalse(_parse_wazo_datetime(False))
         self.assertFalse(_parse_wazo_datetime(None))
 
     def test_invalid_value_returns_false(self):
+        """Vérifie qu'une valeur illisible rend `False`."""
         self.assertFalse(_parse_wazo_datetime("hier matin"))
 
 
@@ -55,6 +60,7 @@ def _cdr_item(**overrides):
 class TestWazoCdrSync(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare la connexion Wazo et les paramètres des tests de synchronisation des CDR."""
         super().setUpClass()
         cls.env["ir.config_parameter"].sudo().set_str("wazo.url", "https://wazo.example.com")
         cls.env["ir.config_parameter"].sudo().set_str("wazo.api_key", "test-api-token")
@@ -69,6 +75,7 @@ class TestWazoCdrSync(TransactionCase):
         """Pages : liste de listes d'items (simulation de pagination)."""
 
         def call_logd(method, path, params=None, body=None):
+            """Sert les pages de CDR préparées, une page par appel."""
             assert method == "GET" and path == "/cdr"
             page = int(params["page"])
             items = pages[page - 1] if page <= len(pages) else []
@@ -79,6 +86,7 @@ class TestWazoCdrSync(TransactionCase):
         )
 
     def test_sync_creates_cdr_and_matches_partner_by_phone(self):
+        """Vérifie que la synchronisation crée le CDR et rattache le contact par téléphone."""
         with self._patch_call_logd([[_cdr_item()]]):
             created = self.env["wazo.cdr"].sync_cdrs()
         self.assertEqual(created, 1)
@@ -91,6 +99,7 @@ class TestWazoCdrSync(TransactionCase):
         self.assertEqual(cdr.partner_id, self.partner)
 
     def test_sync_is_idempotent(self):
+        """Vérifie qu'une seconde synchronisation ne duplique pas les CDR."""
         pages = [[_cdr_item()]]
         with self._patch_call_logd(pages):
             self.env["wazo.cdr"].sync_cdrs()
@@ -100,6 +109,7 @@ class TestWazoCdrSync(TransactionCase):
         self.assertEqual(self.env["wazo.cdr"].search_count([("wazo_cdr_id", "=", 1234)]), 1)
 
     def test_sync_updates_changed_fields(self):
+        """Vérifie qu'une synchronisation met à jour les champs modifiés."""
         pages = [[_cdr_item(answered=False, duration=0, end="2026-09-20T10:00:01+00:00")]]
         with self._patch_call_logd(pages):
             self.env["wazo.cdr"].sync_cdrs()
@@ -111,6 +121,7 @@ class TestWazoCdrSync(TransactionCase):
         self.assertEqual(cdr.duration, 0)
 
     def test_sync_handles_pagination(self):
+        """Vérifie que la synchronisation parcourt toutes les pages."""
         # Ids distincts (hors du pool des CDR réels) : l'upsert est
         # idempotent, un wazo_cdr_id déjà en base ne compte pas comme
         # « créé ».
@@ -125,9 +136,11 @@ class TestWazoCdrSync(TransactionCase):
         self.assertEqual(self.env["wazo.cdr"].search_count([]), before + 2)
 
     def test_sync_sends_start_end_window(self):
+        """Vérifie que la synchronisation envoie la fenêtre de dates attendue."""
         seen = {}
 
         def call_logd(method, path, params=None, body=None):
+            """Capture les paramètres reçus par `call_logd`."""
             seen.update(params)
             return {"items": []}
 
@@ -142,6 +155,7 @@ class TestWazoCdrSync(TransactionCase):
 
     @mute_logger("odoo.addons.wazo_tenant.models.wazo_cdr")
     def test_cron_sync_swallows_api_errors(self):
+        """Vérifie que la tâche planifiée avale les erreurs de l'API."""
         from ..services.wazo_client import WazoAPIError
 
         with patch(
@@ -151,9 +165,11 @@ class TestWazoCdrSync(TransactionCase):
             self.env["wazo.cdr"].cron_sync_cdrs()  # ne doit pas lever
 
     def test_default_window_is_last_24h(self):
+        """Vérifie que la fenêtre par défaut couvre les 24 dernières heures."""
         seen = {}
 
         def call_logd(method, path, params=None, body=None):
+            """Capture les paramètres reçus par `call_logd`."""
             seen.update(params)
             return {"items": []}
 
@@ -166,6 +182,7 @@ class TestWazoCdrSync(TransactionCase):
         self.assertAlmostEqual((end - start).total_seconds(), 86400, delta=60)
 
     def test_now_utc_helper_is_naive(self):
+        """Vérifie que l'horodatage `now` utilisé est naïf en UTC."""
         # La fenêtre par défaut doit rester naive (fuseau UTC)
         now = datetime.now(UTC).replace(tzinfo=None)
         self.assertIsNone(now.tzinfo)

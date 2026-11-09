@@ -56,10 +56,33 @@ def _poster(channel, cmd):
 class HermesApprobation(http.Controller):
     @http.route("/hermes/approbation", type="jsonrpc", auth="user", methods=["POST"])
     def approbation(self, canal=None, cmd=None):
+        """Poste la commande d'approbation dans le canal, au nom de l'utilisateur.
+
+        Args:
+            canal (int, optional): identifiant du canal Discuss.
+            cmd (str, optional): commande, parmi la liste blanche.
+
+        Returns:
+            dict: identifiant du message posté.
+
+        Raises:
+            werkzeug.exceptions.NotFound: commande inconnue, canal absent ou usager
+                non membre.
+        """
         return {"message_id": _poster(_canal(canal, cmd), cmd).id}
 
     @http.route("/hermes/repondre", type="http", auth="user", methods=["GET"])
     def confirmer(self, canal=None, cmd=None, **kwargs):
+        """Affiche la page de confirmation d'une commande, sans rien poster.
+
+        Args:
+            canal (int, optional): identifiant du canal Discuss.
+            cmd (str, optional): commande, parmi la liste blanche.
+            **kwargs: paramètres de route supplémentaires, ignorés.
+
+        Returns:
+            odoo.http.Response: page HTML de confirmation, avec jeton CSRF.
+        """
         # Repli sans JavaScript : une page de confirmation, rien n'est posté.
         channel = _canal(canal, cmd)
         page = Markup(
@@ -77,6 +100,19 @@ class HermesApprobation(http.Controller):
 
     @http.route("/hermes/repondre", type="http", auth="user", methods=["POST"])
     def envoyer(self, canal=None, cmd=None, **kwargs):
+        """Poste la commande confirmée par formulaire, au nom de l'utilisateur.
+
+        Le POST exige le jeton CSRF d'Odoo ; un formulaire d'un autre site est donc
+        refusé.
+
+        Args:
+            canal (int, optional): identifiant du canal Discuss.
+            cmd (str, optional): commande, parmi la liste blanche.
+            **kwargs: paramètres de route supplémentaires, ignorés.
+
+        Returns:
+            odoo.http.Response: redirection vers Discuss.
+        """
         # csrf=True (défaut d'Odoo) : un formulaire d'un autre site est refusé.
         channel = _canal(canal, cmd)
         _poster(channel, cmd)

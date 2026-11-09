@@ -242,6 +242,11 @@ class WazoCdr(models.Model):
         }
 
     def action_open_cdrs(self):
+        """Ouvre le journal d'appels filtré sur `partner_id` égal à l'identifiant de la fiche.
+
+        Returns:
+            dict: action `ir.actions.act_window` sur `wazo.cdr`.
+        """
         self.ensure_one()
         return {
             "type": "ir.actions.act_window",

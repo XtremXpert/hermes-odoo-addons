@@ -57,6 +57,15 @@ def herd_is_agent(user):
 
 
 def check_digest(env, image):
+    """Vérifie qu'une image est épinglée par digest et non par tag.
+
+    Args:
+        env (odoo.api.Environment): environnement, pour le message traduit.
+        image (str): image au format `repo@sha256:<64 hex>`.
+
+    Raises:
+        odoo.exceptions.ValidationError: image vide ou non épinglée par digest.
+    """
     if not image or not DIGEST_RE.match(image):
         raise ValidationError(
             env._(
@@ -184,6 +193,14 @@ class K8sOdooPromotion(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        """Crée des promotions en attribuant un nom pris à la séquence.
+
+        Args:
+            vals_list (list[dict]): valeurs des enregistrements à créer.
+
+        Returns:
+            k8s.odoo.promotion: enregistrements créés.
+        """
         for vals in vals_list:
             if vals.get("name", "New") == "New":
                 vals["name"] = (
@@ -192,6 +209,17 @@ class K8sOdooPromotion(models.Model):
         return super().create(vals_list)
 
     def write(self, vals):
+        """Écrit des promotions et invalide le code si un champ figé change.
+
+        Args:
+            vals (dict): valeurs à écrire.
+
+        Returns:
+            bool: résultat de l'écriture du modèle parent.
+
+        Raises:
+            odoo.exceptions.UserError: la promotion n'est plus à l'état « requested ».
+        """
         frozen = FROZEN_FIELDS & set(vals)
         if frozen and any(p.state != "requested" for p in self):
             raise UserError(
@@ -203,6 +231,14 @@ class K8sOdooPromotion(models.Model):
         return super().write(vals)
 
     def unlink(self):
+        """Supprime des promotions qui n'ont pas démarré.
+
+        Returns:
+            bool: résultat de la suppression.
+
+        Raises:
+            odoo.exceptions.UserError: promotion démarrée ou confirmée.
+        """
         if any(p.state not in ("requested", "cancelled") for p in self):
             raise UserError(_("Only unconfirmed promotions can be deleted."))
         return super().unlink()
@@ -366,6 +402,17 @@ class K8sOdooPromotion(models.Model):
 
     @api.model
     def herd_cancel(self, promotion_id):
+        """Annule une promotion qui n'a pas encore démarré.
+
+        Args:
+            promotion_id (int): identifiant de la promotion.
+
+        Returns:
+            bool: True quand l'annulation est enregistrée.
+
+        Raises:
+            odoo.exceptions.UserError: promotion déjà démarrée ou terminée.
+        """
         promotion = self.sudo().browse(int(promotion_id)).exists()
         self._herd_check_can_operate(promotion.staging_id)
         if promotion.state not in ("requested", "scheduled"):

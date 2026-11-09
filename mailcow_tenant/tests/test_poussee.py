@@ -12,12 +12,14 @@ REPONSE = [{"msg": "Task completed", "type": "success"}]
 class TestPoussee(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare le domaine des tests de poussée."""
         super().setUpClass()
         cls.domain = cls.env["mailcow.domain"].search([("name", "=", "dc.com")], limit=1)
         if not cls.domain:
             cls.domain = cls.env["mailcow.domain"].create({"name": "dc.com"})
 
     def test_cree_ce_qui_manque_et_met_a_jour_le_reste(self):
+        """Vérifie que la poussée crée ce qui manque et met à jour le reste."""
         nouvelle = self.env["mailcow.mailbox"].create(
             {
                 "local_part": "nouvelle",

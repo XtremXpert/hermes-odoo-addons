@@ -13,6 +13,7 @@ from odoo.tests import tagged
 class TestVoIPMSAccess(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare un usager hors groupe et un usager du groupe SMS."""
         super().setUpClass()
         GroupUser = cls.env.ref("voipms_sms.group_voipms_user")
         cls.external_user = cls.env["res.users"].create(
@@ -25,6 +26,7 @@ class TestVoIPMSAccess(TransactionCase):
         cls.external_user.group_ids = [(4, GroupUser.id)]
 
     def test_user_without_group_cannot_read(self):
+        """Vérifie qu'un usager hors groupe ne lit pas les DIDs."""
         outsider = self.env["res.users"].create(
             {
                 "name": "Outsider",
@@ -36,6 +38,7 @@ class TestVoIPMSAccess(TransactionCase):
             self.env["voipms.sms.out"].with_user(outsider).search([])
 
     def test_regular_user_cannot_send(self):
+        """Vérifie qu'un usager ordinaire ne peut pas envoyer de SMS."""
         outsider = self.env["res.users"].create(
             {
                 "name": "Outsider2",
@@ -55,6 +58,7 @@ class TestVoIPMSAccess(TransactionCase):
             msg.with_user(outsider).action_send()
 
     def test_regular_user_in_group_can_create_and_send(self):
+        """Vérifie qu'un usager du groupe crée et envoie un SMS."""
         with patch.object(
             VoIPMSClient,
             "_request",

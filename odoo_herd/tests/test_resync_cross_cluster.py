@@ -15,6 +15,7 @@ class TestResyncCrossCluster(TransactionCase):
 
     @classmethod
     def setUpClass(cls):
+        """Prépare les clusters source et cible et leurs instances de test."""
         super().setUpClass()
         Cluster = cls.env["k8s.cluster"]
         cluster_vals = {
@@ -71,6 +72,7 @@ class TestResyncCrossCluster(TransactionCase):
         cls.Refresh = type(cls.env["k8s.odoo.staging.refresh"])
 
     def setUp(self):
+        """Filtre les journaux de synchronisation de cluster pendant le test."""
         super().setUp()
         self.enterContext(
             mute_logger(
@@ -107,6 +109,7 @@ class TestResyncCrossCluster(TransactionCase):
         return backup
 
     def test_other_cluster_restores_the_latest_backup(self):
+        """Vérifie qu'un resync inter-cluster restaure la sauvegarde complète la plus récente."""
         self._backup(self.prod, 48)
         latest = self._backup(self.prod, 24)
         self._backup(self.prod, 1, with_filestore=False)  # incomplete copy
@@ -121,6 +124,7 @@ class TestResyncCrossCluster(TransactionCase):
         self.assertTrue(result.neutralize)
 
     def test_other_cluster_without_backup_refuses(self):
+        """Vérifie qu'un resync inter-cluster refuse sans sauvegarde exploitable."""
         self._backup(self.prod, 1, with_filestore=False)
         with self.assertRaises(UserError):
             self.staging._herd_resync_from(self.prod)
@@ -129,11 +133,13 @@ class TestResyncCrossCluster(TransactionCase):
         )
 
     def test_other_cluster_keeps_the_filestore(self):
+        """Vérifie qu'un resync inter-cluster refuse de sauter le filestore."""
         self._backup(self.prod, 1)
         with self.assertRaises(UserError):
             self.staging._herd_resync_from(self.prod, skip_filestore=True)
 
     def test_same_location_clones(self):
+        """Vérifie qu'un resync sur le même emplacement clone l'instance."""
         staging = self.env["k8s.odoo.instance"].create(
             {
                 "cluster_id": self.home.id,
@@ -149,6 +155,7 @@ class TestResyncCrossCluster(TransactionCase):
         self.assertTrue(result.neutralize)
 
     def test_never_targets_a_production(self):
+        """Vérifie qu'un resync ne cible jamais une instance de production."""
         with self.assertRaises(UserError):
             self.local_prod._herd_resync_from(self.prod)
 

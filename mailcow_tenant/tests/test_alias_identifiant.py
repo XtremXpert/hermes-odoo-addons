@@ -12,12 +12,14 @@ REPONSE = [{"msg": "Task completed", "type": "success"}]
 class TestIdentifiantDUnAlias(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare le domaine des tests d'identifiant d'alias."""
         super().setUpClass()
         cls.domain = cls.env["mailcow.domain"].search([("name", "=", "dc.com")], limit=1)
         if not cls.domain:
             cls.domain = cls.env["mailcow.domain"].create({"name": "dc.com"})
 
     def test_la_creation_range_l_identifiant(self):
+        """Vérifie que la création range l'identifiant Mailcow de l'alias."""
         cible = self.env["mailcow.email_address"].create({"address": "vers@dc.com"})
         alias = self.env["mailcow.alias"].create(
             {

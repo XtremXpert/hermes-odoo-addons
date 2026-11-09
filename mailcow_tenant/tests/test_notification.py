@@ -30,6 +30,7 @@ class TestNotificationMailcow(TransactionCase):
 
     @classmethod
     def setUpClass(cls):
+        """Prépare la connexion Mailcow des tests de notification."""
         super().setUpClass()
         cls.env["ir.config_parameter"].sudo().set_str(
             "mailcow.base_url", "https://mail.example.com"

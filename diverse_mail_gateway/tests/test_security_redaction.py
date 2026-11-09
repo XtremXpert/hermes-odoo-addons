@@ -12,7 +12,7 @@ Two hard guarantees we promise to operators:
 
 2. **Only admins can read or modify tokens.** The endpoint deliberately
    bypasses Odoo's ACLs (auth='none' + sudo on validate_token), so the
-   safety net is the model's own ``ir.model.access`` row + the security
+   safety net is the model's own ``ir.access`` row + the security
    group. We verify that a regular Internal User cannot search, read,
    create or write tokens.
 
@@ -36,6 +36,7 @@ class TestNoTokenInLogs(HttpCase):
 
     @classmethod
     def setUpClass(cls):
+        """Prépare un jeton et autorise le HTTP clair pour capturer les journaux."""
         super().setUpClass()
         cls.Token = cls.env["diverse.mail_gateway.token"]
         cls.env["ir.config_parameter"].sudo().set_str("diverse_mail_gateway.allow_http", "True")
@@ -97,6 +98,7 @@ class TestNoTokenInLogs(HttpCase):
     # ---- Generation path --------------------------------------------------
 
     def test_generate_does_not_log_raw(self):
+        """Vérifie que la génération d'un jeton ne journalise pas sa valeur."""
         handler, _ = self._capture()
         _, raw = self.Token.action_generate("redact-gen")
         self._assert_no_leak(handler, raw, "action_generate")
@@ -104,12 +106,14 @@ class TestNoTokenInLogs(HttpCase):
     # ---- Validation paths -------------------------------------------------
 
     def test_validate_success_does_not_log_raw(self):
+        """Vérifie qu'une validation réussie ne journalise pas le jeton."""
         _, raw = self.Token.action_generate("redact-val-ok")
         handler, _ = self._capture()
         self.Token.validate_token(raw, ip="127.0.0.1")
         self._assert_no_leak(handler, raw, "validate_token (success)")
 
     def test_validate_failure_does_not_log_attempted_token(self):
+        """Vérifie qu'une validation refusée ne journalise pas le jeton tenté."""
         attempted = "evil-attempted-token-shouldn't-appear-anywhere-XYZ123"
         handler, _ = self._capture()
         self.Token.validate_token(attempted)
@@ -118,6 +122,7 @@ class TestNoTokenInLogs(HttpCase):
     # ---- Controller paths -------------------------------------------------
 
     def test_controller_check_success_does_not_log_raw(self):
+        """Vérifie que /check avec un jeton valide ne journalise pas sa valeur."""
         _, raw = self.Token.action_generate("redact-ctl-check")
         handler, _ = self._capture()
         self.opener.post(
@@ -128,6 +133,7 @@ class TestNoTokenInLogs(HttpCase):
         self._assert_no_leak(handler, raw, "controller /check (200)")
 
     def test_controller_check_failure_does_not_log_attempted(self):
+        """Vérifie que /check refusé ne journalise pas le jeton tenté."""
         attempted = "evil-controller-token-X9Y8Z7"
         handler, _ = self._capture()
         self.opener.post(
@@ -139,6 +145,7 @@ class TestNoTokenInLogs(HttpCase):
 
     @mute_logger("odoo.addons.mail.models.mail_thread")
     def test_controller_process_does_not_log_raw(self):
+        """Vérifie que /process ne journalise pas le jeton utilisé."""
         _, raw = self.Token.action_generate("redact-ctl-process")
         handler, _ = self._capture()
         self.opener.post(
@@ -169,6 +176,7 @@ class _ListHandler(logging.Handler):
         self.records: list[logging.LogRecord] = []
 
     def emit(self, record: logging.LogRecord) -> None:
+        """Capture un enregistrement de journal dans la liste du gestionnaire."""
         self.records.append(record)
 
 
@@ -178,6 +186,7 @@ class TestAclEnforcement(TransactionCase):
 
     @classmethod
     def setUpClass(cls):
+        """Prépare un utilisateur interne sans droit d'administration."""
         super().setUpClass()
         cls.Token = cls.env["diverse.mail_gateway.token"]
         # A plain Internal User — no admin groups.
@@ -194,30 +203,36 @@ class TestAclEnforcement(TransactionCase):
         return self.Token.with_user(self.regular_user)
 
     def test_regular_user_cannot_search(self):
+        """Vérifie qu'un utilisateur ordinaire ne peut pas chercher de jeton."""
         # Pre-create a token as admin so search has something to find
         self.Token.action_generate("acl-search")
         with self.assertRaises(AccessError):
             self._as_user().search([])
 
     def test_regular_user_cannot_read(self):
+        """Vérifie qu'un utilisateur ordinaire ne peut pas lire un jeton."""
         rec, _ = self.Token.action_generate("acl-read")
         with self.assertRaises(AccessError):
             self._as_user().browse(rec.id).read(["name"])
 
     def test_regular_user_cannot_create(self):
+        """Vérifie qu'un utilisateur ordinaire ne peut pas créer de jeton."""
         with self.assertRaises(AccessError):
             self._as_user().create({"name": "acl-create-fail", "token_hash": "0" * 64})
 
     def test_regular_user_cannot_call_action_generate(self):
+        """Vérifie qu'un utilisateur ordinaire ne peut pas générer de jeton."""
         with self.assertRaises(AccessError):
             self._as_user().action_generate("acl-gen-fail")
 
     def test_regular_user_cannot_write(self):
+        """Vérifie qu'un utilisateur ordinaire ne peut pas modifier un jeton."""
         rec, _ = self.Token.action_generate("acl-write")
         with self.assertRaises(AccessError):
             rec.with_user(self.regular_user).active = False
 
     def test_regular_user_cannot_unlink(self):
+        """Vérifie qu'un utilisateur ordinaire ne peut pas supprimer un jeton."""
         rec, _ = self.Token.action_generate("acl-unlink")
         with self.assertRaises(AccessError):
             rec.with_user(self.regular_user).unlink()
@@ -237,10 +252,12 @@ class TestTokenHashNotInUiSearches(TransactionCase):
 
     @classmethod
     def setUpClass(cls):
+        """Prépare le modèle des jetons pour les recherches d'interface."""
         super().setUpClass()
         cls.Token = cls.env["diverse.mail_gateway.token"]
 
     def test_name_search_returns_label_not_hash(self):
+        """Vérifie que la recherche d'interface renvoie le libellé, jamais l'empreinte."""
         rec, raw = self.Token.action_generate("ns-search-label")
         results = self.Token.name_search("ns-search-label")
         # results = [(id, display_name), ...]

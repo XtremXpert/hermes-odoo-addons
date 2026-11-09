@@ -1,8 +1,12 @@
 {
     "name": "Hermes N1 — modifications documentées",
+    "summary": "Façade d'écriture pour l'agent N1 et journal immuable des modifications",
     "version": "20.0.3.1.2",
+    "development_status": "Beta",
+    "category": "Administration",
     "author": "Benoît Vézina, Diverse-Cité",
     "website": "https://github.com/XtremXpert/hermes-odoo-addons",
+    "maintainers": ["XtremXpert"],
     "license": "AGPL-3",
     "depends": ["mail"],
     "data": ["security/groups.xml", "security/ir.access.csv"],

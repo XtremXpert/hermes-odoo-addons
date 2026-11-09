@@ -47,12 +47,23 @@ class K8sOdooPromotionConfirm(models.TransientModel):
         }
 
     def action_send_code(self):
+        """Envoie un code de confirmation à l'approbateur et rouvre l'assistant.
+
+        Returns:
+            dict: action rouvrant l'assistant avec le message d'envoi.
+        """
         self.ensure_one()
         # sudo record as in the portal; the checks use the real user passed in.
         self.promotion_id.sudo()._herd_send_code(self.env.user)
         return self._reopen(_("A code was sent to %s.", self.env.user.email))
 
     def action_confirm(self):
+        """Confirme la promotion avec le code saisi et referme l'assistant.
+
+        Returns:
+            dict: fermeture de l'assistant, ou réouverture avec l'erreur si le code
+                est faux.
+        """
         self.ensure_one()
         if not self.code:
             raise UserError(_("Enter the code."))

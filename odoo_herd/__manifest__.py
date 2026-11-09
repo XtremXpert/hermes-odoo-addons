@@ -1,6 +1,7 @@
 {
     "name": "Odoo Herd",
     "version": "20.0.1.9.1",
+    "development_status": "Beta",
     "category": "Administration/Kubernetes",
     "summary": "Manage your herd of Odoo instances across Kubernetes clusters",
     "description": """
@@ -20,6 +21,7 @@ Features:
 """,
     "author": "Bemade Inc., Diverse-Cité",
     "website": "https://github.com/XtremXpert/hermes-odoo-addons",
+    "maintainers": ["XtremXpert"],
     "license": "LGPL-3",
     "depends": [
         "base",

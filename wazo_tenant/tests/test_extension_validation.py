@@ -71,6 +71,7 @@ class WazoValidationTestBase(TransactionCase):
 
     @classmethod
     def setUpClass(cls):
+        """Prépare le contexte Wazo et le routeur simulé des tests de validation."""
         super().setUpClass()
         icp = cls.env["ir.config_parameter"].sudo()
         icp.set_str("wazo.url", "https://wazo.example.com")
@@ -105,6 +106,7 @@ class WazoValidationTestBase(TransactionCase):
         ligne = LIGNE_WAZO if ligne is None else ligne
 
         def conf(method, path, params=None, body=None):
+            """Simule les réponses de confd, avec panne injectée sur la route demandée."""
             appels.append((method, path))
             if erreur_sur and (method, path) == tuple(erreur_sur):
                 # Panne simulée au milieu d'une séquence : sert à vérifier
@@ -163,6 +165,7 @@ class WazoValidationTestBase(TransactionCase):
     @staticmethod
     def _auth():
         def auth(method, path, params=None, body=None):
+            """Simule la réponse d'authd à la création d'un compte."""
             return {"uuid": "auth-uuid-1", "username": (body or {}).get("username")}
 
         return auth
@@ -201,10 +204,12 @@ class TestExtensionLocalRules(WazoValidationTestBase):
     """Règles vérifiables sans le PBX."""
 
     def test_extension_must_be_digits(self):
+        """Vérifie qu'un poste non numérique est refusé."""
         with self.assertRaises(ValidationError):
             self._create_user("10a1")
 
     def test_extension_must_not_contain_separators(self):
+        """Vérifie qu'un poste contenant un séparateur est refusé."""
         with self.assertRaises(ValidationError):
             self._create_user("100-1")
 
@@ -230,6 +235,7 @@ class TestExtensionRangeRules(WazoValidationTestBase):
     """Règles de plage, vérifiées au moment de la synchronisation."""
 
     def test_extension_outside_any_declared_range_is_refused(self):
+        """Vérifie qu'un poste hors de toute plage déclarée est refusé."""
         wazo_user = self._create_user("5101")
         ctx, _ = self._expect_refusal(wazo_user)
         self.assertIn("plage", str(ctx.exception).lower())

@@ -4,6 +4,7 @@
     "category": "Productivity",
     "summary": """Création et encadrement des tenants Wazo""",
     "version": "20.0.2.1.0",
+    "development_status": "Beta",
     # « wazo_voipms » : le tableau de bord de l'exploitant lit l'état du
     # pont (trunk, DIDs). « web » : le tableau de bord importe
     # @web/@odoo/owl, et le tri des modules place wazo_server avant
@@ -27,6 +28,7 @@
     },
     "author": "Benoît Vézina, Diverse-Cité",
     "website": "https://github.com/XtremXpert/hermes-odoo-addons",
+    "maintainers": ["XtremXpert"],
     "license": "LGPL-3",
     "installable": True,
     "application": True,

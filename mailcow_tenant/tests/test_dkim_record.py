@@ -13,10 +13,12 @@ REPONSE = [{"msg": "Task completed", "type": "success"}]
 class TestEnregistrementDkim(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare le domaine des tests d'enregistrement DKIM."""
         super().setUpClass()
         cls.domaine = cls.env["mailcow.domain"].create({"name": "dkim.com", "synced": True})
 
     def test_ne_garde_que_la_partie_publique(self):
+        """Vérifie que seul l'enregistrement public DKIM est gardé."""
         reponse = [
             {
                 "dkim_selector": "dkim",
@@ -32,12 +34,14 @@ class TestEnregistrementDkim(TransactionCase):
         self.assertNotIn("PRIVEE", self.domaine.dkim_record)
 
     def test_le_selecteur_du_serveur_est_respecte(self):
+        """Vérifie que le sélecteur DKIM du serveur est respecté."""
         reponse = [{"dkim_selector": "selecteur2", "dkim_txt": "v=DKIM1;p=X"}]
         with patch.object(MailcowClient, "_request", return_value=reponse):
             self.domaine.action_fetch_dkim()
         self.assertIn("selecteur2._domainkey.dkim.com", self.domaine.dkim_record)
 
     def test_refuse_une_reponse_sans_cle(self):
+        """Vérifie qu'une réponse sans clé DKIM est refusée."""
         with patch.object(MailcowClient, "_request", return_value=[{"type": "danger"}]):
             with self.assertRaises(UserError):
                 self.domaine.action_fetch_dkim()

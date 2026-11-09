@@ -123,6 +123,19 @@ def _mesurer(domaines, boites, alias, jours_avant_dormance):
     # La regle vit donc au meme endroit que les autres regles du module, et se
     # teste sans navigateur.
     def alerte(cle, libelle, gravite, detail, modele, fiches):
+        """Construit une entrée d'alerte du tableau de bord.
+
+        Args:
+            cle: identifiant de l'alerte.
+            libelle: libellé affiché à l'utilisateur.
+            gravite: niveau de gravité (`danger`, `warning`…).
+            detail: phrase qui explique l'alerte.
+            modele: modèle Odoo dont les fiches sont pointées.
+            fiches: enregistrements concernés.
+
+        Returns:
+            dict: alerte prête pour le composant du tableau de bord.
+        """
         return {
             "cle": cle,
             "libelle": libelle,
@@ -714,7 +727,7 @@ class MailcowDomain(models.Model):
         self.ensure_one()
         return {
             "type": "ir.actions.client",
-            "tag": "mailcow_tenant.dashboard_domaine",
+            "tag": "mailcow.dashboard_domaine",
             "name": "Domaine %s" % self.name,
             "res_id": self.id,
             "params": {"resId": self.id},

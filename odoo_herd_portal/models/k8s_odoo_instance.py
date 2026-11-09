@@ -98,6 +98,17 @@ class K8sOdooInstance(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        """Crée des instances en héritant le client de la production.
+
+        Un staging sans client explicite reprend `herd_partner_id` de sa production,
+        faute de quoi la base clonée resterait invisible du portail.
+
+        Args:
+            vals_list (list[dict]): valeurs des enregistrements à créer.
+
+        Returns:
+            k8s.odoo.instance: enregistrements créés.
+        """
         # Un staging appartient au client de sa production. Sans cet héritage,
         # la base clonée reste invisible du portail et personne ne s'en aperçoit.
         for vals in vals_list:
@@ -109,6 +120,18 @@ class K8sOdooInstance(models.Model):
         return super().create(vals_list)
 
     def write(self, vals):
+        """Écrit des instances et interdit aux agents les champs protégés.
+
+        Args:
+            vals (dict): valeurs à écrire.
+
+        Returns:
+            bool: résultat de l'écriture du modèle parent.
+
+        Raises:
+            odoo.exceptions.AccessError: un agent modifie un champ interdit, ou
+                l'image d'une production.
+        """
         if herd_is_agent(self.env.user):
             forbidden = AGENT_FORBIDDEN_FIELDS & set(vals)
             if "image" in vals and any(i.environment == "production" for i in self):

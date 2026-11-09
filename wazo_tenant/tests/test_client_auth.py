@@ -20,6 +20,7 @@ from odoo.tests import tagged
 class WazoTokenTestBase(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare les réglages d'authentification des tests de jeton."""
         super().setUpClass()
         icp = cls.env["ir.config_parameter"].sudo()
         icp.set_str("wazo.url", "https://wazo.example.com")
@@ -45,10 +46,12 @@ class WazoTokenTestBase(TransactionCase):
 @tagged("wazo_tenant", "post_install", "-at_install")
 class TestWazoClientToken(WazoTokenTestBase):
     def test_token_endpoint_is_singular(self):
+        """Vérifie que la route du jeton est au singulier."""
         request, _ = self._appel_token()
         self.assertEqual(request.full_url, "https://wazo.example.com/api/auth/0.1/token")
 
     def test_authentication_is_basic(self):
+        """Vérifie que l'authentification est de type Basic."""
         request, _ = self._appel_token()
         entetes = {k.lower(): v for k, v in request.header_items()}
         attendu = base64.b64encode(b"odoo_admin:motdepasse").decode()
@@ -67,6 +70,7 @@ class TestWazoClientToken(WazoTokenTestBase):
         self.assertNotIn("wazo-tenant", entetes)
 
     def test_expiration_is_sent_and_token_returned(self):
+        """Vérifie que l'expiration est envoyée et que le jeton est rendu."""
         request, resultat = self._appel_token(expiration=315360000)
         self.assertEqual(request.data, b'{"expiration": 315360000}')
         self.assertEqual(resultat["token"], "jeton-du-tenant")
@@ -99,6 +103,7 @@ class TestWazoClientRevokeToken(WazoTokenTestBase):
         return urlopen.call_args[0][0], resultat
 
     def test_revocation_is_a_delete_on_the_token_path(self):
+        """Vérifie que la révocation est un DELETE sur la route du jeton."""
         request, _ = self._appel_revocation()
         self.assertEqual(request.get_method(), "DELETE")
         self.assertEqual(
@@ -112,5 +117,6 @@ class TestWazoClientRevokeToken(WazoTokenTestBase):
         self.assertNotIn("authorization", entetes)
 
     def test_revocation_returns_the_api_message(self):
+        """Vérifie que la révocation rend le message de l'API."""
         _, resultat = self._appel_revocation()
         self.assertEqual(resultat["message"], "Token revoked")

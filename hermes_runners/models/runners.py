@@ -7,12 +7,12 @@ Deux sources, et la distinction compte :
   par job attribué, avec sa phase et son identifiant GitHub. C'est direct,
   sans jeton, sans quota ;
 * **GitHub** sait ce qui *attend* — un job en file n'a pas encore de pod, donc
-  n'apparaît nulle part dans Kubernetes. Cette moitié demande un jeton et vit
-  dans `github_queue_snapshot`, qui échoue proprement quand le jeton manque.
+  n'apparaît nulle part dans Kubernetes. Cette moitié demande un jeton ; elle
+  n'est **pas implémentée** : `runners_snapshot` ne lit que le cluster.
 
 Un tableau de bord qui ne montrerait que le cluster afficherait « tout va bien »
-pendant qu'une file grossit. C'est pour cette raison que les deux vues existent
-et que la file est affichée séparément, avec son propre indicateur d'échec.
+pendant qu'une file grossit. C'est pourquoi le gabarit prévient explicitement
+qu'un job en file n'a pas encore de pod et n'apparaît donc pas.
 """
 
 import logging

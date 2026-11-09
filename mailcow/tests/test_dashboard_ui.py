@@ -40,6 +40,7 @@ const verifierTexte = (racine) => {
 class TestTableauDeBordNavigateur(HttpCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare un domaine et une boîte aux lettres de test."""
         super().setUpClass()
         cls.domaine = cls.env["mailcow.domain"].create(
             {
@@ -63,6 +64,7 @@ class TestTableauDeBordNavigateur(HttpCase):
         )
 
     def test_les_tableaux_de_bord_s_affichent_et_se_parcourent(self):
+        """Vérifie que les tableaux de bord mailcow s'affichent et se parcourent."""
         code = (
             _ATTENDRE
             + """

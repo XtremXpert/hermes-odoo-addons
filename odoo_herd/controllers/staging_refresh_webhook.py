@@ -19,6 +19,18 @@ class K8sStagingRefreshWebhook(http.Controller):
         csrf=False,
     )
     def staging_refresh_webhook(self, refresh_id, **kwargs):
+        """Traite le webhook de statut d'une resynchronisation de staging.
+
+        Vérifie le jeton Bearer puis applique la phase reçue (running, completed,
+        failed) et notifie l'auteur de la resynchronisation.
+
+        Args:
+            refresh_id (int): identifiant du `k8s.odoo.staging.refresh` visé.
+            **kwargs: paramètres de route supplémentaires, ignorés.
+
+        Returns:
+            odoo.http.Response: réponse JSON (200, 400, 401, 403 ou 404).
+        """
         auth_header = request.httprequest.headers.get("Authorization", "")
         if not auth_header.startswith("Bearer "):
             _logger.warning(

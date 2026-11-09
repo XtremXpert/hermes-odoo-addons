@@ -72,6 +72,11 @@ class _LecteurHtml(HTMLParser):
         self.rang, self.entete, self.tableau, self.pre = None, False, [], False
 
     def ecrire(self, morceau):
+        """Ajoute un morceau au texte produit, ou au rang de tableau en cours.
+
+        Args:
+            morceau (str): texte ou balise Markdown à ajouter.
+        """
         if self.muet:
             return
         if self.rang is not None and self.rang:
@@ -80,6 +85,12 @@ class _LecteurHtml(HTMLParser):
             self.sortie.append(morceau)
 
     def handle_starttag(self, tag, attrs):
+        """Traduit une balise ouvrante HTML en équivalent Markdown.
+
+        Args:
+            tag (str): nom de la balise.
+            attrs (list[tuple]): attributs de la balise.
+        """
         attrs = dict(attrs)
         if tag in ("script", "style"):
             self.muet += 1
@@ -115,6 +126,11 @@ class _LecteurHtml(HTMLParser):
                 self.rang.append("")
 
     def handle_endtag(self, tag):
+        """Traduit une balise fermante HTML en équivalent Markdown.
+
+        Args:
+            tag (str): nom de la balise.
+        """
         if tag in ("script", "style"):
             self.muet = max(0, self.muet - 1)
         elif tag in ("p", "div", "blockquote", "h1", "h2", "h3", "h4", "h5", "h6"):
@@ -146,6 +162,11 @@ class _LecteurHtml(HTMLParser):
             self.ecrire("\n\n")
 
     def handle_data(self, data):
+        """Ajoute le texte brut au rang en cours ou au flux, espaces normalisés.
+
+        Args:
+            data (str): texte du document HTML.
+        """
         if self.rang is not None and self.rang:
             self.rang[-1] += data
         else:
@@ -153,6 +174,14 @@ class _LecteurHtml(HTMLParser):
 
 
 def markdown_depuis_html(texte: str) -> str:
+    """Convertit du HTML simple en Markdown, sans conserver de balise.
+
+    Args:
+        texte (str): HTML d'entrée.
+
+    Returns:
+        str: Markdown nettoyé.
+    """
     lecteur = _LecteurHtml()
     lecteur.feed(texte)
     lecteur.close()
@@ -163,6 +192,15 @@ def markdown_depuis_html(texte: str) -> str:
 
 
 def html_depuis_markdown(texte: str) -> str:
+    """Convertit du Markdown en HTML échappé, puis réintroduit les balises voulues.
+
+    Args:
+        texte (str): Markdown d'entrée ; un texte qui commence par une balise de
+            bloc est d'abord ramené en Markdown.
+
+    Returns:
+        str: HTML assaini, prêt pour Odoo.
+    """
     if _BLOC_HTML.match(texte or ""):
         texte = markdown_depuis_html(texte)
     lignes = _echapper(texte or "").split("\n")
@@ -171,17 +209,20 @@ def html_depuis_markdown(texte: str) -> str:
     code = None
 
     def vider_para():
+        """Vide le paragraphe en cours dans le HTML produit."""
         if para:
             html.append("<p>%s</p>" % _en_ligne("<br>".join(para)))
             del para[:]
 
     def fermer_liste():
+        """Ferme la liste ouverte, s'il y en a une."""
         nonlocal liste
         if liste:
             html.append("</%s>" % liste)
             liste = None
 
     def vider_tableau():
+        """Vide les lignes de tableau accumulées dans le HTML produit."""
         if not tableau:
             return
         rangs = [[c.strip() for c in ligne.strip("|").split("|")] for ligne in tableau]

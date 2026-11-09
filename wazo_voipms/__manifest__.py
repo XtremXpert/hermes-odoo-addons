@@ -4,6 +4,7 @@
     "category": "Productivity",
     "summary": """Trunk SIP VoIP.ms pour Wazo : appels sortants et routage des DIDs""",
     "version": "20.0.1.0.0",
+    "development_status": "Beta",
     "depends": ["wazo_tenant", "voipms_sms"],
     "data": [
         "security/ir.access.csv",
@@ -14,6 +15,7 @@
     ],
     "author": "Benoît Vézina, Diverse-Cité",
     "website": "https://github.com/XtremXpert/hermes-odoo-addons",
+    "maintainers": ["XtremXpert"],
     "license": "LGPL-3",
     "installable": True,
     "application": False,

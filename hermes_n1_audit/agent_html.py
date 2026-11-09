@@ -84,6 +84,7 @@ def _body(lines):
     parts, para, items = [], [], []
 
     def flush():
+        """Vide dans le HTML les paragraphes et la liste en attente."""
         if para:
             parts.append(Markup("<p>%s</p>") % Markup("<br/>").join(_inline(x) for x in para))
             para.clear()

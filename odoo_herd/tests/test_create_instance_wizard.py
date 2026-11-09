@@ -16,11 +16,13 @@ class FakeCoreV1Api:
         self.created_namespaces = []
 
     def read_namespace(self, name):
+        """Simule la lecture d'un namespace : 404 quand il ne doit pas exister."""
         if self.should_exist:
             return {"metadata": {"name": name}}
         raise ApiException(status=404)
 
     def create_namespace(self, body):
+        """Simule la création d'un namespace et mémorise son nom."""
         self.created_namespaces.append(body.metadata.name)
         return body
 
@@ -31,6 +33,7 @@ class FakeCustomObjectsApi:
         self.read_objects = {}
 
     def create_namespaced_custom_object(self, group, version, namespace, plural, body):  # pylint: disable=unused-argument
+        """Simule la création d'une ressource personnalisée et la mémorise."""
         self.created.append(
             {
                 "group": group,
@@ -43,6 +46,7 @@ class FakeCustomObjectsApi:
         return body
 
     def get_namespaced_custom_object(self, group, version, namespace, plural, name):  # pylint: disable=unused-argument
+        """Simule la lecture d'une ressource personnalisée déjà enregistrée."""
         key = (namespace, plural, name)
         if key in self.read_objects:
             return self.read_objects[key]
@@ -53,6 +57,7 @@ class FakeCustomObjectsApi:
 class TestCreateInstanceWizard(TransactionCase):
     @classmethod
     def setUpClass(cls):  # type: ignore[misc]  # Odoo test base defines env at runtime
+        """Prépare le cluster, l'offre et les valeurs du wizard de création."""
         super().setUpClass()
         env: Any = cls.env  # satisfy static type checkers
         cls.cluster = cast(
@@ -91,11 +96,13 @@ class TestCreateInstanceWizard(TransactionCase):
         return cast(Any, wiz)
 
     def test_parse_ingress_hosts_requires_value(self):
+        """Vérifie que des hôtes d'ingress vides sont refusés."""
         wiz = self._make_wizard(ingress_hosts=" \n ")
         with self.assertRaises(UserError):
             wiz._parse_ingress_hosts()
 
     def test_build_instance_spec_includes_config_options_and_pull_secret(self):
+        """Vérifie que la spec reprend les options de configuration et le secret de pull."""
         wiz = self._make_wizard(
             image_pull_secret="regcred",
             config_options='{"workers": "4", "addons_path": "/mnt/a"}',
@@ -108,6 +115,7 @@ class TestCreateInstanceWizard(TransactionCase):
         self.assertEqual(spec["configOptions"]["workers"], "4")
 
     def test_build_instance_spec_ignores_bad_json(self):
+        """Vérifie qu'un JSON d'options invalide est ignoré sans erreur."""
         wiz = self._make_wizard(config_options="{bad json")
         spec = wiz._build_instance_spec(["a.example.com"])
         self.assertNotIn("configOptions", spec)
@@ -145,16 +153,19 @@ class TestCreateInstanceWizard(TransactionCase):
         self.assertEqual(json.loads(wiz.config_options)["workers"], "5")
 
     def test_validate_initialization_mode_enforces_restore_fields(self):
+        """Vérifie que le mode « restore » exige les champs de restauration."""
         wiz = self._make_wizard(initialization_mode="restore")
         with self.assertRaises(UserError):
             wiz._validate_initialization_mode()
 
     def test_validate_initialization_mode_enforces_backup_has_backup(self):
+        """Vérifie que le mode « backup » exige une sauvegarde."""
         wiz = self._make_wizard(initialization_mode="backup", backup_id=False)
         with self.assertRaises(UserError):
             wiz._validate_initialization_mode()
 
     def test_build_webhook_url_generates_token(self):
+        """Vérifie que l'URL de webhook génère un jeton quand il manque."""
         # Reset token to force generation
         self.cluster.instance_webhook_token = False
         wiz = self._make_wizard()
@@ -163,12 +174,14 @@ class TestCreateInstanceWizard(TransactionCase):
         self.assertTrue(self.cluster.instance_webhook_token)
 
     def test_ensure_namespace_creates_on_404(self):
+        """Vérifie que le namespace est créé quand l'API répond 404."""
         core = FakeCoreV1Api(should_exist=False)
         wiz = self._make_wizard()
         wiz._ensure_namespace(core)
         self.assertEqual(core.created_namespaces, ["odoo"])
 
     def test_action_create_instance_happy_path_fresh(self):
+        """Vérifie la création d'une instance neuve de bout en bout."""
         fake_core = FakeCoreV1Api(should_exist=False)
         fake_custom = FakeCustomObjectsApi()
 
@@ -216,17 +229,20 @@ class TestCreateInstanceWizard(TransactionCase):
         self.assertEqual(action["tag"], "display_notification")
 
     def test_build_instance_spec_fresh_enables_init(self):
+        """Vérifie que le mode « fresh » active l'initialisation avec le module base."""
         wiz = self._make_wizard(initialization_mode="fresh")
         spec = wiz._build_instance_spec(["a.example.com"])
         self.assertTrue(spec["init"]["enabled"])
         self.assertEqual(spec["init"]["modules"], ["base"])
 
     def test_build_instance_spec_restore_disables_init(self):
+        """Vérifie que le mode « restore » désactive l'initialisation."""
         wiz = self._make_wizard(initialization_mode="restore")
         spec = wiz._build_instance_spec(["a.example.com"])
         self.assertFalse(spec["init"]["enabled"])
 
     def test_build_instance_spec_backup_disables_init(self):
+        """Vérifie que le mode « backup » désactive l'initialisation."""
         wiz = self._make_wizard(initialization_mode="backup")
         spec = wiz._build_instance_spec(["a.example.com"])
         self.assertFalse(spec["init"]["enabled"])

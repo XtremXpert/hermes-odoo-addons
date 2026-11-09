@@ -64,6 +64,19 @@ class ProxmoxSyncMixin(models.AbstractModel):
     def web_search_read(
         self, domain, specification, offset=0, limit=None, order=None, count_limit=None
     ):
+        """Rafraîchit les données Proxmox périmées avant de lire la vue.
+
+        Args:
+            domain: Domaine de recherche.
+            specification: Spécification des champs à lire.
+            offset: Décalage de départ.
+            limit: Nombre maximal d'enregistrements.
+            order: Ordre de tri.
+            count_limit: Limite de comptage.
+
+        Returns:
+            Le résultat de ``web_search_read`` du modèle.
+        """
         self._rafraichir_si_obsolete()
         return super().web_search_read(
             domain,

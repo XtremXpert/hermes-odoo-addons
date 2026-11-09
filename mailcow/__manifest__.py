@@ -4,6 +4,7 @@
     "category": "Productivity",
     "summary": """Côté usager de Mailcow : vue d'ensemble du serveur""",
     "version": "20.0.1.0.0",
+    "development_status": "Beta",
     "depends": ["mailcow_tenant"],
     "data": [
         "views/mailcow_dashboard_views.xml",
@@ -22,6 +23,7 @@
     },
     "author": "Benoît Vézina, Diverse-Cité",
     "website": "https://github.com/XtremXpert/hermes-odoo-addons",
+    "maintainers": ["XtremXpert"],
     "license": "LGPL-3",
     "installable": True,
     "application": True,

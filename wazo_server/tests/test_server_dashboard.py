@@ -25,6 +25,7 @@ VOIPMS_CTOR = "odoo.addons.wazo_server.models.wazo_server_dashboard.VoIPMSClient
 class TestServerDashboard(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare le tableau de bord et ses modèles."""
         super().setUpClass()
         cls.Dashboard = cls.env["wazo.server.dashboard"]
         cls.Tenant = cls.env["wazo.server.tenant"]
@@ -35,6 +36,7 @@ class TestServerDashboard(TransactionCase):
         return self.Dashboard.get_server_dashboard()
 
     def test_aggregates_tenants_trunks_and_dids(self):
+        """Vérifie que le tableau de bord agrège tenants, trunks et DIDs."""
         self.Tenant.create({"name": "Diverse-Cité", "slug": "diverse"})
         self.Trunk.create({"name": "T1", "voipms_username": "u", "voipms_password": "p"})
         self.Did.create({"number": "4184803381"})
@@ -48,6 +50,7 @@ class TestServerDashboard(TransactionCase):
         self.assertEqual(data["dids"]["routed"], 0)
 
     def test_did_routed_counts(self):
+        """Vérifie que les DIDs routés sont comptés."""
         did = self.Did.create({"number": "4184803382"})
         did.wazo_route_state = "routed"
         data = self._dashboard()
@@ -55,6 +58,7 @@ class TestServerDashboard(TransactionCase):
         self.assertEqual(data["dids"]["muted"], 0)
 
     def test_token_expiry_flags_only_soon(self):
+        """Vérifie que seule une expiration proche est signalée."""
         bientot = fields.Datetime.to_string(datetime.now() + timedelta(days=10))
         loin = fields.Datetime.to_string(datetime.now() + timedelta(days=200))
         self.Tenant.create({"name": "Bientôt", "slug": "bientot", "token_expires_at": bientot})
@@ -74,6 +78,7 @@ class TestServerDashboard(TransactionCase):
         client._request.assert_not_called()
 
     def test_balance_on_request_parses_amount(self):
+        """Vérifie que le solde demandé est analysé."""
         client = MagicMock()
         client._request.return_value = {
             "status": "success",
@@ -101,6 +106,7 @@ class TestServerDashboard(TransactionCase):
         self.assertEqual(data["tenants"]["total"], 0)
 
     def test_balance_unreadable_response_degrades(self):
+        """Vérifie qu'une réponse de solde illisible dégrade sans échouer."""
         client = MagicMock()
         client._request.return_value = {"status": "success", "balance": {}}
         with patch(VOIPMS_CTOR, return_value=client):

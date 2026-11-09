@@ -10,6 +10,7 @@ from odoo.tests import tagged
 class TestMailcowAccessRights(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare un domaine et des usagers de droits différents."""
         super().setUpClass()
         cls.domain = cls.env["mailcow.domain"].create({"name": "rights.com"})
         # Utilisateur standard, sans aucun groupe Mailcow
@@ -22,10 +23,12 @@ class TestMailcowAccessRights(TransactionCase):
         cls.manager_user = cls.env.ref("mailcow_tenant.group_mailcow_manager").user_ids[0]
 
     def test_external_user_cannot_read_domains(self):
+        """Vérifie qu'un usager externe ne lit pas les domaines."""
         with self.assertRaises(AccessError):
             self.env["mailcow.domain"].with_user(self.external_user).search([])
 
     def test_external_user_cannot_create_mailbox(self):
+        """Vérifie qu'un usager externe ne crée pas de boîte."""
         with self.assertRaises(AccessError):
             self.env["mailcow.mailbox"].with_user(self.external_user).create(
                 {
@@ -35,9 +38,11 @@ class TestMailcowAccessRights(TransactionCase):
             )
 
     def test_manager_can_read_domains(self):
+        """Vérifie qu'un gestionnaire lit les domaines."""
         domains = self.env["mailcow.domain"].with_user(self.manager_user).search([])
         self.assertIn(self.domain, domains)
 
     def test_regular_user_without_group_cannot_unlink(self):
+        """Vérifie qu'un usager sans groupe ne supprime pas de domaine."""
         with self.assertRaises(AccessError):
             self.domain.with_user(self.external_user).unlink()

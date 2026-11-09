@@ -110,6 +110,11 @@ class WazoSetupWizard(models.TransientModel):
         return self._reopen()
 
     def action_back(self):
+        """Revient à l'étape précédente de l'assistant.
+
+        Returns:
+            L'action qui rouvre l'assistant sur l'étape précédente.
+        """
         self.ensure_one()
         order = ["done", "group", "user", "trunk"]
         previous = order[max(order.index(self.state) - 1, 0)]
@@ -117,6 +122,11 @@ class WazoSetupWizard(models.TransientModel):
         return self._reopen()
 
     def action_close(self):
+        """Ferme l'assistant.
+
+        Returns:
+            L'action de fermeture de fenêtre.
+        """
         return {"type": "ir.actions.act_window_close"}
 
     def _reopen(self):

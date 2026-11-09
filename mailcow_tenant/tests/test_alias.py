@@ -13,6 +13,7 @@ from odoo.tests import tagged
 class TestMailcowAlias(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare la connexion Mailcow des tests d'alias."""
         super().setUpClass()
         cls.env["ir.config_parameter"].sudo().set_str(
             "mailcow.base_url", "https://mail.example.com"
@@ -27,6 +28,7 @@ class TestMailcowAlias(TransactionCase):
         )
 
     def test_create_alias_sends_addresses_and_marks_synced(self):
+        """Vérifie que la création envoie les adresses et marque l'alias synchronisé."""
         alias = self.env["mailcow.alias"].create(
             {
                 "alias_name": "info",
@@ -54,6 +56,7 @@ class TestMailcowAlias(TransactionCase):
         self.assertTrue(alias.synced)
 
     def test_create_alias_requires_at_least_one_address(self):
+        """Vérifie qu'un alias exige au moins une adresse."""
         alias = self.env["mailcow.alias"].create(
             {
                 "alias_name": "info",
@@ -64,6 +67,7 @@ class TestMailcowAlias(TransactionCase):
             alias.action_create_on_mailcow()
 
     def test_delete_alias_unsyncs_and_archives(self):
+        """Vérifie que la suppression désynchronise et archive l'alias."""
         alias = self.env["mailcow.alias"].create(
             {
                 "alias_name": "info",
@@ -82,6 +86,7 @@ class TestMailcowAlias(TransactionCase):
         self.assertFalse(alias.active)
 
     def test_sync_from_mailcow_creates_missing_aliases(self):
+        """Vérifie que la synchronisation crée les alias manquants."""
         existing = self.env["mailcow.alias"].create(
             {
                 "alias_name": "info",
