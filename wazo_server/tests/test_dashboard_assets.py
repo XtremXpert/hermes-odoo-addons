@@ -20,6 +20,7 @@ IMPORT = re.compile(r'from\s+"(@[a-z0-9_]+)/[^"]*"')
 
 class TestDashboardAssets(TransactionCase):
     def test_le_javascript_importe_seulement_des_modules_declares(self):
+        """Vérifie que le JavaScript n'importe que des modules déclarés."""
         racine = Path(__file__).resolve().parents[1]
         manifeste = ast.literal_eval((racine / "__manifest__.py").read_text())
         declarees = set(manifeste.get("depends", []))
@@ -39,6 +40,7 @@ class TestDashboardAssets(TransactionCase):
         )
 
     def test_le_javascript_est_ordonne_apres_le_chargeur_de_modules(self):
+        """Vérifie que le JavaScript passe après le chargeur de modules."""
         racine = Path(__file__).resolve().parents[1]
         manifeste = ast.literal_eval((racine / "__manifest__.py").read_text())
         commandes = manifeste["assets"]["web.assets_backend"]

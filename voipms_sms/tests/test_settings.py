@@ -12,6 +12,7 @@ from odoo.tests import tagged
 @tagged("voipms_sms", "post_install", "-at_install")
 class TestVoIPMSSettings(TransactionCase):
     def test_settings_store_credentials(self):
+        """Vérifie que les réglages rangent les identifiants."""
         settings = self.env["res.config.settings"].create({})
         settings.voipms_api_username = "myuser"
         settings.voipms_api_token = "mytoken"
@@ -21,6 +22,7 @@ class TestVoIPMSSettings(TransactionCase):
         self.assertEqual(icp.get_str("voipms.api_token"), "mytoken")
 
     def test_test_connection_success(self):
+        """Vérifie qu'un test de connexion réussi rend vrai."""
         self.env["ir.config_parameter"].sudo().set_str("voipms.api_username", "test-user")
         self.env["ir.config_parameter"].sudo().set_str("voipms.api_token", "test-token")
         settings = self.env["res.config.settings"].create({})
@@ -33,6 +35,7 @@ class TestVoIPMSSettings(TransactionCase):
         self.assertTrue(settings.voipms_connection_ok)
 
     def test_test_connection_failure(self):
+        """Vérifie qu'un test de connexion en échec lève une erreur."""
         from ..services.voipms_client import VoIPMSAPIError
 
         self.env["ir.config_parameter"].sudo().set_str("voipms.api_username", "test-user")

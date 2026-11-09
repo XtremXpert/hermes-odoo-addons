@@ -89,6 +89,16 @@ PSEUDO_TOKEN = re.compile(r"\b[A-Z]{2,6}-\d{1,6}\b")
 
 
 def values_match(before, expected):
+    """Compare les valeurs attendues à celles relues en base.
+
+    Args:
+        before (dict): valeurs actuellement en base.
+        expected (dict): valeurs attendues ; une valeur contenant un jeton de
+            pseudonymisation (`XXX-123`) n'est pas comparée.
+
+    Returns:
+        bool: True quand toutes les valeurs vérifiables correspondent.
+    """
     # Reads return Presidio-anonymized values, so a field whose expected value
     # carries a pseudo token can never be verified — skip strict equality for it.
     for key, value in expected.items():
@@ -100,6 +110,17 @@ def values_match(before, expected):
 
 
 def json_value(value):
+    """Normalise une valeur pour la comparaison et le journal.
+
+    Les dates passent en chaîne ISO avec microsecondes, pour qu'une seconde
+    écriture dans la même seconde entre aussi en conflit.
+
+    Args:
+        value (object): valeur à normaliser.
+
+    Returns:
+        object: valeur sérialisable en JSON.
+    """
     # Preserve microseconds: a second write in the same second must conflict too.
     return json.loads(
         json.dumps(
@@ -182,6 +203,19 @@ class Business(models.Model):
 
     @api.model
     def explorer(self, channel_id, message_id, partner_id, model=None, offset=0):
+        """Décrit un modèle et ses capacités, ou liste les modèles accessibles.
+
+        Args:
+            channel_id (int): conversation Discuss de la demande.
+            message_id (int): message source de la demande.
+            partner_id (int): partenaire auteur du message source.
+            model (str, optional): modèle à décrire ; absent, la liste paginée est
+                renvoyée.
+            offset (int, optional): position de départ de la liste des modèles.
+
+        Returns:
+            dict: description du modèle, ou `models`, `total` et `next_offset`.
+        """
         actor, _ = self._business_actor(channel_id, message_id, partner_id)
         if model:
             target = self._business(model, actor)
@@ -227,6 +261,22 @@ class Business(models.Model):
         offset=0,
         include_archived=False,
     ):
+        """Lit des objets métier avec les droits ORM du demandeur.
+
+        Args:
+            model (str): modèle lu.
+            channel_id (int): conversation Discuss de la demande.
+            message_id (int): message source de la demande.
+            partner_id (int): partenaire auteur du message source.
+            domain (list, optional): filtre Odoo, limité aux champs autorisés.
+            names (list[str], optional): champs renvoyés ; `id` et `name` par défaut.
+            limit (int, optional): nombre de lignes, 80 au plus (défaut 20).
+            offset (int, optional): position de départ.
+            include_archived (bool, optional): inclure les objets archivés.
+
+        Returns:
+            dict: `rows`, `count`, `limit` et `offset`.
+        """
         actor, _ = self._business_actor(channel_id, message_id, partner_id)
         target = self._business(model, actor)
         if type(include_archived) is not bool:
@@ -352,6 +402,22 @@ class Business(models.Model):
         record_id=None,
         expected=None,
     ):
+        """Crée ou corrige un objet métier, avec journal et note atomiques.
+
+        Args:
+            model (str): modèle visé.
+            values (dict): champs et valeurs à écrire.
+            reason (str): motif, de 1 à 1000 caractères.
+            channel_id (int): conversation Discuss de la demande.
+            message_id (int): message source de la demande.
+            partner_id (int): partenaire auteur du message source.
+            record_id (int, optional): objet à corriger ; absent, création.
+            expected (dict, optional): valeurs précédentes, obligatoires pour une
+                correction et de mêmes clés que `values`.
+
+        Returns:
+            dict: résultat avec `audit_id`, `chatter_message_id`, avant et après.
+        """
         actor, source = self._business_actor(channel_id, message_id, partner_id)
         target_model = self._business(model, actor, writable=True)
         editable = self._business_fields(target_model, writable=True)

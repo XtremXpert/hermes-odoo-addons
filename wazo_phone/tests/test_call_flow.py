@@ -23,6 +23,7 @@ from odoo.tests.common import TransactionCase
 class TestCallFlow(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare un usager et un contact des tests de bouclage d'appel."""
         super().setUpClass()
         cls.user = cls.env["res.users"].create(
             {
@@ -51,6 +52,7 @@ class TestCallFlow(TransactionCase):
         original = self.env["bus.bus"]._sendone
 
         def spy(bus, target, notification_type, message):
+            """Capture les notifications bus envoyées pendant le test."""
             sent.append((target, notification_type, message))
             return original(target, notification_type, message)
 
@@ -76,6 +78,7 @@ class TestCallFlow(TransactionCase):
     # ------------------------------------------------------------------
 
     def test_notify_incoming_sends_on_user_channel(self):
+        """Vérifie que l'appel entrant est diffusé sur le canal de l'usager."""
         sent, bus = self._bus_spy()
         with bus:
             result = self.user.with_user(self.user).notify_wazo_incoming_call(
@@ -92,6 +95,7 @@ class TestCallFlow(TransactionCase):
         self.assertEqual(message["name"], "Client Alpha")
 
     def test_notify_incoming_accepts_legacy_from_key(self):
+        """Vérifie que l'appel entrant accepte l'ancienne clé `from`."""
         sent, bus = self._bus_spy()
         with bus:
             self.user.notify_wazo_incoming_call({"from": "1012"})
@@ -102,6 +106,7 @@ class TestCallFlow(TransactionCase):
     # ------------------------------------------------------------------
 
     def test_finalize_answered_call_notes_the_partner(self):
+        """Vérifie qu'un appel répondu dépose une note sur le contact."""
         result = self.user.finalize_wazo_call(
             {"num": "5145550100", "direction": "inbound", "answered": True, "duration": 150}
         )
@@ -121,6 +126,7 @@ class TestCallFlow(TransactionCase):
         )
 
     def test_finalize_outbound_call_matches_destination(self):
+        """Vérifie qu'un appel sortant est rattaché par la destination."""
         result = self.user.finalize_wazo_call(
             {"num": "5145550100", "direction": "outbound", "answered": True, "duration": 5}
         )
@@ -131,6 +137,7 @@ class TestCallFlow(TransactionCase):
     # ------------------------------------------------------------------
 
     def test_finalize_missed_inbound_creates_call_activity(self):
+        """Vérifie qu'un entrant manqué crée une activité « Appel »."""
         sent, bus = self._bus_spy()
         with bus:
             result = self.user.finalize_wazo_call(
@@ -152,6 +159,7 @@ class TestCallFlow(TransactionCase):
         self.assertEqual(missed[0][2]["partner_id"], self.caller.id)
 
     def test_finalize_missed_without_partner_notifies_only(self):
+        """Vérifie qu'un manqué sans contact notifie seulement."""
         sent, bus = self._bus_spy()
         with bus:
             result = self.user.finalize_wazo_call(
@@ -163,6 +171,7 @@ class TestCallFlow(TransactionCase):
         self.assertEqual([s[1] for s in sent].count("wazo_phone.missed_call"), 1)
 
     def test_finalize_unknown_direction_defaults_outbound(self):
+        """Vérifie qu'un sens inconnu est traité comme sortant."""
         result = self.user.finalize_wazo_call(
             {"num": "5145550100", "direction": "sideways", "answered": True}
         )
@@ -174,6 +183,7 @@ class TestCallFlow(TransactionCase):
     # ------------------------------------------------------------------
 
     def test_dashboard_mine_filters_on_user_extension(self):
+        """Vérifie que le tableau de bord « mes appels » filtre sur le poste."""
         self._cdr(5001, destination_num="1011", answered=False)
         self._cdr(5002, call_direction="outbound", caller_num="1011", destination_num="5145550100")
         self._cdr(5003, destination_num="2000", answered=False)  # autre poste
@@ -186,11 +196,13 @@ class TestCallFlow(TransactionCase):
         self.assertEqual(mine["duration_sum"], 120)
 
     def test_dashboard_team_requires_manager(self):
+        """Vérifie que le périmètre équipe exige le groupe gestionnaire."""
         self._cdr(5010, destination_num="2000")
         dashboard = self.env["wazo.cdr"].with_user(self.user).get_wazo_dashboard(30)
         self.assertFalse(dashboard["team"])
 
     def test_dashboard_team_aggregates_agents(self):
+        """Vérifie que le périmètre équipe agrège les agents."""
         manager_group = self.env.ref("wazo_tenant.group_wazo_manager")
         self.user.write({"group_ids": [(4, manager_group.id)]})
         self._cdr(5020, destination_num="1011", answered=False)
@@ -206,6 +218,7 @@ class TestCallFlow(TransactionCase):
         self.assertEqual(agents["1011"]["name"], "Agent Test")
 
     def test_dashboard_recent_is_newest_first(self):
+        """Vérifie que les appels récents sont du plus récent au plus ancien."""
         older = self._cdr(5030, date_start=fields.Datetime.now() - timedelta(hours=3))
         newer = self._cdr(5031, date_start=fields.Datetime.now() - timedelta(hours=1))
         dashboard = self.env["wazo.cdr"].with_user(self.user).get_wazo_dashboard(30)
@@ -213,6 +226,7 @@ class TestCallFlow(TransactionCase):
         self.assertLess(ids.index(newer.id), ids.index(older.id))
 
     def test_dashboard_mine_is_empty_without_extension(self):
+        """Vérifie que « mes appels » est vide sans poste."""
         self._cdr(5040, destination_num="2000")
         sans_poste = self.env["res.users"].create(
             {
@@ -227,6 +241,7 @@ class TestCallFlow(TransactionCase):
         self.assertEqual(dashboard["mine"]["recent"], [])
 
     def test_dashboard_clamps_days(self):
+        """Vérifie que la fenêtre du tableau de bord est bornée."""
         dashboard = self.env["wazo.cdr"].with_user(self.user).get_wazo_dashboard("99")
         self.assertEqual(dashboard["days"], 99)
         dashboard = self.env["wazo.cdr"].with_user(self.user).get_wazo_dashboard(9999)

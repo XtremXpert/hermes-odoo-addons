@@ -65,9 +65,25 @@ class HermesN1Change(models.Model):
     _unique_request = models.Constraint("UNIQUE(request_key)", "Demande déjà documentée.")
 
     def write(self, vals):  # pylint: disable=method-required-super
+        """Refuse toute écriture sur le journal, qui est immuable.
+
+        Args:
+            vals (dict): valeurs proposées.
+
+        Raises:
+            odoo.exceptions.AccessError: systématiquement.
+        """
         raise AccessError(self.env._("L'historique Hermes N1 est immuable."))
 
     def unlink(self):  # pylint: disable=method-required-super
+        """Refuse toute suppression du journal, qui est immuable.
+
+        Returns:
+            bool: jamais atteint.
+
+        Raises:
+            odoo.exceptions.AccessError: systématiquement.
+        """
         raise AccessError(  # pylint: disable=no-raise-unlink
             self.env._("L'historique Hermes N1 est immuable.")
         )
@@ -97,6 +113,15 @@ class HermesN1Change(models.Model):
 
     @api.model
     def capabilities(self, model):
+        """Décrit les champs modifiables pour l'ancien appel `modifier`.
+
+        Args:
+            model (str): modèle à décrire.
+
+        Returns:
+            dict: modèle, champs modifiables et limites (pas de création ni de
+                suppression).
+        """
         self._check_agent()
         return {
             "model": model,
@@ -142,6 +167,25 @@ class HermesN1Change(models.Model):
     def modifier(
         self, model, record_id, values, expected, reason, channel_id, message_id, partner_id
     ):
+        """Corrige un objet avec les droits du demandeur et journalise l'opération.
+
+        Args:
+            model (str): modèle visé, présent dans `WRITE_FIELDS`.
+            record_id (int): identifiant de l'objet à corriger.
+            values (dict): jusqu'à 12 champs et leurs nouvelles valeurs.
+            expected (dict): valeurs précédentes, de mêmes clés que `values`.
+            reason (str): motif, de 1 à 1000 caractères.
+            channel_id (int): conversation Discuss de la demande.
+            message_id (int): message source de la demande.
+            partner_id (int): partenaire auteur du message source.
+
+        Returns:
+            dict: résultat avec `audit_id`, `chatter_message_id`, avant et après.
+
+        Raises:
+            odoo.exceptions.UserError: champs non autorisés, valeurs périmées ou
+                motif invalide.
+        """
         self._check_agent()
         actor, source = self._requester(channel_id, message_id, partner_id)
         editable = self._editable(model)

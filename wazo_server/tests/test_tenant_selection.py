@@ -28,6 +28,7 @@ class TestTenantSelection(TransactionCase):
 
     @classmethod
     def setUpClass(cls):
+        """Prépare les tenants et postes des tests de sélection."""
         super().setUpClass()
         icp = cls.env["ir.config_parameter"].sudo()
         icp.set_str("wazo.url", "https://wazo.example.com")
@@ -68,6 +69,7 @@ class TestTenantSelection(TransactionCase):
     # ------------------------------------------------------------------
 
     def test_a_chosen_tenant_supplies_the_header(self):
+        """Vérifie que le tenant choisi fournit l'en-tête."""
         poste = self._poste(tenant_id=self.tenant.id)
         self.assertEqual(poste._wazo_tenant_uuid(), CLIENT)
         self.assertEqual(poste._wazo_client().tenant_id, CLIENT)
@@ -107,6 +109,7 @@ class TestTenantSelection(TransactionCase):
     # ------------------------------------------------------------------
 
     def test_without_a_chosen_tenant_the_settings_win(self):
+        """Vérifie que les réglages s'appliquent sans tenant choisi."""
         poste = self._poste()
         self.assertEqual(poste._wazo_tenant_uuid(), MAITRE)
         self.assertEqual(poste._wazo_client().tenant_id, MAITRE)

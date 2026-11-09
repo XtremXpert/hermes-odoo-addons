@@ -15,6 +15,7 @@ INVITE = (
 class TestApproval(HttpCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare l'administrateur, l'agent et le canal du test d'approbation."""
         super().setUpClass()
         cls.admin = cls.env.ref("base.user_admin")
         cls.bot = (
@@ -55,6 +56,7 @@ class TestApproval(HttpCase):
         )
 
     def test_agent_invite_becomes_relative_buttons(self):
+        """Vérifie que l'invite d'approbation devient des boutons relatifs."""
         message = self.channel.with_user(self.bot).message_post(
             body=INVITE, message_type="comment", subtype_xmlid="mail.mt_comment"
         )
@@ -69,6 +71,7 @@ class TestApproval(HttpCase):
         self.assertIn("<code>/approve</code>", body)
 
     def test_get_only_shows_a_confirmation(self):
+        """Vérifie qu'un GET n'écrit rien et affiche la confirmation."""
         self.authenticate("admin", "admin")
         avant = self._messages()
         url = "/hermes/repondre?canal=%d&cmd=%%2Fapprove" % self.channel.id
@@ -78,6 +81,7 @@ class TestApproval(HttpCase):
         self.assertEqual(self._messages(), avant, "un GET ne doit rien poster")
 
     def test_unknown_command_or_foreign_channel_is_not_found(self):
+        """Vérifie qu'une commande inconnue ou un canal étranger renvoie 404."""
         self.authenticate("admin", "admin")
         for url in (
             "/hermes/repondre?canal=%d&cmd=bonjour" % self.channel.id,
@@ -88,6 +92,7 @@ class TestApproval(HttpCase):
                 self.assertEqual(self.url_open(url).status_code, 404)
 
     def test_post_requires_the_csrf_token(self):
+        """Vérifie que le POST sans jeton CSRF est refusé."""
         self.authenticate("admin", "admin")
         avant = self._messages()
         with self.assertLogs("odoo.http", "WARNING"):
@@ -100,6 +105,7 @@ class TestApproval(HttpCase):
         self.assertEqual(self._messages(), avant)
 
     def test_confirmed_post_is_signed_by_the_clicker(self):
+        """Vérifie que le POST confirmé est signé par la personne qui clique."""
         self.authenticate("admin", "admin")
         page = self.url_open("/hermes/repondre?canal=%d&cmd=%%2Fdeny" % self.channel.id).text
         jeton = re.search(r"name=.csrf_token. value=.([^'\"]+)", page).group(1)
@@ -116,6 +122,7 @@ class TestApproval(HttpCase):
         self.assertIn("/deny", str(dernier.body))
 
     def test_jsonrpc_click_posts_as_the_clicker(self):
+        """Vérifie qu'un clic JSON-RPC poste au nom de la personne qui clique."""
         self.authenticate("admin", "admin")
         resultat = self.make_jsonrpc_request(
             "/hermes/approbation", {"canal": self.channel.id, "cmd": "/approve"}

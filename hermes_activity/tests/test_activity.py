@@ -14,6 +14,7 @@ from odoo.tests import tagged
 class TestActivity(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare l'administrateur, l'agent, le canal privé et la façade d'activité."""
         super().setUpClass()
         cls.admin = cls.env.ref("base.user_admin")
         cls.bot = (
@@ -52,6 +53,7 @@ class TestActivity(TransactionCase):
         cls.service = cls.env["hermes.activity"].with_user(cls.bot)
 
     def test_gateway_poll_marks_only_the_authenticated_agent_online(self):
+        """Vérifie que seul l'agent authentifié passe en ligne au polling."""
         for group_name in (
             "hermes_n1_audit.group_agent",
             "hermes_n2_support.group_agent",
@@ -77,6 +79,7 @@ class TestActivity(TransactionCase):
         self.assertFalse(self.admin.presence_ids)
 
     def test_agent_presence_expires_and_recovers_without_expiring_humans(self):
+        """Vérifie que la présence d'agent expire et revient sans toucher aux humains."""
         self.service._heartbeat()
         self.env["mail.presence"]._update_presence(self.admin)
         old = fields.Datetime.now() - timedelta(minutes=4)
@@ -90,11 +93,13 @@ class TestActivity(TransactionCase):
         self.assertEqual(self.bot.im_status, "online")
 
     def test_activity_keeps_the_agent_online_during_work(self):
+        """Vérifie que publier une activité maintient l'agent en ligne."""
         self.bot.presence_ids.unlink()
         self.service.publier(**self.source, sequence=1, state="working")
         self.assertEqual(self.bot.im_status, "online")
 
     def test_step_history_heartbeat_terminal_and_new_request(self):
+        """Vérifie les étapes, les heartbeats, l'état terminal et un nouveau message."""
         with patch("odoo.addons.hermes_activity.models.activity.time.time", return_value=100):
             self.service.publier(**self.source, sequence=1, state="working")
         with patch("odoo.addons.hermes_activity.models.activity.time.time", return_value=103):
@@ -125,6 +130,7 @@ class TestActivity(TransactionCase):
         self.assertEqual(len(fresh["steps"]), 1)
 
     def test_step_history_is_bounded(self):
+        """Vérifie que l'historique des étapes est borné."""
         for sequence in range(1, 57):
             self.service.publier(
                 **self.source,
@@ -138,6 +144,7 @@ class TestActivity(TransactionCase):
         self.assertEqual(activity["steps"][0]["number"], 7)
 
     def test_status_is_private_ordered_and_terminal(self):
+        """Vérifie que l'état est privé, ordonné et refuse les mises à jour terminales."""
         self.assertTrue(
             self.service.publier(**self.source, sequence=1, state="working")["accepted"]
         )
@@ -175,6 +182,7 @@ class TestActivity(TransactionCase):
             )
 
     def test_formatted_reply_is_authored_by_bot_and_safe(self):
+        """Vérifie qu'une réponse est attribuée à l'agent et rendue sans danger."""
         text = '# Résultat\n\n**Oui**\n\n- premier\n- second\n\n```\nprint("test")\n```\n<script>alert(1)</script>\n[x](https://example.org/"onmouseover="bad)'
         mid = self.service.repondre(**self.source, text=text)
         message = self.env["mail.message"].browse(mid)
@@ -191,6 +199,7 @@ class TestActivity(TransactionCase):
             )
 
     def test_rpc_markdown_is_formatted_for_each_agent_level(self):
+        """Vérifie que le Markdown RPC est mis en forme pour chaque niveau d'agent."""
         text = (
             "# Résultat\n\n**Oui** et `code`\n\n- premier\n- second\n\n"
             "| Service | État |\n| --- | --- |\n| Odoo | Prêt |\n\n"
@@ -230,6 +239,7 @@ class TestActivity(TransactionCase):
                 self.assertIn("&lt;strong&gt;code littéral&lt;/strong&gt;", body)
 
     def test_human_plain_text_and_existing_html_are_preserved(self):
+        """Vérifie que le texte humain et le HTML existant sont préservés."""
         message = self.channel.with_user(self.admin).message_post(
             body="**Texte humain**", message_type="comment"
         )
@@ -241,6 +251,7 @@ class TestActivity(TransactionCase):
         self.assertNotIn("&lt;strong&gt;", str(message.body))
 
     def test_rpc_html_from_the_gateway_is_not_escaped_again(self):
+        """Vérifie que le HTML déjà préparé par la passerelle n'est pas ré-échappé."""
         # The odoo_discuss gateway escapes and formats the reply itself, then
         # posts it with body_is_html=True.
         message = self.channel.with_user(self.bot).message_post(
@@ -256,6 +267,7 @@ class TestActivity(TransactionCase):
         self.assertNotIn("<script>", body)
 
     def test_html_written_by_the_model_is_formatted_not_shown(self):
+        """Vérifie que le HTML écrit par le modèle est mis en forme, pas affiché brut."""
         # Odoo presents, the gateway only carries the model's raw text: an
         # answer written in HTML is brought back to Markdown, then escaped.
         text = (
@@ -288,6 +300,7 @@ class TestActivity(TransactionCase):
                 self.assertNotIn(absent, body)
 
     def test_bold_may_surround_inline_code(self):
+        """Vérifie qu'un gras peut entourer du code en ligne."""
         # N1 on mac, 2026-10-15: "**… base `mac`**" kept its asterisks.
         text = "**État — base `mac`**\n\n- `a**b**` et *x `y` z*"
         body = str(

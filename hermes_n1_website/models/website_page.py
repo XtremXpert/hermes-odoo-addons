@@ -173,6 +173,21 @@ class HermesN1ChangeWebsite(models.Model):
 
     @api.model
     def lire_page_web(self, page_id, channel_id, message_id, partner_id):
+        """Lit le contenu éditable d'une page web et son empreinte.
+
+        Args:
+            page_id: Identifiant de la page.
+            channel_id: Canal Discuss à l'origine de la demande.
+            message_id: Message Discuss à l'origine de la demande.
+            partner_id: Partenaire à l'origine de la demande.
+
+        Returns:
+            Dictionnaire avec l'URL, le HTML du ``#wrap``, son empreinte sha256 et
+            les indicateurs de modification.
+
+        Raises:
+            UserError: Page invalide, absente ou sans zone ``#wrap`` éditable.
+        """
         actor, _source = self._business_actor(channel_id, message_id, partner_id)
         page, website, _view, wrap = self._page_wrap(page_id, actor)
         content = _inner(wrap)
@@ -191,6 +206,24 @@ class HermesN1ChangeWebsite(models.Model):
     def modifier_page_web(
         self, page_id, html, expected_sha256, reason, channel_id, message_id, partner_id
     ):
+        """Remplace le contenu d'une page web après contrôle d'empreinte.
+
+        Args:
+            page_id: Identifiant de la page.
+            html: Nouveau contenu HTML.
+            expected_sha256: Empreinte lue par ``lire_page_web``.
+            reason: Motif de la modification, conservé au journal.
+            channel_id: Canal Discuss à l'origine de la demande.
+            message_id: Message Discuss à l'origine de la demande.
+            partner_id: Partenaire à l'origine de la demande.
+
+        Returns:
+            Résultat de la modification, avec l'identifiant du journal d'audit.
+
+        Raises:
+            UserError: Contenu, empreinte ou motif invalides, ou page non modifiable.
+            AccessError: Demandeur sans droit de modification du site.
+        """
         actor, source = self._business_actor(channel_id, message_id, partner_id)
         if not isinstance(html, str) or not html.strip() or len(html) > MAX_HTML:
             raise UserError(self.env._("Contenu HTML requis, %d caractères au plus.", MAX_HTML))

@@ -12,6 +12,7 @@ BODY = '<section class="s_text_block"><div class="container"><p>Avant</p></div><
 class TestN1WebsitePage(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare l'administrateur, le compte agent, le canal et la page de test."""
         super().setUpClass()
         cls.admin = cls.env.ref("base.user_admin")
         cls.bot = (
@@ -60,6 +61,11 @@ class TestN1WebsitePage(TransactionCase):
         cls.service = cls.env["hermes.n1.change"].with_user(cls.bot)
 
     def source(self):
+        """Retourne la source Discuss des appels de service.
+
+        Returns:
+            Dictionnaire avec le canal, le message et le partenaire.
+        """
         return {
             "channel_id": self.channel.id,
             "message_id": self.message.id,
@@ -67,9 +73,15 @@ class TestN1WebsitePage(TransactionCase):
         }
 
     def read_page(self):
+        """Lit la page de test via le service.
+
+        Returns:
+            Le contenu de la page et son empreinte.
+        """
         return self.service.lire_page_web(self.page.id, **self.source())
 
     def test_read_then_write_replaces_only_the_wrap_and_is_traced(self):
+        """Vérifie que l'écriture ne remplace que le ``#wrap`` et laisse une trace d'audit."""
         current = self.read_page()
         self.assertIn("<p>Avant</p>", current["html"])
         self.assertTrue(current["modifiable"])
@@ -101,6 +113,7 @@ class TestN1WebsitePage(TransactionCase):
         self.assertTrue(again["deja_applique"])
 
     def test_html_is_sanitized_to_plain_content(self):
+        """Vérifie que le HTML est assaini en contenu statique sûr."""
         dirty = (
             '<p onclick="x()" t-att-class="1">Texte<script>alert(1)</script></p>'
             '<t t-out="request.env.user.login"/><a href="javascript:alert(1)">lien</a>'
@@ -126,6 +139,9 @@ class TestN1WebsitePage(TransactionCase):
         self.assertIn('src="data:image/png', clean)
 
     def test_stale_hash_qweb_section_and_unauthorized_requester_are_refused(self):
+        """Vérifie le refus d'une empreinte périmée, d'une section QWeb et d'un
+        demandeur non autorisé.
+        """
         with self.assertRaises(UserError):
             self.service.modifier_page_web(
                 self.page.id, "<p>x</p>", "0" * 64, "Motif", **self.source()
@@ -175,6 +191,7 @@ class TestN1WebsitePage(TransactionCase):
                 )
 
     def test_snippet_options_are_kept_but_field_bindings_removed(self):
+        """Vérifie que les options de snippet sont gardées et les liaisons de champs retirées."""
         clean = sanitize(
             '<section class="s_cover" data-snippet="s_cover" data-name="Couverture" '
             'data-oe-shape-data="{&quot;shape&quot;:&quot;x&quot;}" data-bs-toggle="collapse">'
@@ -186,6 +203,7 @@ class TestN1WebsitePage(TransactionCase):
             self.assertNotIn(removed, clean)
 
     def test_block_catalogue_serves_editor_ready_static_blocks(self):
+        """Vérifie que le catalogue sert des blocs statiques prêts pour l'éditeur."""
         keys, offset = set(), 0
         while offset is not None:
             listing = self.service.lister_blocs_web(offset=offset, **self.source())
@@ -211,6 +229,7 @@ class TestN1WebsitePage(TransactionCase):
         self.assertTrue(result["audit_id"])
 
     def test_theme_is_loaded_once_on_a_website_without_theme(self):
+        """Vérifie qu'un thème est appliqué une seule fois à un site sans thème."""
         theme = self.env["ir.module.module"].create(
             {"name": "theme_n1_test", "state": "installed", "shortdesc": "Thème de test N1"}
         )
@@ -249,6 +268,9 @@ class TestN1WebsitePage(TransactionCase):
                 )
 
     def test_create_page_is_unpublished_sanitized_traced_and_never_overwrites(self):
+        """Vérifie qu'une page créée est non publiée, assainie, tracée et n'écrase
+        rien.
+        """
         pages = self.env["website.page"].search_count([])
         result = self.service.creer_page_web(
             self.website.id,
@@ -306,6 +328,7 @@ class TestN1WebsitePage(TransactionCase):
         self.assertIn("<p>Après</p>", self.service.lire_page_web(page.id, **self.source())["html"])
 
     def test_create_page_refuses_invalid_requests(self):
+        """Vérifie que la création de page refuse les demandes invalides."""
         bad = [
             (0, "Page", "<p>x</p>", "Motif"),
             (999999, "Page", "<p>x</p>", "Motif"),

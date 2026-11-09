@@ -30,6 +30,7 @@ SAMPLE_RAW = (
 class TestMailGatewayController(HttpCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare les jetons, l'alias et le domaine nécessaires aux tests HTTP."""
         super().setUpClass()
         cls.Token = cls.env["diverse.mail_gateway.token"]
         # Allow plain HTTP under the test runner (Odoo's HttpCase test
@@ -85,6 +86,7 @@ class TestMailGatewayController(HttpCase):
     # ---- /health ----------------------------------------------------------
 
     def test_health_returns_200_without_auth(self):
+        """Vérifie que la sonde de vie répond 200 sans authentification."""
         r = self._get("/diverse/mail-gateway/health")
         self.assertEqual(r.status_code, 200)
         body = r.json()
@@ -95,11 +97,13 @@ class TestMailGatewayController(HttpCase):
     # ---- /check -----------------------------------------------------------
 
     def test_check_without_token_returns_401(self):
+        """Vérifie que /check refuse une requête sans jeton."""
         r = self._post("/diverse/mail-gateway/check")
         self.assertEqual(r.status_code, 401)
         self.assertEqual(r.json(), {"ok": False, "error": "unauthorized"})
 
     def test_check_with_invalid_token_returns_401(self):
+        """Vérifie que /check refuse un jeton inconnu."""
         r = self._post(
             "/diverse/mail-gateway/check",
             headers={"X-Mail-Gateway-Token": "definitely-not-a-real-token"},
@@ -107,6 +111,7 @@ class TestMailGatewayController(HttpCase):
         self.assertEqual(r.status_code, 401)
 
     def test_check_with_valid_token_returns_200(self):
+        """Vérifie que /check accepte un jeton valide."""
         _, raw = self.Token.action_generate("ctl-check-1")
         r = self._post("/diverse/mail-gateway/check", headers={"X-Mail-Gateway-Token": raw})
         self.assertEqual(r.status_code, 200)
@@ -115,6 +120,7 @@ class TestMailGatewayController(HttpCase):
         self.assertEqual(body["token_label"], "ctl-check-1")
 
     def test_check_with_revoked_token_returns_401(self):
+        """Vérifie que /check refuse un jeton révoqué."""
         rec, raw = self.Token.action_generate("ctl-check-revoked")
         rec.action_revoke()
         r = self._post("/diverse/mail-gateway/check", headers={"X-Mail-Gateway-Token": raw})
@@ -123,10 +129,12 @@ class TestMailGatewayController(HttpCase):
     # ---- /process ---------------------------------------------------------
 
     def test_process_without_token_returns_401(self):
+        """Vérifie que /process refuse une requête sans jeton."""
         r = self._post("/diverse/mail-gateway/process", body=SAMPLE_RAW)
         self.assertEqual(r.status_code, 401)
 
     def test_process_with_invalid_token_returns_401(self):
+        """Vérifie que /process refuse un jeton inconnu."""
         r = self._post(
             "/diverse/mail-gateway/process",
             body=SAMPLE_RAW,
@@ -135,6 +143,7 @@ class TestMailGatewayController(HttpCase):
         self.assertEqual(r.status_code, 401)
 
     def test_process_with_empty_body_returns_400(self):
+        """Vérifie que /process refuse un corps vide."""
         _, raw = self.Token.action_generate("ctl-empty")
         r = self._post(
             "/diverse/mail-gateway/process",
@@ -214,6 +223,7 @@ class TestMailGatewayController(HttpCase):
         self.assertEqual(body["error"], "no_route")
 
     def test_process_with_valid_alias_returns_200_and_creates_message(self):
+        """Vérifie que /process remet le message au fil de l'alias et le crée."""
         # Channel, alias and alias_domain are created in setUpClass (committed)
         # so they are visible to the HTTP request's independent cursor.
         catchall = self.alias_domain.name
@@ -252,6 +262,7 @@ class TestMailGatewayController(HttpCase):
         self.assertTrue(msgs, "expected exactly one mail.message for our test")
 
     def test_process_updates_token_usage(self):
+        """Vérifie que /process met à jour le compteur d'usage du jeton."""
         rec, raw = self.Token.action_generate("ctl-usage")
         self.assertEqual(rec.use_count, 0)
         # Even on no_route (422), token validation succeeded → use_count++

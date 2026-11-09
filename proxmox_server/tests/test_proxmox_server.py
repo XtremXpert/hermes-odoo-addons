@@ -9,6 +9,7 @@ from odoo.tests.common import TransactionCase
 
 class TestProxmoxTenant(TransactionCase):
     def setUp(self):
+        """Prépare un serveur et un tenant Proxmox de test."""
         super().setUp()
         self.serveur = self.env["proxmox.server"].create(
             {"name": "pve1", "url": "https://pve.test:8006", "api_token": "root@pam!odoo=aa-11"}

@@ -28,12 +28,14 @@ class TestMigrationMembres(TransactionCase):
     """La reprise des membres est complète et idempotente."""
 
     def setUp(self):
+        """Prépare l'ancienne table des membres de groupe."""
         super().setUp()
         self.env.cr.execute("DROP TABLE IF EXISTS %s" % ANCIENNE_TABLE)
         self.env.cr.execute("CREATE TABLE %s (group_id int4, user_id int4)" % ANCIENNE_TABLE)
         self.migrate = _charger_migrate()
 
     def tearDown(self):
+        """Supprime l'ancienne table après le test."""
         self.env.cr.execute("DROP TABLE IF EXISTS %s" % ANCIENNE_TABLE)
         super().tearDown()
 

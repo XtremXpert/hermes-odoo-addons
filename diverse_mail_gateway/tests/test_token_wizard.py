@@ -13,11 +13,13 @@ from odoo.tests.common import tagged
 class TestTokenCreateWizard(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare l'assistant de génération et le modèle des jetons."""
         super().setUpClass()
         cls.Wizard = cls.env["diverse.mail_gateway.token.create.wizard"]
         cls.Token = cls.env["diverse.mail_gateway.token"]
 
     def test_generate_creates_record_and_exposes_raw_token(self):
+        """Vérifie que l'assistant crée le jeton et affiche sa valeur une fois."""
         wiz = self.Wizard.create({"name": "wiz-test-1"})
         self.assertFalse(wiz.generated_token)
         self.assertFalse(wiz.generated_token_id)
@@ -45,17 +47,20 @@ class TestTokenCreateWizard(TransactionCase):
         )
 
     def test_generate_twice_on_same_wizard_raises(self):
+        """Vérifie qu'un second appel sur le même assistant est refusé."""
         wiz = self.Wizard.create({"name": "wiz-test-2"})
         wiz.action_generate()
         with self.assertRaises(UserError):
             wiz.action_generate()
 
     def test_generate_with_empty_name_propagates_validation_error(self):
+        """Vérifie qu'un libellé vide remonte l'erreur de validation."""
         wiz = self.Wizard.create({"name": "   "})
         with self.assertRaises(ValidationError):
             wiz.action_generate()
 
     def test_generate_with_expiry_persists_to_record(self):
+        """Vérifie que l'expiration saisie est enregistrée sur le jeton."""
         from datetime import timedelta
 
         from odoo import fields
@@ -66,11 +71,13 @@ class TestTokenCreateWizard(TransactionCase):
         self.assertEqual(wiz.generated_token_id.expires_at, future)
 
     def test_action_close_returns_close_action(self):
+        """Vérifie que la fermeture de l'assistant renvoie l'action de fermeture."""
         wiz = self.Wizard.create({"name": "wiz-close"})
         action = wiz.action_close()
         self.assertEqual(action, {"type": "ir.actions.act_window_close"})
 
     def test_action_open_create_wizard_returns_act_window(self):
+        """Vérifie que l'ouverture renvoie l'action du formulaire de l'assistant."""
         action = self.Wizard.action_open_create_wizard()
         self.assertEqual(action["type"], "ir.actions.act_window")
         self.assertEqual(action["res_model"], self.Wizard._name)

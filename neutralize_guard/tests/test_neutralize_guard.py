@@ -8,6 +8,7 @@ from odoo.tests import tagged
 class TestNeutralizeGuard(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare un paramètre système et un cron de test."""
         super().setUpClass()
         cls.icp = cls.env["ir.config_parameter"].sudo()
         cls.cron = cls.env["ir.cron"].search([], limit=1)
@@ -24,16 +25,19 @@ class TestNeutralizeGuard(TransactionCase):
             )
 
     def setUp(self):
+        """Remet le drapeau de neutralisation à faux après chaque test."""
         super().setUp()
         self.addCleanup(self.icp.set_bool, "database.is_neutralized", False)
 
     def test_flags_the_neutralized_database(self):
+        """Vérifie que le cron détecte une base neutralisée."""
         self.icp.set_bool("database.is_neutralized", True)
         self.assertTrue(self.cron._is_neutralized())
         self.icp.set_bool("database.is_neutralized", False)
         self.assertFalse(self.cron._is_neutralized())
 
     def test_callback_refuses_on_a_neutralized_database(self):
+        """Vérifie que le callback refuse d'exécuter une action sur une base neutralisée."""
         self.icp.set_bool("database.is_neutralized", True)
         action = self.cron.ir_actions_server_id
         with patch.object(type(action), "run") as run:
@@ -42,6 +46,7 @@ class TestNeutralizeGuard(TransactionCase):
         run.assert_not_called()
 
     def test_callback_delegates_on_a_normal_database(self):
+        """Vérifie que le callback délègue l'exécution sur une base normale."""
         self.icp.set_bool("database.is_neutralized", False)
         action = self.cron.ir_actions_server_id
         # `_callback` n'est pas défini par la première classe parente : la chaîne

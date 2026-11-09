@@ -61,6 +61,19 @@ class Channel(models.Model):
     hermes_activity_state = fields.Json(readonly=True, copy=False)
 
     def message_post(self, *, body="", **kwargs):
+        """Met en forme le message d'un agent Hermes avant de le publier.
+
+        Le Markdown reçu par RPC est converti puis assaini ; un corps déjà en
+        `Markup`, ou marqué `body_is_html`, n'est pas reconverti. Le drapeau est
+        consommé au passage.
+
+        Args:
+            body (str): corps du message.
+            **kwargs: arguments transmis à `discuss.channel.message_post`.
+
+        Returns:
+            mail.message: message créé.
+        """
         # API-key clients send Markdown as a plain RPC string. Convert here
         # as well as in repondre(), without needing a web-session password.
         # Markup from the web route or repondre() is already formatted. With
@@ -76,12 +89,34 @@ class Channel(models.Model):
         return super().message_post(body=body, **kwargs)
 
     def write(self, vals):
+        """Interdit l'écriture directe de l'état d'activité hors superutilisateur.
+
+        Args:
+            vals (dict): valeurs à écrire.
+
+        Returns:
+            bool: résultat de l'écriture.
+
+        Raises:
+            odoo.exceptions.AccessError: écriture directe de `hermes_activity_state`.
+        """
         if "hermes_activity_state" in vals and not self.env.su:
             raise AccessError(self.env._("Utiliser la façade d’activité Hermes."))
         return super().write(vals)
 
     @api.model_create_multi
     def create(self, vals_list):
+        """Interdit de créer un canal en posant directement l'état d'activité.
+
+        Args:
+            vals_list (list[dict]): valeurs des canaux à créer.
+
+        Returns:
+            discuss.channel: canaux créés.
+
+        Raises:
+            odoo.exceptions.AccessError: création avec `hermes_activity_state`.
+        """
         if not self.env.su and any("hermes_activity_state" in vals for vals in vals_list):
             raise AccessError(self.env._("Utiliser la façade d’activité Hermes."))
         return super().create(vals_list)
@@ -98,6 +133,20 @@ class Activity(models.AbstractModel):
 
     @api.model
     def repondre(self, channel_id, message_id, partner_id, text):
+        """Publie la réponse d'un agent, mise en forme et assainie.
+
+        Args:
+            channel_id (int): conversation Discuss.
+            message_id (int): message source de la demande.
+            partner_id (int): partenaire auteur du message source.
+            text (str): réponse de l'agent, de 1 à 100 000 caractères.
+
+        Returns:
+            int: identifiant du message publié.
+
+        Raises:
+            odoo.exceptions.UserError: réponse vide ou trop longue.
+        """
         self._source(channel_id, message_id, partner_id)
         if not isinstance(text, str) or not 1 <= len(text) <= 100000:
             raise UserError(self.env._("Réponse invalide."))
@@ -110,6 +159,22 @@ class Activity(models.AbstractModel):
 
     @api.model
     def publier(self, channel_id, message_id, partner_id, sequence, state, tool=None):
+        """Enregistre l'état d'activité de l'agent sur le canal.
+
+        Args:
+            channel_id (int): conversation Discuss.
+            message_id (int): message source de la demande.
+            partner_id (int): partenaire auteur du message source.
+            sequence (int): ordre de la mise à jour, croissant.
+            state (str): état parmi `working`, `tool`, `done`, `error`, `cancelled`.
+            tool (str, optional): outil en cours, quand l'état vaut `tool`.
+
+        Returns:
+            dict: `{"accepted": bool}` ; False pour une mise à jour obsolète.
+
+        Raises:
+            odoo.exceptions.UserError: séquence, état ou outil invalide.
+        """
         self._source(channel_id, message_id, partner_id)
         if type(sequence) is not int or sequence < 0 or state not in STATES:
             raise UserError(self.env._("État invalide."))
@@ -161,6 +226,18 @@ class Activity(models.AbstractModel):
 
     @api.model
     def lire(self, channel_id):
+        """Retourne l'état d'activité d'un canal privé de l'utilisateur.
+
+        Args:
+            channel_id (int): conversation Discuss.
+
+        Returns:
+            dict | bool: état d'activité, ou False s'il n'y en a pas.
+
+        Raises:
+            odoo.exceptions.AccessError: conversation invalide, absente ou non
+                privée.
+        """
         if type(channel_id) is not int or channel_id < 1:
             raise AccessError(self.env._("Conversation invalide."))
         channel = self.env["discuss.channel"].browse(channel_id).exists()

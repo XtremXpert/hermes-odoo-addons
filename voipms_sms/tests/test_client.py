@@ -16,6 +16,7 @@ from odoo.tests import tagged
 class VoIPMSClientTestBase(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare les identifiants VoIP.ms des tests du client."""
         super().setUpClass()
         cls.env["ir.config_parameter"].sudo().set_str("voipms.api_username", "test-user")
         cls.env["ir.config_parameter"].sudo().set_str("voipms.api_token", "test-token")
@@ -47,6 +48,7 @@ class VoIPMSClientTestBase(TransactionCase):
 @tagged("voipms_sms", "post_install", "-at_install")
 class TestVoIPMSClientRequest(VoIPMSClientTestBase):
     def test_get_sends_query_params_and_no_body(self):
+        """Vérifie qu'un GET passe les paramètres en requête, sans corps."""
         request, params = self._call_with("getDIDsInfo")
         self.assertTrue(request.full_url.startswith("https://voip.ms/api/v1/rest.php?"))
         self.assertIsNone(request.data)
@@ -56,6 +58,7 @@ class TestVoIPMSClientRequest(VoIPMSClientTestBase):
         self.assertEqual(params["method"], "getDIDsInfo")
 
     def test_send_sms_sends_did_dst_and_message(self):
+        """Vérifie que `sendSMS` envoie le DID, le destinataire et le message."""
         _request, params = self._call_with(
             "sendSMS", did="14184803381", dst="14184541752", message="Bonjour"
         )
@@ -65,12 +68,14 @@ class TestVoIPMSClientRequest(VoIPMSClientTestBase):
         self.assertEqual(params["message"], "Bonjour")
 
     def test_missing_credentials_raise(self):
+        """Vérifie que des identifiants absents lèvent une erreur."""
         self.env["ir.config_parameter"].sudo().set_str("voipms.api_username", False)
         client = VoIPMSClient(self.env)
         with self.assertRaises(VoIPMSAPIError):
             client._request("getDIDsInfo")
 
     def test_provider_failure_raises_api_error(self):
+        """Vérifie qu'un refus du fournisseur lève `VoIPMSAPIError`."""
         import io
         import json
 
@@ -89,6 +94,7 @@ class TestVoIPMSClientRequest(VoIPMSClientTestBase):
                 client._request("getDIDsInfo")
 
     def test_unreachable_server_raises_api_error(self):
+        """Vérifie qu'un serveur injoignable lève `VoIPMSAPIError`."""
         import urllib.error
 
         with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("refused")):

@@ -10,6 +10,7 @@ from ..models.control_room import summarize_kubernetes
 class TestControlRoom(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare un serveur et un nœud Proxmox de test."""
         super().setUpClass()
         cls.server = cls.env["proxmox.server"].create(
             {
@@ -29,6 +30,7 @@ class TestControlRoom(TransactionCase):
         )
 
     def test_snapshot_has_the_expected_shape(self):
+        """Vérifie que l'instantané expose totaux, nœuds, alertes et horodatage."""
         snapshot = self.env["control.room"].proxmox_snapshot()
         self.assertIn("totals", snapshot)
         self.assertIn("nodes", snapshot)
@@ -37,17 +39,20 @@ class TestControlRoom(TransactionCase):
         self.assertEqual(snapshot["totals"]["nodes"], 1)
 
     def test_a_node_near_its_memory_limit_raises_a_warning(self):
+        """Vérifie qu'un nœud proche de sa limite mémoire émet un avertissement."""
         snapshot = self.env["control.room"].proxmox_snapshot()
         warnings = [a for a in snapshot["alerts"] if a["level"] == "warning"]
         self.assertTrue(any("pve-test" in alert["text"] for alert in warnings))
 
     def test_an_offline_node_raises_a_critical_alert(self):
+        """Vérifie qu'un nœud hors ligne émet une alerte critique."""
         self.node.status = "offline"
         snapshot = self.env["control.room"].proxmox_snapshot()
         criticals = [alert for alert in snapshot["alerts"] if alert["level"] == "critical"]
         self.assertTrue(any("pve-test" in alert["text"] for alert in criticals))
 
     def test_summarize_kubernetes_counts_what_is_not_ready(self):
+        """Vérifie que la synthèse Kubernetes compte nœuds et déploiements non prêts."""
         result = summarize_kubernetes(
             [{"name": "n1", "ready": True}, {"name": "n2", "ready": False}],
             [
@@ -61,6 +66,7 @@ class TestControlRoom(TransactionCase):
         self.assertEqual(result["unavailable"], ["b/down"])
 
     def test_summarize_kubernetes_ignores_scaled_to_zero(self):
+        """Vérifie que la synthèse Kubernetes ignore les déploiements réduits à zéro."""
         result = summarize_kubernetes(
             [],
             [{"namespace": "a", "name": "sleeping", "ready": 0, "desired": 0}],

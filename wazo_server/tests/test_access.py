@@ -15,6 +15,7 @@ from odoo.tests import tagged
 class TestTenantAccess(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare un tenant et des usagers de droits différents."""
         super().setUpClass()
         cls.tenant = cls.env["wazo.server.tenant"].create({"name": "Client Alpha", "slug": "alpha"})
         cls.gestionnaire = cls.env["res.users"].create(
@@ -42,6 +43,7 @@ class TestTenantAccess(TransactionCase):
         )
 
     def test_manager_reads_writes_and_creates(self):
+        """Vérifie qu'un gestionnaire lit, modifie et crée un tenant."""
         gestionnaire = self.tenant.with_user(self.gestionnaire)
         self.assertEqual(gestionnaire.name, "Client Alpha")
         gestionnaire.write({"name": "Client Alpha 2"})
@@ -53,15 +55,18 @@ class TestTenantAccess(TransactionCase):
         self.assertTrue(nouveau.id)
 
     def test_plain_user_cannot_read_a_tenant(self):
+        """Vérifie qu'un usager ordinaire ne lit pas un tenant."""
         with self.assertRaises(AccessError):
             self.tenant.with_user(self.ordinaire).name
 
     def test_plain_user_cannot_create_a_tenant(self):
+        """Vérifie qu'un usager ordinaire ne crée pas de tenant."""
         with self.assertRaises(AccessError):
             self.env["wazo.server.tenant"].with_user(self.ordinaire).create(
                 {"name": "Client Gamma", "slug": "gamma"}
             )
 
     def test_plain_user_cannot_delete_a_tenant(self):
+        """Vérifie qu'un usager ordinaire ne supprime pas de tenant."""
         with self.assertRaises(AccessError):
             self.tenant.with_user(self.ordinaire).unlink()

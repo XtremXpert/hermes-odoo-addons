@@ -15,6 +15,7 @@ from ..models.runners import summarize_pools
 @tagged("post_install", "-at_install")
 class TestSummarizePools(TransactionCase):
     def test_occupation_et_saturation(self):
+        """Vérifie le calcul d'occupation, de places libres et de saturation par pool."""
         pools = [
             {"name": "arc-a", "min": 1, "max": 2, "repo": "org/a"},
             {"name": "arc-b", "min": 0, "max": 3, "repo": "org/b"},
@@ -53,5 +54,6 @@ class TestSummarizePools(TransactionCase):
         self.assertEqual(resume[0]["free"], 1)
 
     def test_tri_stable(self):
+        """Vérifie que les pools sont triés par nom."""
         pools = [{"name": "z"}, {"name": "a"}, {"name": "m"}]
         self.assertEqual([p["name"] for p in summarize_pools(pools, [])], ["a", "m", "z"])

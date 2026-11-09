@@ -11,6 +11,11 @@ tableau de bord. Idempotent.
 
 def adopt_dashboard_xmlids(env):
     # Odoo 20 passe un Environment : le curseur vit sous env.cr.
+    """Rattache les identifiants des tableaux de bord au module ``mailcow``.
+
+    Args:
+        env: Environnement Odoo courant.
+    """
     env.cr.execute(
         """
         UPDATE ir_model_data

@@ -14,6 +14,7 @@ from odoo.tests import tagged
 class TestVoIPMSOutbox(TransactionCase):
     @classmethod
     def setUpClass(cls):
+        """Prépare les identifiants VoIP.ms des tests de boîte d'envoi."""
         super().setUpClass()
         cls.env["ir.config_parameter"].sudo().set_str("voipms.api_username", "test-user")
         cls.env["ir.config_parameter"].sudo().set_str("voipms.api_token", "test-token")
@@ -34,6 +35,7 @@ class TestVoIPMSOutbox(TransactionCase):
         )
 
     def test_send_short_message_marks_sent(self):
+        """Vérifie qu'un message court passe à l'état envoyé."""
         msg = self._make_message("Bonjour")
         with patch.object(
             VoIPMSClient,
@@ -51,6 +53,7 @@ class TestVoIPMSOutbox(TransactionCase):
         self.assertEqual(msg.provider_message_ids, "7")
 
     def test_long_message_sends_numbered_segments(self):
+        """Vérifie qu'un message long part en segments numérotés."""
         long_body = " ".join(["mot%d" % i for i in range(60)])  # > 150 car.
         msg = self._make_message(long_body)
         with patch.object(
@@ -65,6 +68,7 @@ class TestVoIPMSOutbox(TransactionCase):
         self.assertEqual(msg.state, "sent")
 
     def test_send_requires_sms_enabled_did(self):
+        """Vérifie que l'envoi exige un DID avec SMS activé."""
         did_no_sms = self.env["voipms.did"].create({"number": "15140000001", "sms_enabled": 0})
         msg = self.env["voipms.sms.out"].create(
             {
@@ -77,16 +81,19 @@ class TestVoIPMSOutbox(TransactionCase):
             msg.action_send()
 
     def test_send_rejects_empty_body(self):
+        """Vérifie qu'un message vide est refusé."""
         msg = self._make_message("   ")
         with self.assertRaises(UserError):
             msg.action_send()
 
     def test_send_rejects_malformed_destination(self):
+        """Vérifie qu'un destinataire mal formé est refusé."""
         msg = self._make_message("Bonjour", dst="123")
         with self.assertRaises(UserError):
             msg.action_send()
 
     def test_send_failure_marks_failed_and_keeps_message(self):
+        """Vérifie qu'un échec marque le message en échec et le conserve."""
         msg = self._make_message("Bonjour")
         with patch.object(
             VoIPMSClient,
@@ -99,6 +106,7 @@ class TestVoIPMSOutbox(TransactionCase):
         self.assertEqual(msg.error_message, "IP not enabled")
 
     def test_destination_is_normalized_before_send(self):
+        """Vérifie que le destinataire est normalisé avant l'envoi."""
         msg = self._make_message("Bonjour", dst="4184541752")
         with patch.object(
             VoIPMSClient,
