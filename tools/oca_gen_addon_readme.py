@@ -12,6 +12,7 @@ paquet PyPI). Ce lanceur enregistre un lexer de repli pour la seule validation
 du RST : le HTML engendré affiche le diagramme comme bloc de code, et GitHub
 rend le Mermaid directement depuis `readme/CONTEXT.md`.
 """
+
 import sys
 from pathlib import Path
 
