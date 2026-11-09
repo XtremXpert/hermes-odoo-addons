@@ -50,8 +50,7 @@ class TestNeutralizeGuard(TransactionCase):
         # cherche donc celle qui le déclare réellement, quel que soit le nombre
         # d'héritages intermédiaires.
         parent = next(
-            classe for classe in type(self.cron).__mro__[1:]
-            if "_callback" in classe.__dict__
+            classe for classe in type(self.cron).__mro__[1:] if "_callback" in classe.__dict__
         )
         with patch.object(parent, "_callback") as delegated:
             self.cron._callback(self.cron.name, action.id)
