@@ -14,14 +14,14 @@
             </div>
 
             <t t-if="state.error">
-                <div class="alert alert-danger" t-esc="state.error" />
+                <div class="alert alert-danger" t-out="state.error" />
             </t>
 
             <t t-if="state.data">
                 <div class="text-muted small mb-3">
-                    Instantané du <t t-esc="state.data.generated_at" /> —
-                    <t t-esc="state.data.totals.runners" /> runner(s),
-                    <t t-esc="state.data.totals.saturated" /> pool(s) saturé(s)
+                    Instantané du <t t-out="state.data.generated_at" /> —
+                    <t t-out="state.data.totals.runners" /> runner(s),
+                    <t t-out="state.data.totals.saturated" /> pool(s) saturé(s)
                 </div>
 
                 <table class="table table-sm">
@@ -40,15 +40,15 @@
                             t-as="runner"
                             t-key="runner.name"
                         >
-                            <td t-esc="runner.cluster" />
-                            <td t-esc="runner.pool" />
+                            <td t-out="runner.cluster" />
+                            <td t-out="runner.pool" />
                             <td
                                 t-att-class="phaseClass(runner.phase)"
-                                t-esc="runner.phase"
+                                t-out="runner.phase"
                             />
-                            <td t-esc="runner.runner_id" />
+                            <td t-out="runner.runner_id" />
                             <td>
-                                <t t-esc="runner.age_minutes" /> min
+                                <t t-out="runner.age_minutes" /> min
                             </td>
                         </tr>
                         <tr t-if="!state.data.runners.length">
@@ -77,11 +77,11 @@
                         >
                             <t t-foreach="cluster.pools" t-as="pool" t-key="pool.name">
                                 <tr>
-                                    <td t-esc="pool.name" />
-                                    <td t-esc="pool.repo" />
+                                    <td t-out="pool.name" />
+                                    <td t-out="pool.repo" />
                                     <td t-att-class="pool.saturated ? 'o_arc_bad' : ''">
-                                        <t t-esc="pool.running" /> / <t
-                                        t-esc="pool.max"
+                                        <t t-out="pool.running" /> / <t
+                                        t-out="pool.max"
                                     />
                                         <t t-if="pool.paused"> (en pause)</t>
                                     </td>

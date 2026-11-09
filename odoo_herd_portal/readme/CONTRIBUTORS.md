@@ -1,0 +1,2 @@
+- Bemade Inc.
+- Diverse-Cité
