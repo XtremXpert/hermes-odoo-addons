@@ -6,7 +6,7 @@
                 <h4 class="mb-0">Runners GitHub Actions</h4>
                 <button
                     class="btn btn-sm btn-secondary"
-                    t-on-click="reload"
+                    t-on-click="() => this.reload()"
                     t-att-disabled="state.loading"
                 >
                     Rafraîchir

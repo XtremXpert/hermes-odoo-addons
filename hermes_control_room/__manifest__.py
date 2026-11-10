@@ -1,7 +1,7 @@
 # Part of the hermes_control_room Odoo module. See LICENSE for details.
 {
     "name": "Hermes — Salle de contrôle",
-    "version": "20.0.1.0.0",
+    "version": "20.0.1.0.1",
     "development_status": "Beta",
     "category": "Administration",
     "author": "Benoît Vézina, Diverse-Cité",
