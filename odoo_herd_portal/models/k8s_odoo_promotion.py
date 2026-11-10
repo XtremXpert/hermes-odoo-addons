@@ -804,7 +804,15 @@ class K8sOdooPromotion(models.Model):
             return
         prod = self.production_id
         try:
-            custom_api = client.CustomObjectsApi(cluster._get_k8s_client())
+            # Lire la production DANS SON cluster, pas dans celui qui héberge le
+            # manifeste : pour une instance dont la production vit sur un autre
+            # cluster (diverse-odoo sur rke01), interroger le cluster du
+            # manifeste ramenait l'instance de même nom et de même namespace —
+            # c'est-à-dire le staging. Constaté le 2026-11-09 : PROMO/0184 a
+            # publié cite.636.vezina.biz comme production, et le détecteur de
+            # dérive a comparé des hôtes de staging à ceux de production.
+            source = prod.cluster_id or cluster
+            custom_api = client.CustomObjectsApi(source._get_k8s_client())
             obj = custom_api.get_namespaced_custom_object(
                 group="bemade.org",
                 version="v1alpha1",

@@ -1,6 +1,6 @@
 {
     "name": "Odoo Herd Portal",
-    "version": "20.0.1.7.0",
+    "version": "20.0.1.7.1",
     "development_status": "Beta",
     "category": "Administration/Kubernetes",
     "summary": "Client portal for an Odoo production and its staging: "
