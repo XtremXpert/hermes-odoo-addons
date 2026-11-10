@@ -325,7 +325,10 @@ class K8sOdooUpgrade(models.Model):
             message (str, optional): message à conserver sur la fiche.
         """
         for record in self:
-            ecarts = record._ecarts_de_version()
+            # Vérifier n'a de sens que sur une exécution réelle : une fiche
+            # créée et close sans job (tests, flux simulé) n'a rien exécuté,
+            # donc rien à comparer.
+            ecarts = record._ecarts_de_version() if record.job_name else []
             if ecarts:
                 record.mark_failed(
                     message=_(
