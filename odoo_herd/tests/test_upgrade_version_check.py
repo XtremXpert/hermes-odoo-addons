@@ -47,14 +47,14 @@ class TestUpgradeVersionCheck(TransactionCase):
 
     def test_version_concordante_marque_completed(self):
         """Base et image d'accord : la mise à jour est valide."""
-        upgrade = self._upgrade()
+        upgrade = self._upgrade(job_name="upgrade-job-1")
         with patch.object(type(upgrade), "_ecarts_de_version", return_value=[]):
             upgrade.mark_completed()
         self.assertEqual(upgrade.state, "completed")
 
     def test_version_en_retard_marque_failed(self):
         """Le job a réussi mais la base n'a pas bougé : c'est un échec."""
-        upgrade = self._upgrade()
+        upgrade = self._upgrade(job_name="upgrade-job-1")
         with patch.object(
             type(upgrade),
             "_ecarts_de_version",
@@ -64,6 +64,21 @@ class TestUpgradeVersionCheck(TransactionCase):
         self.assertEqual(upgrade.state, "failed")
         self.assertIn("n'a pas été appliquée", upgrade.message)
         self.assertIn("mail", upgrade.message)
+
+    def test_fiche_sans_job_n_est_pas_verifiee(self):
+        """Une fiche close sans exécution réelle n'a rien à comparer.
+
+        C'est le cas des flux simulés (tests d'autres modules) : vérifier ferait
+        échouer une promotion qui n'a jamais lancé de job.
+        """
+        upgrade = self._upgrade()
+        with patch.object(
+            type(upgrade),
+            "_ecarts_de_version",
+            side_effect=AssertionError("ne doit pas être appelé"),
+        ):
+            upgrade.mark_completed()
+        self.assertEqual(upgrade.state, "completed")
 
     def test_module_absent_de_la_base_est_un_ecart(self):
         """Un module demandé qui n'existe pas en base ne peut pas aller mieux."""
