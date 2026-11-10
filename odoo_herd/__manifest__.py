@@ -1,6 +1,6 @@
 {
     "name": "Odoo Herd",
-    "version": "20.0.1.9.1",
+    "version": "20.0.1.9.2",
     "development_status": "Beta",
     "category": "Administration/Kubernetes",
     "summary": "Manage your herd of Odoo instances across Kubernetes clusters",
