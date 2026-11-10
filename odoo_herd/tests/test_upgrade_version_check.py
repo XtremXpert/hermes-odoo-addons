@@ -2,6 +2,7 @@ from unittest.mock import patch
 
 from odoo.tests import TransactionCase
 from odoo.tests import tagged
+from odoo.tools import mute_logger
 
 
 @tagged("post_install", "-at_install")
@@ -18,22 +19,51 @@ class TestUpgradeVersionCheck(TransactionCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.cluster = cls.env["k8s.cluster"].create(
-            {
-                "name": "test-cluster-upgrade",
-                "api_endpoint": "https://k8s.example.com",
-                "kubeconfig": "{}",
-                "webhook_base_url": "http://odoo.example.com",
-            }
+        # Cluster bidon : toute construction de client Kubernetes journalise une
+        # ERROR, et la CI compte ces lignes comme des échecs de test. Le silence
+        # couvre la création ET le flush, là où les calculs se déclenchent.
+        with mute_logger(
+            "odoo.addons.odoo_herd.models.k8s_cluster",
+            "odoo.addons.odoo_herd.models.k8s_odoo_instance",
+        ):
+            cls.cluster = cls.env["k8s.cluster"].create(
+                {
+                    "name": "test-cluster-upgrade",
+                    "api_endpoint": "https://k8s.example.com",
+                    "kubeconfig": "{}",
+                    "webhook_base_url": "http://odoo.example.com",
+                }
+            )
+            cls.instance = cls.env["k8s.odoo.instance"].create(
+                {
+                    "cluster_id": cls.cluster.id,
+                    "name": "test-upgrade-version",
+                    "namespace": "test-ns",
+                    "environment": "production",
+                    "image": "ghcr.io/client/shop:1",
+                }
+            )
+            cls.env.flush_all()
+
+    def setUp(self):
+        """Tait les journaux d'un cluster bidon pendant tout le test.
+
+        Le client Kubernetes est créé paresseusement, à la première lecture : le
+        silence ne peut donc pas être limité à la création des enregistrements.
+        La CI compte toute ligne ERROR comme un échec.
+        """
+        super().setUp()
+        self.enterContext(
+            mute_logger(
+                "odoo.addons.odoo_herd.models.k8s_cluster",
+                "odoo.addons.odoo_herd.models.k8s_odoo_instance",
+            )
         )
-        cls.instance = cls.env["k8s.odoo.instance"].create(
-            {
-                "cluster_id": cls.cluster.id,
-                "name": "test-upgrade-version",
-                "namespace": "test-ns",
-                "environment": "production",
-                "image": "ghcr.io/client/shop:1",
-            }
+        # Aucun client réel : construire un client Kubernetes sur un kubeconfig
+        # bidon journalise une ERROR, et la CI compte ces lignes comme des
+        # échecs, même quand tous les tests passent.
+        self.enterContext(
+            patch.object(type(self.env["k8s.cluster"]), "_get_k8s_client", return_value=None)
         )
 
     def _upgrade(self, **vals):
