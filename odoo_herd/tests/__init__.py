@@ -8,3 +8,4 @@ from . import test_k8s_create_instance_wizard_clone_prod
 from . import test_sync_edited_fields
 from . import test_job_mixin
 from . import test_resync_cross_cluster
+from . import test_upgrade_version_check

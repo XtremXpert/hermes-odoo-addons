@@ -276,6 +276,47 @@ class K8sOdooUpgrade(models.Model):
         _logger.warning("Could not parse datetime: %s", value)
         return None
 
+    def _ecarts_de_version(self):
+        """Modules demandés dont la base n'est pas à la version de l'image.
+
+        Odoo sort en code 0 même quand une mise à jour de module a échoué : les
+        erreurs SQL sont journalisées, puis le processus se termine normalement.
+        Le job Kubernetes est donc « Complete », et l'opérateur le rapporte
+        fidèlement — alors que la base n'a pas bougé (constaté le 2026-11-10 :
+        ALTER TABLE refusé sur res_users, job marqué completed, contrainte
+        d'unicité perdue).
+
+        Comparer les versions est la seule preuve que la mise à jour a été
+        appliquée, et non seulement tentée.
+        """
+        from odoo.modules.module import get_manifest
+
+        demandes = []
+        for champ in ("modules", "modules_install"):
+            demandes += [m.strip() for m in (self[champ] or "").split(",") if m.strip()]
+        if not demandes:
+            return []  # « -u all » : aucune liste à vérifier
+        ecarts = []
+        for nom in sorted(set(demandes)):
+            module = self.env["ir.module.module"].search([("name", "=", nom)], limit=1)
+            if not module:
+                ecarts.append(f"{nom} : absent de la base")
+                continue
+            if module.state not in ("installed", "to upgrade"):
+                ecarts.append(f"{nom} : état « {module.state} »")
+                continue
+            try:
+                manifeste = get_manifest(nom)
+            except (OSError, ValueError):
+                manifeste = None
+            if not manifeste:
+                continue  # module absent de l'image : ce n'est pas un écart de version
+            sur_disque = (manifeste.get("version") or "").strip()
+            en_base = (module.latest_version or "").strip()
+            if sur_disque and en_base and sur_disque != en_base:
+                ecarts.append(f"{nom} : base {en_base} / image {sur_disque}")
+        return ecarts
+
     def mark_completed(self, completion_time=None, message=None):
         """Passe les mises à jour à l'état « completed ».
 
@@ -284,6 +325,16 @@ class K8sOdooUpgrade(models.Model):
             message (str, optional): message à conserver sur la fiche.
         """
         for record in self:
+            ecarts = record._ecarts_de_version()
+            if ecarts:
+                record.mark_failed(
+                    message=_(
+                        "Le job est terminé mais la mise à jour n'a pas été appliquée : %s",
+                        " ; ".join(ecarts),
+                    ),
+                    completion_time=completion_time,
+                )
+                continue
             vals = {
                 "state": "completed",
                 "completion_time": self._parse_datetime(completion_time) or fields.Datetime.now(),
