@@ -175,9 +175,15 @@ class MailGatewayController(http.Controller):
         # above; from here on we run as SUPERUSER scoped to one method
         # call.
         try:
-            result = request.env(user=SUPERUSER_ID)["mail.thread"].message_process(
-                None, raw, **kwargs
-            )
+            # Traiter ET vider la file de champs dans l'environnement
+            # SUPERUSER : le flush final du routeur se fait avec request.env,
+            # qui n'a aucun utilisateur (auth='none'). Sur un alias dont le
+            # modèle porte un champ monétaire (ex. crm.lead.expected_revenue),
+            # ce flush déclenche un contrôle d'accès avec env.user vide et
+            # casse la requête en 500. Vider ici évite ce flush tardif.
+            env = request.env(user=SUPERUSER_ID)
+            result = env["mail.thread"].message_process(None, raw, **kwargs)
+            env.flush_all()
         except ValueError as exc:
             err_msg = str(exc)
             # Odoo raises a generic ValueError for "No possible route found
