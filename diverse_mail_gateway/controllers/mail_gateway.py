@@ -145,6 +145,17 @@ class MailGatewayController(http.Controller):
                 status=403,
             )
 
+        # Le jeton validé est écrit (last_used_at, use_count) dans request.env,
+        # dont l'utilisateur est VIDE sur une route auth='none'. Ce n'est pas
+        # l'écriture qui casse, c'est son flush : le routeur vide request.env à
+        # la fin de la requête, mail._flush rejoue alors les champs qui exigent
+        # un utilisateur (followers, conversion monétaire) et lève
+        # « Expected singleton: res.users() » — 500 sur chaque courriel, vu en
+        # production le 2026-11-11. Lier SUPERUSER à l'environnement de la
+        # requête AVANT la validation du jeton rend ce flush inoffensif :
+        # l'écriture et le flush partagent le même utilisateur.
+        request.update_env(user=SUPERUSER_ID)
+
         token_rec = self._validate_token_header()
         if not token_rec:
             return _json_response({"ok": False, "error": "unauthorized"}, status=401)
