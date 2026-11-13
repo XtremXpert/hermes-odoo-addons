@@ -3,6 +3,8 @@ from unittest.mock import patch
 from odoo.tests import TransactionCase
 from odoo.tests import tagged
 
+from ..models.ir_cron import IrCron
+
 
 @tagged("post_install", "-at_install")
 class TestNeutralizeGuard(TransactionCase):
@@ -44,7 +46,13 @@ class TestNeutralizeGuard(TransactionCase):
     def test_callback_delegates_on_a_normal_database(self):
         self.icp.set_bool("database.is_neutralized", False)
         action = self.cron.ir_actions_server_id
-        parent = type(self.cron).__mro__[1]
+        # `_callback` n'est pas défini par le parent immédiat : mail, event et
+        # d'autres surchargent ir.cron sans le redéfinir, donc __mro__[1] n'a
+        # pas l'attribut et patch.object lève AttributeError. On vise la
+        # classe que super() atteint réellement depuis notre surcharge.
+        mro = type(self.cron).__mro__
+        after_ours = mro[mro.index(IrCron) + 1 :]
+        parent = next(klass for klass in after_ours if "_callback" in vars(klass))
         with patch.object(parent, "_callback") as delegated:
             self.cron._callback(self.cron.name, action.id)
         delegated.assert_called_once_with(self.cron.name, action.id)
