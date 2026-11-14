@@ -4,6 +4,8 @@
 import json
 import logging
 
+from kubernetes import client
+
 from odoo import http
 from odoo.http import Response
 from odoo.http import request
@@ -89,6 +91,24 @@ class K8sUpgradeWebhook(http.Controller):
             phase,
             job_name,
         )
+
+        # L'opérateur dépose la queue du journal dans le CR ; le webhook peut
+        # arriver avant que le champ ne soit posé. Une lecture du CR, sans échec
+        # bloquant, récupère ce qui est disponible.
+        try:
+            resource = (
+                client.CustomObjectsApi(upgrade.cluster_id._get_k8s_client())
+                .get_namespaced_custom_object(
+                    group="bemade.org",
+                    version="v1alpha1",
+                    namespace=upgrade.instance_id.namespace,
+                    plural="odooupgradejobs",
+                    name=upgrade.upgrade_job_name,
+                )
+            )
+            upgrade._k8s_job_prendre_journal((resource.get("status") or {}).get("logTail"))
+        except Exception as e:  # noqa: BLE001 — le journal ne doit pas bloquer le flux
+            _logger.info("Upgrade webhook %s: journal non récupéré (%s)", upgrade_id, e)
 
         # Update upgrade record based on phase
         if phase == "running":

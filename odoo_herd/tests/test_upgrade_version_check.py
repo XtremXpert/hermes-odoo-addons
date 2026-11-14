@@ -125,7 +125,7 @@ class TestUpgradeVersionCheck(TransactionCase):
         l'image de cette instance, cherchés dans la base du portail où ils n'ont
         jamais existé. Le contrôle doit s'abstenir pour une instance distante.
         """
-        self.env["ir.config_parameter"].sudo().set_param(
+        self.env["ir.config_parameter"].sudo().set_str(
             "odoo_herd.self_instance_id", str(self.instance.id + 1)
         )
         upgrade = self._upgrade(modules="module_qui_n_existe_pas")
@@ -133,7 +133,7 @@ class TestUpgradeVersionCheck(TransactionCase):
 
     def test_instance_servie_par_cette_base_est_verifiee(self):
         """L'instance du portail, elle, reste contrôlée."""
-        self.env["ir.config_parameter"].sudo().set_param(
+        self.env["ir.config_parameter"].sudo().set_str(
             "odoo_herd.self_instance_id", str(self.instance.id)
         )
         upgrade = self._upgrade(modules="module_qui_n_existe_pas")
