@@ -20,23 +20,32 @@ class TestJournalDeJob(TransactionCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.cluster = cls.env["k8s.cluster"].create(
-            {
-                "name": "test-cluster-journal",
-                "api_endpoint": "https://k8s.example.com",
-                "kubeconfig": "{}",
-                "webhook_base_url": "http://odoo.example.com",
-            }
-        )
-        cls.instance = cls.env["k8s.odoo.instance"].create(
-            {
-                "cluster_id": cls.cluster.id,
-                "name": "test-journal",
-                "namespace": "test-ns",
-                "environment": "production",
-                "image": "ghcr.io/client/shop:1",
-            }
-        )
+        # Cluster bidon : construire un client Kubernetes journalise une ERROR,
+        # et la CI compte ces lignes comme des échecs de test, même quand tous
+        # les tests passent. Le silence doit couvrir la création ET le flush,
+        # là où les calculs se déclenchent.
+        with mute_logger(
+            "odoo.addons.odoo_herd.models.k8s_cluster",
+            "odoo.addons.odoo_herd.models.k8s_odoo_instance",
+        ):
+            cls.cluster = cls.env["k8s.cluster"].create(
+                {
+                    "name": "test-cluster-journal",
+                    "api_endpoint": "https://k8s.example.com",
+                    "kubeconfig": "{}",
+                    "webhook_base_url": "http://odoo.example.com",
+                }
+            )
+            cls.instance = cls.env["k8s.odoo.instance"].create(
+                {
+                    "cluster_id": cls.cluster.id,
+                    "name": "test-journal",
+                    "namespace": "test-ns",
+                    "environment": "production",
+                    "image": "ghcr.io/client/shop:1",
+                }
+            )
+            cls.env.flush_all()
 
     def setUp(self):
         super().setUp()
