@@ -117,6 +117,30 @@ class TestUpgradeVersionCheck(TransactionCase):
         self.assertTrue(ecarts)
         self.assertIn("absent de la base", ecarts[0])
 
+    def test_instance_distante_ne_compare_pas_la_base_du_portail(self):
+        """Une promotion d'une autre instance ne se vérifie pas contre cette base.
+
+        Le 2026-11-13, la promotion de « diverse-odoo » (cluster OVH) a échoué
+        sur social_mobile_chat, social_nearby et social_meet : trois modules de
+        l'image de cette instance, cherchés dans la base du portail où ils n'ont
+        jamais existé. Le contrôle doit s'abstenir pour une instance distante.
+        """
+        self.env["ir.config_parameter"].sudo().set_param(
+            "odoo_herd.self_instance_id", str(self.instance.id + 1)
+        )
+        upgrade = self._upgrade(modules="module_qui_n_existe_pas")
+        self.assertEqual(upgrade._ecarts_de_version(), [])
+
+    def test_instance_servie_par_cette_base_est_verifiee(self):
+        """L'instance du portail, elle, reste contrôlée."""
+        self.env["ir.config_parameter"].sudo().set_param(
+            "odoo_herd.self_instance_id", str(self.instance.id)
+        )
+        upgrade = self._upgrade(modules="module_qui_n_existe_pas")
+        ecarts = upgrade._ecarts_de_version()
+        self.assertTrue(ecarts)
+        self.assertIn("absent de la base", ecarts[0])
+
     def test_module_absent_de_l_image_n_est_pas_un_ecart(self):
         """Un module retiré de l'image n'a pas de version à comparer."""
         upgrade = self._upgrade(modules="base")
