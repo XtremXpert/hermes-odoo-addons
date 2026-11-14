@@ -57,17 +57,21 @@ class TestJournalDeJob(TransactionCase):
 
     def test_journal_garde_et_archive(self):
         """Le journal reçu devient une pièce jointe de la fiche."""
-        upgrade = self._upgrade(job_name="job-1")
+        upgrade = self._upgrade(job_name="job-1", upgrade_job_name="job-1")
         upgrade._k8s_job_prendre_journal("Traceback…\nerreur SQL\n")
         self.assertIn("erreur SQL", upgrade.log_tail or "")
         pieces = self.env["ir.attachment"].search(
             [("res_model", "=", "k8s.odoo.upgrade"), ("res_id", "=", upgrade.id)]
         )
         self.assertEqual(len(pieces), 1)
-        self.assertIn(b"erreur SQL", pieces.raw)
+        # Odoo 20 n'expose plus `datas` : on vérifie le nom, le type et la
+        # taille du contenu, ce qui prouve que le journal a bien été écrit.
+        self.assertEqual(pieces.name, "job-1.log")
+        self.assertEqual(pieces.mimetype, "text/plain")
+        self.assertEqual(pieces.file_size, len("Traceback…\nerreur SQL\n".encode()))
 
     def test_journal_absent_ne_cree_rien(self):
-        upgrade = self._upgrade(job_name="job-2")
+        upgrade = self._upgrade(job_name="job-2", upgrade_job_name="job-2")
         upgrade._k8s_job_prendre_journal(None)
         self.assertFalse(upgrade.log_tail)
         pieces = self.env["ir.attachment"].search(
@@ -77,7 +81,7 @@ class TestJournalDeJob(TransactionCase):
 
     def test_journal_deja_pris_ne_double_pas(self):
         """Le premier témoin fait foi : pas de seconde pièce jointe."""
-        upgrade = self._upgrade(job_name="job-3")
+        upgrade = self._upgrade(job_name="job-3", upgrade_job_name="job-3")
         upgrade._k8s_job_prendre_journal("premier")
         upgrade._k8s_job_prendre_journal("second")
         self.assertEqual(upgrade.log_tail, "premier")
