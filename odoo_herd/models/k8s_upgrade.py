@@ -276,6 +276,33 @@ class K8sOdooUpgrade(models.Model):
         _logger.warning("Could not parse datetime: %s", value)
         return None
 
+    def _verifie_sa_propre_base(self):
+        """Le contrôle porte-t-il sur la base où tourne ce portail ?
+
+        Une promotion peut viser une instance d'un autre cluster : le job monte
+        alors les modules dans SA base, pas dans celle du portail. Comparer les
+        modules demandés au catalogue de cette base-ci produit « absent de la
+        base » pour tout module de l'instance distante.
+
+        Constaté le 2026-11-13 : la promotion de ``diverse-odoo`` (cluster OVH)
+        a échoué sur ``social_mobile_chat``, ``social_nearby`` et
+        ``social_meet`` — trois modules présents dans l'image de cette instance
+        et dans aucune autre. Le contrôle les a cherchés dans la base du portail,
+        où ils n'ont jamais été installés.
+
+        Le paramètre système ``odoo_herd.self_instance_id`` désigne l'instance
+        servie par cette base. Sans lui, on vérifie tout, comme avant.
+        """
+        propre = (
+            self.env["ir.config_parameter"].sudo().get_str("odoo_herd.self_instance_id")
+        )
+        if not propre:
+            return True
+        try:
+            return self.instance_id.id == int(propre)
+        except (TypeError, ValueError):
+            return True
+
     def _ecarts_de_version(self):
         """Modules demandés dont la base n'est pas à la version de l'image.
 
@@ -290,6 +317,9 @@ class K8sOdooUpgrade(models.Model):
         appliquée, et non seulement tentée.
         """
         from odoo.modules.module import get_manifest
+
+        if not self._verifie_sa_propre_base():
+            return []
 
         demandes = []
         for champ in ("modules", "modules_install"):
