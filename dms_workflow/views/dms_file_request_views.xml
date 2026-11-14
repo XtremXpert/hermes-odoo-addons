@@ -31,10 +31,10 @@
                         <div class="p-2">
                             <div class="fw-bold"><field name="name" /></div>
                             <div class="text-muted small">
-                                <span class="oi" data-icon="user" /> <field name="requested_to_id" />
+                                <span class="oi" data-icon="user" title="Demandé à" /> <field name="requested_to_id" />
                             </div>
                             <div t-if="record.deadline.raw_value" class="small">
-                                <span class="oi" data-icon="schedule" /> <field name="deadline" />
+                                <span class="oi" data-icon="schedule" title="Échéance" /> <field name="deadline" />
                             </div>
                         </div>
                     </t>
@@ -98,7 +98,7 @@
                         domain="[('requested_by_id', '=', uid), ('state', '=', 'uploaded')]" />
                 <filter name="late" string="En retard"
                         domain="[('deadline', '&lt;', context_today().strftime('%Y-%m-%d')), ('state', 'not in', ['done', 'cancelled'])]" />
-                <group expand="0" string="Grouper par">
+                <group>
                     <filter name="group_state" string="État" context="{'group_by': 'state'}" />
                     <filter name="group_to" string="Demandé à" context="{'group_by': 'requested_to_id'}" />
                 </group>
