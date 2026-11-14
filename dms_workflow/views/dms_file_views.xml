@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <!-- The request_id field stays hidden: it is set by the request flow. -->
+    <record id="view_dms_file_form_request" model="ir.ui.view">
+        <field name="name">dms_file.form.request</field>
+        <field name="model">dms.file</field>
+        <field name="inherit_id" ref="dms.view_dms_file_form" />
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='directory_id']" position="after">
+                <field name="request_id" readonly="1" />
+            </xpath>
+        </field>
+    </record>
+</odoo>

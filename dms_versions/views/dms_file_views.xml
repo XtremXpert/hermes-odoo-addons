@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <record id="view_dms_file_form_versions" model="ir.ui.view">
+        <field name="name">dms_file.form.versions</field>
+        <field name="model">dms.file</field>
+        <field name="inherit_id" ref="dms.view_dms_file_form" />
+        <field name="arch" type="xml">
+            <!-- Smart button: the count follows the file's own access. -->
+            <xpath expr="//sheet//div[hasclass('oe_button_box')]" position="inside">
+                <button name="action_view_versions" type="object"
+                        class="oe_stat_button" icon="history">
+                    <field name="version_count" widget="statinfo" string="Versions" />
+                </button>
+            </xpath>
+            <!-- History page: read-only list of archived contents. -->
+            <xpath expr="//notebook" position="inside">
+                <page name="page_versions" string="Historique des versions">
+                    <field name="version_ids" readonly="1"
+                           context="{'default_file_id': id}">
+                        <list create="false" edit="false" delete="false">
+                            <field name="display_label" string="Version" />
+                            <field name="mimetype" string="Type" />
+                            <field name="size" string="Taille" widget="filesize" />
+                            <field name="origin" string="Origine" widget="badge"
+                                   decoration-info="origin == 'update'"
+                                   decoration-warning="origin == 'restore'" />
+                            <field name="create_uid" string="Par" />
+                            <field name="create_date" string="Le" />
+                            <button name="action_restore" type="object" string="Restaurer"
+                                    icon="history"
+                                    confirm="Restaurer ce contenu ? Le contenu actuel sera archivé." />
+                        </list>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

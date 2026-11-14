@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <record id="view_dms_file_tag_wizard" model="ir.ui.view">
+        <field name="name">dms.file.tag.wizard.form</field>
+        <field name="model">dms.file.tag.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Ajouter des étiquettes">
+                <group>
+                    <field name="file_ids" widget="many2many_tags" />
+                    <field name="tag_ids" widget="many2many_tags" />
+                </group>
+                <footer>
+                    <button name="action_tag" type="object" string="Ajouter"
+                            class="oe_highlight" />
+                    <button string="Annuler" special="cancel" />
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_dms_file_tag_wizard" model="ir.actions.act_window">
+        <field name="name">Ajouter des étiquettes</field>
+        <field name="res_model">dms.file.tag.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="dms.model_dms_file" />
+    </record>
+</odoo>

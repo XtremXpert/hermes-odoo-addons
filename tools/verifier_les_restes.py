@@ -27,6 +27,9 @@ RACINE = Path(__file__).resolve().parent.parent
 SERIE = "20.0"
 MODULES = (
     "asterisk_ari",
+    "dms_ux",
+    "dms_versions",
+    "dms_workflow",
     "mailcow",
     "mailcow_server",
     "mailcow_tenant",
@@ -118,6 +121,11 @@ PAQUETS = {"odoo"}
 
 def import_resolu(addon: str, chemin: str) -> bool:
     if addon in PAQUETS:
+        return True
+    # Un import vers un module absent de ce dépôt (vendored ailleurs, comme
+    # dms dans maison) ne peut pas être vérifié ici : il se résout au
+    # chargement des actifs, là où les deux modules coexistent.
+    if not any((RACINE / racine / addon).is_dir() for racine in RACINES_ADDONS):
         return True
     for racine in RACINES_ADDONS:
         base = RACINE / racine / addon / "static" / "src" / chemin

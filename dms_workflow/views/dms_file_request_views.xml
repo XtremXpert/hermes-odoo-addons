@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <record id="view_dms_file_request_list" model="ir.ui.view">
+        <field name="name">dms.file.request.list</field>
+        <field name="model">dms.file.request</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name" string="Demande" />
+                <field name="requested_to_id" string="Demandé à" widget="many2one_avatar_user" />
+                <field name="requested_by_id" string="Demandé par" widget="many2one_avatar_user" />
+                <field name="directory_id" string="Répertoire cible" />
+                <field name="deadline" string="Échéance" />
+                <field name="file_id" string="Fichier déposé" optional="show" />
+                <field name="state" widget="badge"
+                       decoration-info="state == 'submitted'"
+                       decoration-warning="state == 'uploaded'"
+                       decoration-success="state == 'done'"
+                       decoration-danger="state == 'refused'"
+                       decoration-muted="state == 'cancelled'" />
+            </list>
+        </field>
+    </record>
+
+    <record id="view_dms_file_request_kanban" model="ir.ui.view">
+        <field name="name">dms.file.request.kanban</field>
+        <field name="model">dms.file.request</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="state" class="o_kanban_small_column">
+                <templates>
+                    <t t-name="card">
+                        <div class="p-2">
+                            <div class="fw-bold"><field name="name" /></div>
+                            <div class="text-muted small">
+                                <span class="oi" data-icon="user" /> <field name="requested_to_id" />
+                            </div>
+                            <div t-if="record.deadline.raw_value" class="small">
+                                <span class="oi" data-icon="schedule" /> <field name="deadline" />
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="view_dms_file_request_form" model="ir.ui.view">
+        <field name="name">dms.file.request.form</field>
+        <field name="model">dms.file.request</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_upload" type="object" string="Déposer le document"
+                            class="oe_highlight" invisible="state not in ['submitted', 'refused']" />
+                    <button name="action_validate" type="object" string="Valider"
+                            class="oe_highlight" invisible="state != 'uploaded'" />
+                    <button name="action_refuse" type="object" string="Refuser"
+                            invisible="state not in ['uploaded', 'submitted']" />
+                    <button name="action_reopen" type="object" string="Relancer"
+                            invisible="state not in ['refused', 'cancelled']" />
+                    <button name="action_cancel" type="object" string="Annuler"
+                            invisible="state in ['done', 'cancelled']" />
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="submitted,uploaded,done" />
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Ex. : Bail du studio 103" /></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="requested_by_id" />
+                            <field name="requested_to_id" />
+                            <field name="deadline" />
+                        </group>
+                        <group>
+                            <field name="directory_id" />
+                            <field name="file_id" />
+                        </group>
+                    </group>
+                    <field name="description" placeholder="Ce qui est attendu, le format, le contexte…" />
+                </sheet>
+                <chatter />
+            </form>
+        </field>
+    </record>
+
+    <record id="view_dms_file_request_search" model="ir.ui.view">
+        <field name="name">dms.file.request.search</field>
+        <field name="model">dms.file.request</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name" />
+                <field name="requested_to_id" />
+                <field name="directory_id" />
+                <filter name="my_requests" string="Mes demandes à traiter"
+                        domain="[('requested_to_id', '=', uid), ('state', 'in', ['submitted', 'uploaded'])]" />
+                <filter name="waiting" string="À valider"
+                        domain="[('requested_by_id', '=', uid), ('state', '=', 'uploaded')]" />
+                <filter name="late" string="En retard"
+                        domain="[('deadline', '&lt;', context_today().strftime('%Y-%m-%d')), ('state', 'not in', ['done', 'cancelled'])]" />
+                <group expand="0" string="Grouper par">
+                    <filter name="group_state" string="État" context="{'group_by': 'state'}" />
+                    <filter name="group_to" string="Demandé à" context="{'group_by': 'requested_to_id'}" />
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_dms_file_request" model="ir.actions.act_window">
+        <field name="name">Demandes de documents</field>
+        <field name="res_model">dms.file.request</field>
+        <field name="view_mode">kanban,list,form</field>
+    </record>
+</odoo>
