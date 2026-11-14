@@ -48,6 +48,9 @@ class DmsFile(models.Model):
                 continue
             # The archive stores the bytes as an attachment; the version
             # itself is created with the metadata of the outgoing content.
+            # bytes(): `old` is a lazy proxy on the live attachment — it
+            # must be frozen NOW, before super().write() replaces the
+            # attachment's raw content in place.
             Version.create({
                 "file_id": dms_file.id,
                 "name": dms_file.name,
@@ -55,7 +58,7 @@ class DmsFile(models.Model):
                 "mimetype": dms_file.mimetype,
                 "checksum": dms_file.checksum,
                 "size": dms_file.size,
-                "content": old,
+                "content": bytes(old),
                 "origin": "restore" if self.env.context.get("dms_version_restore")
                 else "update",
             })

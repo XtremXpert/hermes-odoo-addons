@@ -47,10 +47,10 @@ class DmsFileVersion(models.Model):
     )
     display_label = fields.Char(compute="_compute_display_label")
 
-    _sql_constraints = [
-        ("file_checksum_uniq", "unique(file_id, checksum)",
-         "Cette version existe déjà pour ce fichier."),
-    ]
+    _file_checksum_uniq = models.Constraint(
+        "unique(file_id, checksum)",
+        "Cette version existe déjà pour ce fichier.",
+    )
 
     @api.depends("name", "create_date")
     def _compute_display_label(self):
@@ -85,7 +85,11 @@ class DmsFileVersion(models.Model):
             }
         # The normal write path archives the current content first
         # (see dms.file.write override), so the chain stays complete.
-        dms_file.with_context(dms_version_restore=True).sudo().content = self.content
+        # bytes(): freeze the lazy attachment proxy before the write path
+        # touches the file's own attachment.
+        dms_file.with_context(dms_version_restore=True).sudo().content = (
+            bytes(self.content) if self.content else False
+        )
         return {
             "type": "ir.actions.client",
             "tag": "display_notification",

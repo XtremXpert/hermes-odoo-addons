@@ -35,10 +35,10 @@ class DmsSyncDevice(models.Model):
     )
     scope_directory_count = fields.Integer(compute="_compute_scope_directory_count")
 
-    _sql_constraints = [
-        ("user_name_uniq", "unique(user_id, name)",
-         "Cet appareil existe déjà pour cet utilisateur."),
-    ]
+    _user_name_uniq = models.Constraint(
+        "unique(user_id, name)",
+        "Cet appareil existe déjà pour cet utilisateur.",
+    )
 
     def _compute_scope_directory_count(self):
         for device in self:
@@ -157,9 +157,12 @@ class DmsSyncDevice(models.Model):
         self._check_file_in_scope(dms_file)
         # Read through the caller: access groups still apply on top of scope.
         dms_file = dms_file.with_user(self.env.user)
+        # Binary fields return a lazy BinaryValue — force base64 while the
+        # cursor is open, the proxy cannot cross JSON-RPC.
+        content = dms_file.content
         return {
             "name": dms_file.name,
-            "content": dms_file.content or "",
+            "content": content.to_base64() if content else "",
         }
 
     def action_put_file(self, directory_id, name, content_b64, checksum):
