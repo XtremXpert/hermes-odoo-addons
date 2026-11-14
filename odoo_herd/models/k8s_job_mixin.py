@@ -11,7 +11,6 @@ Two guarantees shared by the four models:
   when Odoo restarts at the end of an upgrade it triggered).
 """
 
-import base64
 import logging
 from datetime import timedelta
 
@@ -146,12 +145,14 @@ class K8sJobMixin(models.AbstractModel):
             )
             if existante:
                 continue
+            # `raw` et non `datas` : avec `mimetype`, Odoo exige `raw` et
+            # refuse l'encodage base64 (assertion de _postprocess_contents).
             self.env["ir.attachment"].sudo().create(
                 {
                     "name": nom,
                     "res_model": record._name,
                     "res_id": record.id,
-                    "datas": base64.b64encode(record.log_tail.encode("utf-8")),
+                    "raw": record.log_tail.encode("utf-8"),
                     "mimetype": "text/plain",
                 }
             )

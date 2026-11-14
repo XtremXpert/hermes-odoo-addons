@@ -5,12 +5,18 @@ cette archive, la seule preuve d'une mise à jour de modules ratée disparaît
 avant qu'on puisse la lire.
 """
 
+from unittest.mock import patch
+
 from odoo.tests import TransactionCase
 from odoo.tests import tagged
+from odoo.tools import mute_logger
 
 
 @tagged("post_install", "-at_install")
 class TestJournalDeJob(TransactionCase):
+    """La CI compte toute ligne ERROR comme un échec : le cluster bidon de ces
+    tests journalise des erreurs de connexion qu'il faut taire, et le client
+    Kubernetes est remplacé par un objet nul."""
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -30,6 +36,18 @@ class TestJournalDeJob(TransactionCase):
                 "environment": "production",
                 "image": "ghcr.io/client/shop:1",
             }
+        )
+
+    def setUp(self):
+        super().setUp()
+        self.enterContext(
+            mute_logger(
+                "odoo.addons.odoo_herd.models.k8s_cluster",
+                "odoo.addons.odoo_herd.models.k8s_odoo_instance",
+            )
+        )
+        self.enterContext(
+            patch.object(type(self.env["k8s.cluster"]), "_get_k8s_client", return_value=None)
         )
 
     def _upgrade(self, **vals):
