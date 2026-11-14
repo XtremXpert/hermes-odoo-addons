@@ -11,6 +11,7 @@ Two guarantees shared by the four models:
   when Odoo restarts at the end of an upgrade it triggered).
 """
 
+import base64
 import logging
 from datetime import timedelta
 
@@ -34,6 +35,10 @@ OPEN_STATES = ("pending", "running")
 class K8sJobMixin(models.AbstractModel):
     _name = "k8s.job.mixin"
     _description = "Operator job created after commit and read back from the cluster"
+
+    # Queue des journaux du pod, déposée par l'opérateur dans le statut du CR
+    # avant que le pod ne disparaisse avec son Job. Null tant que le job tourne.
+    log_tail = fields.Text(string="Journal du job", readonly=True)
 
     # Set by each model.
     _k8s_job_plural = None  # e.g. "odooupgradejobs"
@@ -91,6 +96,7 @@ class K8sJobMixin(models.AbstractModel):
         """Same handling as the operator's webhook for this model.
 
         ``data`` has the webhook's keys: phase, message, completionTime, …"""
+        self._k8s_job_prendre_journal(data.get("logTail"))
         phase = (data.get("phase") or "").lower()
         if phase == "running" and self.state == "pending":
             self.mark_running()
@@ -102,6 +108,52 @@ class K8sJobMixin(models.AbstractModel):
             self.mark_failed(
                 message=data.get("message") or _("The Kubernetes job failed."),
                 completion_time=data.get("completionTime"),
+            )
+
+    def _k8s_job_prendre_journal(self, journal):
+        """Garde la queue du journal, puis l'archive en pièce jointe.
+
+        L'opérateur lit les journaux du pod au moment où le job devient
+        terminal, puis les dépose dans ``status.logTail``. Le pod disparaît
+        avec son Job et l'opérateur élague ses CR : cette pièce jointe est ce
+        qui reste quand on cherche, des semaines plus tard, pourquoi une mise
+        à jour de modules a échoué.
+        """
+        if not journal:
+            return
+        for record in self:
+            if record.log_tail:
+                continue  # déjà capturé : le premier témoin fait foi
+            record.log_tail = journal
+            record._k8s_job_archiver_journal()
+
+    def _k8s_job_archiver_journal(self):
+        """Dépose le journal en pièce jointe de la fiche, une seule fois."""
+        for record in self:
+            if not record.log_tail:
+                continue
+            nom = f"{record[self._k8s_job_cr_field] or record.id}.log"
+            existante = (
+                self.env["ir.attachment"]
+                .sudo()
+                .search_count(
+                    [
+                        ("res_model", "=", record._name),
+                        ("res_id", "=", record.id),
+                        ("name", "=", nom),
+                    ]
+                )
+            )
+            if existante:
+                continue
+            self.env["ir.attachment"].sudo().create(
+                {
+                    "name": nom,
+                    "res_model": record._name,
+                    "res_id": record.id,
+                    "datas": base64.b64encode(record.log_tail.encode("utf-8")),
+                    "mimetype": "text/plain",
+                }
             )
 
     @api.model
