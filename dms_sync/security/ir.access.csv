@@ -1,0 +1,6 @@
+id,name,model_id,group_id/id,operation,domain
+access_dms_sync_device_read,dms_sync_device_read,dms.sync.device,dms.group_dms_user,r,"[('user_id', '=', uid)]"
+access_dms_sync_device_create,dms_sync_device_create,dms.sync.device,dms.group_dms_user,c,
+access_dms_sync_device_write,dms_sync_device_write,dms.sync.device,dms.group_dms_user,w,"[('user_id', '=', uid)]"
+access_dms_sync_device_unlink,dms_sync_device_unlink,dms.sync.device,dms.group_dms_user,d,"[('user_id', '=', uid)]"
+access_dms_sync_line_read,dms_sync_line_read,dms.sync.scope.line,dms.group_dms_user,rw,"[('device_id.user_id', '=', uid)]"

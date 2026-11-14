@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <record id="view_dms_sync_device_list" model="ir.ui.view">
+        <field name="name">dms.sync.device.list</field>
+        <field name="model">dms.sync.device</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name" string="Appareil" />
+                <field name="user_id" string="Utilisateur" widget="many2one_avatar_user" />
+                <field name="hostname" string="Hôte" optional="show" />
+                <field name="scope_directory_count" string="Répertoires synchronisés" />
+                <field name="paused" widget="boolean_toggle" string="Suspendu" />
+                <field name="last_seen" string="Dernier contact" optional="show" />
+            </list>
+        </field>
+    </record>
+
+    <record id="view_dms_sync_device_form" model="ir.ui.view">
+        <field name="name">dms.sync.device.form</field>
+        <field name="model">dms.sync.device</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Ex. : MacBook de Benoît" /></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="user_id" />
+                            <field name="hostname" />
+                        </group>
+                        <group>
+                            <field name="paused" widget="boolean_toggle" />
+                            <field name="last_seen" readonly="1" />
+                        </group>
+                    </group>
+                    <separator string="Périmètre de synchronisation" />
+                    <field name="scope_line_ids">
+                        <list editable="bottom">
+                            <field name="directory_id" string="Répertoire" />
+                            <field name="enabled" widget="boolean_toggle" string="Synchronisé"
+                                   decoration-muted="not enabled" />
+                            <field name="mode" string="Sens" widget="badge"
+                                   decoration-info="mode == 'two_way'"
+                                   decoration-muted="mode == 'read_down'" />
+                            <field name="exclude_patterns" string="Exclusions"
+                                   placeholder="*.tmp, *.iso" />
+                        </list>
+                    </field>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_dms_sync_device" model="ir.actions.act_window">
+        <field name="name">Appareils de synchronisation</field>
+        <field name="res_model">dms.sync.device</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

@@ -27,6 +27,7 @@ RACINE = Path(__file__).resolve().parent.parent
 SERIE = "20.0"
 MODULES = (
     "asterisk_ari",
+    "dms_sync",
     "dms_ux",
     "dms_versions",
     "dms_workflow",
