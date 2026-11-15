@@ -9,6 +9,15 @@ from odoo import fields
 from odoo.exceptions import AccessError
 from odoo.exceptions import UserError
 from odoo.exceptions import ValidationError
+
+
+class _Reponse:
+    """Réponse HTTP minimale, pour simuler le contrôle de santé."""
+
+    def __init__(self, code):
+        self.status_code = code
+
+
 from odoo.tests import TransactionCase
 from odoo.tests import new_test_user
 
@@ -72,6 +81,11 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
         self.assertEqual(promotion.upgrade_id.modules, "sale,project_task_code")
 
         promotion.upgrade_id.mark_completed()
+        # L'image est appliquée et les modules montés : le portail vérifie
+        # maintenant que la production répond avant de conclure.
+        self.assertEqual(promotion.state, "verifying")
+        with patch("requests.get", return_value=_Reponse(200)):
+            promotion._herd_verify_health()
         self.assertEqual(promotion.state, "done")
 
     def test_module_update_waits_for_the_rollout(self):
@@ -580,6 +594,9 @@ class TestHerdPromotion(HerdPortalMixin, TransactionCase):
         self.assertEqual(promotion.upgrade_id.modules_install, "project_task_pull_request")
         self.assertFalse(promotion.upgrade_id.modules)
         promotion.upgrade_id.mark_completed()
+        self.assertEqual(promotion.state, "verifying")
+        with patch("requests.get", return_value=_Reponse(200)):
+            promotion._herd_verify_health()
         self.assertEqual(promotion.state, "done")
 
     def test_update_and_install_in_one_job(self):
