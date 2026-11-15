@@ -257,6 +257,51 @@ class K8sOdooPromotion(models.Model):
     # ------------------------------------------------------------------
     # Façade for agents and the portal (public, explicitly checked)
     # ------------------------------------------------------------------
+    def _herd_filtrer_modules_a_mettre_a_jour(self, production, modules):
+        """Retire de la liste les modules que la base de production ne connaît pas.
+
+        La CI calcule « les modules modifiés entre deux commits ». Un module
+        modifié dans le dépôt mais jamais installé dans la base arrive donc dans
+        la liste des mises à jour — et la vérification de version, qui exige
+        qu'un module demandé existe, fait échouer toute la promotion.
+
+        Constaté deux fois : ``social_*`` pour ``diverse-odoo`` le 13 novembre,
+        ``dms_sync`` / ``dms_versions`` pour ``maison`` le 15.
+
+        Le filtre ne s'applique que si l'instance visée est celle que cette base
+        sert : c'est alors la seule dont le catalogue de modules soit lisible
+        ici. Pour une instance distante, on ne touche à rien — le contrôle de
+        version s'abstient déjà pour elle (``_verifie_sa_propre_base``).
+
+        Rend ``(modules_filtrés, modules_retirés)``.
+        """
+        gardes, retires = [], []
+        for nom in [m.strip() for m in (modules or "").split(",") if m.strip()]:
+            if nom not in gardes:
+                gardes.append(nom)
+        propre = (
+            self.env["ir.config_parameter"]
+            .sudo()
+            .get_str("odoo_herd.self_instance_id")
+        )
+        if not propre or not production:
+            return ",".join(gardes), []
+        try:
+            propre = int(propre)
+        except (TypeError, ValueError):
+            return ",".join(gardes), []
+        if production.id != propre:
+            return ",".join(gardes), []
+        module_model = self.env["ir.module.module"].sudo()
+        connus = []
+        for nom in gardes:
+            module = module_model.search([("name", "=", nom)], limit=1)
+            if module and module.state in ("installed", "to upgrade", "to remove"):
+                connus.append(nom)
+            else:
+                retires.append(nom)
+        return ",".join(connus), retires
+
     @api.model
     def herd_request_promotion(
         self, staging_id, modules=None, scheduled_at=None, modules_install=None, replace=False
@@ -278,6 +323,9 @@ class K8sOdooPromotion(models.Model):
             modules = ",".join(modules)
         if isinstance(modules_install, (list, tuple)):
             modules_install = ",".join(modules_install)
+        modules, retires = self._herd_filtrer_modules_a_mettre_a_jour(
+            staging.production_instance_id, modules
+        )
         # Live images, never the stored `image` field: it can be stale.
         image = staging._herd_live_image()
         production_image = staging.production_instance_id._herd_live_image()
@@ -306,6 +354,15 @@ class K8sOdooPromotion(models.Model):
                 "Promotion requested by %s, awaiting a human approver.", self.env.user.display_name
             )
         )
+        if retires:
+            # La CI a demandé la mise à jour de modules que la base ne connaît
+            # pas : les garder ferait échouer la promotion à la vérification.
+            promotion.message_post(
+                body=_(
+                    "Modules ignorés, absents de la base de production : %s",
+                    ", ".join(retires),
+                )
+            )
         if replace:
             previous = self.sudo().search(
                 [
