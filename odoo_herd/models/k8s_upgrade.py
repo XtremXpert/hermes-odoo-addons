@@ -68,6 +68,15 @@ class K8sOdooUpgrade(models.Model):
         help="When the upgrade is scheduled to run (empty for immediate)",
     )
 
+    # Queue des journaux du pod, déposée par l'opérateur dans le statut du CR
+    # avant que le pod ne disparaisse avec son Job. Sur CE modèle uniquement :
+    # le journal du job qui monte les modules est celui qui explique un échec.
+    # Le mettre sur le mixin partagé ajoutait la colonne aux sauvegardes, aux
+    # restaurations et aux rafraîchissements — et un webhook de sauvegarde
+    # tombait alors sur une colonne absente avant même la mise à jour du module
+    # (constaté le 2026-11-15 : promotion bloquée en « backing_up »).
+    log_tail = fields.Text(string="Journal du job", readonly=True)
+
     job_name = fields.Char(string="Kubernetes Job")
     # The custom resource: job_name above receives the Job's name from the
     # webhook, which the read-back from the cluster cannot use.
@@ -302,6 +311,59 @@ class K8sOdooUpgrade(models.Model):
             return self.instance_id.id == int(propre)
         except (TypeError, ValueError):
             return True
+
+    def _k8s_job_prendre_journal(self, journal):
+        """Garde la queue du journal, puis l'archive en pièce jointe.
+
+        L'opérateur lit les journaux du pod au moment où le job devient
+        terminal, puis les dépose dans ``status.logTail``. Le pod disparaît
+        avec son Job et l'opérateur élague ses CR : cette pièce jointe est ce
+        qui reste quand on cherche, des semaines plus tard, pourquoi une mise
+        à jour de modules a échoué.
+        """
+        if not journal:
+            return
+        for record in self:
+            if record.log_tail:
+                continue  # déjà capturé : le premier témoin fait foi
+            record.log_tail = journal
+            record._k8s_job_archiver_journal()
+
+    def _k8s_job_archiver_journal(self):
+        """Dépose le journal en pièce jointe de la fiche, une seule fois."""
+        for record in self:
+            if not record.log_tail:
+                continue
+            nom = f"{record[self._k8s_job_cr_field] or record.id}.log"
+            existante = (
+                self.env["ir.attachment"]
+                .sudo()
+                .search_count(
+                    [
+                        ("res_model", "=", record._name),
+                        ("res_id", "=", record.id),
+                        ("name", "=", nom),
+                    ]
+                )
+            )
+            if existante:
+                continue
+            # `raw` et non `datas` : avec `mimetype`, Odoo exige `raw` et
+            # refuse l'encodage base64 (assertion de _postprocess_contents).
+            self.env["ir.attachment"].sudo().create(
+                {
+                    "name": nom,
+                    "res_model": record._name,
+                    "res_id": record.id,
+                    "raw": record.log_tail.encode("utf-8"),
+                    "mimetype": "text/plain",
+                }
+            )
+
+    def _k8s_job_apply_status(self, data):
+        """Comme le mixin, plus la capture du journal."""
+        self._k8s_job_prendre_journal(data.get("logTail"))
+        return super()._k8s_job_apply_status(data)
 
     def _ecarts_de_version(self):
         """Modules demandés dont la base n'est pas à la version de l'image.
