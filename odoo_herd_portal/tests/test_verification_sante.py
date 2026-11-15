@@ -34,6 +34,11 @@ class TestVerificationSante(TransactionCase):
         )
         cls.cluster = cls.env["k8s.cluster"].create(
             {
+                # Inactif : aucune écriture ne part vers un vrai client
+                # Kubernetes. Sans cela, le client se construit depuis le
+                # kubeconfig local et journalise un FutureWarning urllib3 que
+                # la CI compte comme un échec.
+                "active": False,
                 "name": "test-cluster-sante",
                 "api_endpoint": "https://k8s.example.com",
                 "kubeconfig": "{}",
