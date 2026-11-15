@@ -98,3 +98,13 @@ class TestJournalDeJob(TransactionCase):
             [("res_model", "=", "k8s.odoo.upgrade"), ("res_id", "=", upgrade.id)]
         )
         self.assertEqual(len(pieces), 1)
+
+    def test_la_sauvegarde_n_a_pas_de_journal(self):
+        """Le journal ne vit que sur la mise à jour de modules.
+
+        Le mettre sur le mixin partagé ajoutait la colonne aux sauvegardes ;
+        un webhook de sauvegarde tombait alors sur une colonne absente avant la
+        mise à jour du module, et la promotion restait bloquée (2026-11-15).
+        """
+        self.assertIn("log_tail", self.env["k8s.odoo.upgrade"]._fields)
+        self.assertNotIn("log_tail", self.env["k8s.odoo.backup"]._fields)
