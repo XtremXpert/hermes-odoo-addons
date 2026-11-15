@@ -27,6 +27,12 @@ CODE_TTL = timedelta(minutes=10)
 CODE_RESEND_DELAY = timedelta(seconds=60)
 CODE_MAX_ATTEMPTS = 5
 STEP_TIMEOUT = timedelta(hours=6)
+# Après application de l'image, combien de temps on laisse la production
+# répondre avant de conclure qu'elle ne démarrera pas et de revenir en arrière.
+HEALTH_TIMEOUT = timedelta(minutes=4)
+# L'URL interrogée. /web/login renvoie 200 sur une instance saine, et 5xx
+# quand les pods ne démarrent pas — c'est exactement ce qu'on veut distinguer.
+HEALTH_PATH = "/web/login"
 # Once a promotion leaves "requested", what was confirmed can no longer change.
 FROZEN_FIELDS = {
     "production_image",
@@ -37,7 +43,7 @@ FROZEN_FIELDS = {
     "modules_install",
     "scheduled_at",
 }
-RUNNING_STATES = ("backing_up", "deploying", "upgrading")
+RUNNING_STATES = ("backing_up", "deploying", "upgrading", "verifying")
 
 
 def herd_is_agent(user):
@@ -135,6 +141,7 @@ class K8sOdooPromotion(models.Model):
             ("backing_up", "Backing up production"),
             ("deploying", "Deploying"),
             ("upgrading", "Updating modules"),
+            ("verifying", "Checking the site responds"),
             ("done", "Done"),
             ("failed", "Failed"),
             ("cancelled", "Cancelled"),
@@ -750,11 +757,14 @@ class K8sOdooPromotion(models.Model):
     def _herd_on_upgrade_done(self, ok, message=None):
         for promotion in self.sudo().filtered(lambda p: p.state == "upgrading"):
             if ok:
+                # Ne pas conclure ici : l'image est appliquée, mais rien ne dit
+                # qu'elle démarre. Le 2026-11-14, la promotion #202 a été
+                # déclarée « done » alors que la production répondait 503 — le
+                # retour arrière a dû être fait à la main, cinq minutes plus
+                # tard. On vérifie donc que le site répond avant de conclure.
                 promotion._herd_set_step(
-                    "done", message=_("Image deployed, modules updated or installed.")
+                    "verifying", message=_("Image deployed; checking the site responds.")
                 )
-                promotion.message_post(body=_("Production now runs %s.", promotion.image))
-                promotion._herd_publish_manifest()
             else:
                 promotion._herd_fail(
                     _(
@@ -869,12 +879,88 @@ class K8sOdooPromotion(models.Model):
         except Exception:  # noqa: BLE001 — un manifeste non publié ne casse pas une promotion
             _logger.warning("Manifest of %s not published", prod.name, exc_info=True)
 
+    def _herd_health_url(self):
+        """URL interrogée pour savoir si la production répond."""
+        self.ensure_one()
+        prod = self.production_id
+        host = (prod.ingress_url or prod.url or "").strip()
+        if not host:
+            return None
+        if not host.startswith(("http://", "https://")):
+            host = f"https://{host}"
+        return host.rstrip("/") + HEALTH_PATH
+
+    def _herd_site_responds(self):
+        """La production répond-elle vraiment ?
+
+        Un code 5xx signifie que la requête atteint Traefik mais qu'aucun pod
+        sain ne la sert. Une exception signifie qu'on n'a même pas pu la
+        joindre. Dans les deux cas, l'image ne démarre pas.
+        """
+        self.ensure_one()
+        import requests
+
+        url = self._herd_health_url()
+        if not url:
+            return True  # rien à interroger : ne pas bloquer une promotion là-dessus
+        try:
+            response = requests.get(url, timeout=10, allow_redirects=True)
+        except Exception as e:  # noqa: BLE001 — toute erreur réseau vaut « pas de réponse »
+            self.message_post(body=_("Health check failed on %(url)s: %(err)s", url=url, err=e))
+            return False
+        if response.status_code >= 500:
+            self.message_post(
+                body=_("Health check on %(url)s returned %(code)s.", url=url, code=response.status_code)
+            )
+            return False
+        return True
+
+    def _herd_verify_health(self):
+        """Conclut les promotions en attente de vérification, ou revient en arrière."""
+        for promotion in self.sudo().filtered(lambda p: p.state == "verifying"):
+            if promotion._herd_site_responds():
+                promotion._herd_set_step(
+                    "done", message=_("Image deployed, modules updated, site responding.")
+                )
+                promotion.message_post(body=_("Production now runs %s.", promotion.image))
+                promotion._herd_publish_manifest()
+                continue
+            started = promotion.step_started_at or fields.Datetime.now()
+            if fields.Datetime.now() - started < HEALTH_TIMEOUT:
+                continue  # encore le temps de démarrer : on repassera
+            promotion._herd_roll_back_unhealthy()
+
+    def _herd_roll_back_unhealthy(self):
+        """L'image appliquée ne démarre pas : remettre celle d'avant."""
+        self.ensure_one()
+        previous = self.previous_image
+        if not previous:
+            self._herd_fail(_("The site does not respond and no previous image is known."))
+            return
+        prod = self.production_id
+        try:
+            prod._herd_patch_image(previous)
+            prod.with_context(k8s_cluster_values=True).image = previous
+        except Exception as e:
+            _logger.exception("Rollback of %s failed", prod.name)
+            self._herd_fail(_("The site does not respond and the rollback failed: %s", e))
+            return
+        self._herd_fail(
+            _(
+                "The site did not respond after the promotion: rolled back to %(prev)s.",
+                prev=previous,
+            )
+        )
+        self.message_post(body=_("Production restored to %s.", previous))
+
+    @api.model
     def _cron_herd_promotions(self):
         now = fields.Datetime.now()
         due = self.sudo().search([("state", "=", "scheduled"), ("scheduled_at", "<=", now)])
         due._herd_start()
         deploying = self.sudo().search([("state", "=", "deploying"), ("upgrade_id", "=", False)])
         deploying.filtered(lambda p: p._herd_rolled_out())._herd_start_upgrade()
+        self.sudo().search([("state", "=", "verifying")])._herd_verify_health()
         self.env["k8s.odoo.instance"].sudo().search(
             [
                 ("environment", "=", "staging"),

@@ -4,3 +4,4 @@ from . import test_request
 from . import test_confirm_backend
 from . import test_neutralize
 from . import test_partner_link
+from . import test_verification_sante
