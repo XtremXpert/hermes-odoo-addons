@@ -27,6 +27,10 @@ CODE_TTL = timedelta(minutes=10)
 CODE_RESEND_DELAY = timedelta(seconds=60)
 CODE_MAX_ATTEMPTS = 5
 STEP_TIMEOUT = timedelta(hours=6)
+# Au-delà, la sauvegarde d'une promotion est relue directement dans le cluster :
+# un webhook perdu pendant le redémarrage du pod laissait sinon la promotion en
+# « backing_up » jusqu'au délai de six heures (2026-11-15, trois fois).
+BACKUP_RECOVERY = timedelta(minutes=20)
 # Après application de l'image, combien de temps on laisse la production
 # répondre avant de conclure qu'elle ne démarrera pas et de revenir en arrière.
 HEALTH_TIMEOUT = timedelta(minutes=4)
@@ -1010,6 +1014,42 @@ class K8sOdooPromotion(models.Model):
         )
         self.message_post(body=_("Production restored to %s.", previous))
 
+    def _herd_recover_backup(self):
+        """Relit la sauvegarde d'une promotion quand le webhook s'est perdu.
+
+        Le cron du module relit déjà les jobs toutes les deux minutes, mais il
+        ne sert à rien si son résultat n'est pas appliqué : une promotion peut
+        rester en « backing_up » alors que le CR est terminé. Ici on force la
+        lecture au niveau de la promotion, au bout de vingt minutes.
+
+        Rien n'est décidé sur la foi du temps seul : si le job tourne encore,
+        on ne touche à rien.
+        """
+        now = fields.Datetime.now()
+        a_relire = self.filtered(
+            lambda p: p.state == "backing_up"
+            and p.backup_id
+            and p.step_started_at
+            and p.step_started_at < now - BACKUP_RECOVERY
+        )
+        for promotion in a_relire:
+            sauvegarde = promotion.backup_id.sudo()
+            try:
+                with self.env.cr.savepoint():
+                    sauvegarde._k8s_job_poll_one(now)
+            except Exception:
+                _logger.exception(
+                    "Could not read the backup of promotion %s back", promotion.id
+                )
+                continue
+            # La relecture a écrit le nouvel état sur la sauvegarde : c'est lui
+            # qui décide, pas le temps écoulé.
+            if sauvegarde.state == "completed":
+                promotion._herd_on_backup_done(True)
+            elif sauvegarde.state == "failed":
+                promotion._herd_on_backup_done(False)
+        return a_relire
+
     @api.model
     def _cron_herd_promotions(self):
         now = fields.Datetime.now()
@@ -1025,6 +1065,7 @@ class K8sOdooPromotion(models.Model):
                 ("herd_deploy_upgrade_id", "=", False),
             ]
         )._herd_advance_deploy()
+        self.sudo().search([("state", "=", "backing_up")])._herd_recover_backup()
         stuck = self.sudo().search(
             [("state", "in", RUNNING_STATES), ("step_started_at", "<", now - STEP_TIMEOUT)]
         )
