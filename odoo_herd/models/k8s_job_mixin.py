@@ -87,6 +87,27 @@ class K8sJobMixin(models.AbstractModel):
     def _k8s_job_instance(self):
         return self[self._k8s_job_instance_field]
 
+    @staticmethod
+    def _k8s_job_date(value):
+        """Read a timestamp from either the webhook or the custom resource.
+
+        The webhook sends what Odoo writes (``2026-11-15 23:12:34``); the CR
+        sends what Kubernetes writes (``2026-11-15T23:12:34Z``). Feeding the
+        second to ``mark_completed`` raised ``ValueError: time data … does not
+        match format``, and the read-back silently did nothing.
+        """
+        if not value:
+            return False
+        texte = str(value).strip().replace("T", " ")
+        if texte.endswith("Z"):
+            texte = texte[:-1]
+        texte = texte.split(".")[0]
+        try:
+            return fields.Datetime.to_datetime(texte)
+        except (TypeError, ValueError):
+            _logger.warning("Unreadable job timestamp: %r", value)
+            return False
+
     def _k8s_job_apply_status(self, data):
         """Same handling as the operator's webhook for this model.
 
@@ -96,12 +117,13 @@ class K8sJobMixin(models.AbstractModel):
             self.mark_running()
         elif phase == "completed":
             self.mark_completed(
-                completion_time=data.get("completionTime"), message=data.get("message")
+                completion_time=self._k8s_job_date(data.get("completionTime")),
+                message=data.get("message"),
             )
         elif phase == "failed":
             self.mark_failed(
                 message=data.get("message") or _("The Kubernetes job failed."),
-                completion_time=data.get("completionTime"),
+                completion_time=self._k8s_job_date(data.get("completionTime")),
             )
 
     @api.model
@@ -109,6 +131,11 @@ class K8sJobMixin(models.AbstractModel):
         """Read back jobs still open after POLL_DELAY (scheduled action)."""
         now = fields.Datetime.now()
         records = self.search([("state", "in", OPEN_STATES), ("write_date", "<", now - POLL_DELAY)])
+        if records:
+            # Sans cette ligne, un rattrapage qui ne fait rien est indiscernable
+            # d'un rattrapage qui n'avait rien à faire — c'est ce qui a rendu la
+            # panne du 2026-11-15 difficile à diagnostiquer.
+            _logger.info("Reading back %s open %s job(s)", len(records), self._name)
         for record in records:
             try:
                 with self.env.cr.savepoint():
@@ -126,6 +153,7 @@ class K8sJobMixin(models.AbstractModel):
         instance = self._k8s_job_instance()
         cluster = instance.cluster_id
         if not cluster.active:
+            _logger.info("Cluster %s inactive: not reading %s back", cluster.display_name, self)
             return
         custom_api = client.CustomObjectsApi(cluster._get_k8s_client())
         try:
