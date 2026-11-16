@@ -18,7 +18,7 @@ from odoo.exceptions import UserError
 class DmsFileRequest(models.Model):
     _name = "dms.file.request"
     _description = "DMS Document Request"
-    _inherit = ["mail.thread"]
+    _inherit = ["mail.thread", "mail.activity.mixin"]
     _order = "deadline, id desc"
 
     name = fields.Char(required=True, tracking=True)
