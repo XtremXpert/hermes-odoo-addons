@@ -246,3 +246,22 @@ class TestJobMixin(TransactionCase):
             )
             self.env.cr.postcommit.run()
         self.assertEqual(seen, [True])
+
+    def test_la_date_du_cr_est_lue(self):
+        """Le CR écrit 2026-11-15T23:12:34Z, le webhook 2026-11-15 23:12:34.
+
+        passer la seconde à mark_completed levait « time data … does not match
+        format », et le rattrapage ne faisait rien — en silence.
+        """
+        from datetime import datetime
+
+        lire = self.env["k8s.odoo.upgrade"]._k8s_job_date
+        self.assertEqual(lire("2026-11-15 23:12:34"), datetime(2026, 11, 15, 23, 12, 34))
+        self.assertEqual(lire("2026-11-15T23:12:34Z"), datetime(2026, 11, 15, 23, 12, 34))
+        self.assertEqual(lire("2026-11-15T23:12:34.123456Z"), datetime(2026, 11, 15, 23, 12, 34))
+        self.assertFalse(lire(None))
+        self.assertFalse(lire(""))
+        with self.assertLogs("odoo.addons.odoo_herd.models.k8s_job_mixin", level="WARNING"):
+            # L'avertissement est voulu ; la CI compte toute ligne WARNING comme
+            # un échec, donc on le capture ici plutôt que de le laisser passer.
+            self.assertFalse(lire("pas une date"))

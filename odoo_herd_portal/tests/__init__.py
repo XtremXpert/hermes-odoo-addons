@@ -6,3 +6,4 @@ from . import test_neutralize
 from . import test_partner_link
 from . import test_verification_sante
 from . import test_filtre_modules
+from . import test_relance_sauvegarde
