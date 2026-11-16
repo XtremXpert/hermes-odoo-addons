@@ -254,12 +254,14 @@ class TestJobMixin(TransactionCase):
         format », et le rattrapage ne faisait rien — en silence.
         """
         from datetime import datetime
+
         lire = self.env["k8s.odoo.upgrade"]._k8s_job_date
         self.assertEqual(lire("2026-11-15 23:12:34"), datetime(2026, 11, 15, 23, 12, 34))
         self.assertEqual(lire("2026-11-15T23:12:34Z"), datetime(2026, 11, 15, 23, 12, 34))
-        self.assertEqual(
-            lire("2026-11-15T23:12:34.123456Z"), datetime(2026, 11, 15, 23, 12, 34)
-        )
+        self.assertEqual(lire("2026-11-15T23:12:34.123456Z"), datetime(2026, 11, 15, 23, 12, 34))
         self.assertFalse(lire(None))
         self.assertFalse(lire(""))
-        self.assertFalse(lire("pas une date"))
+        with self.assertLogs("odoo.addons.odoo_herd.models.k8s_job_mixin", level="WARNING"):
+            # L'avertissement est voulu ; la CI compte toute ligne WARNING comme
+            # un échec, donc on le capture ici plutôt que de le laisser passer.
+            self.assertFalse(lire("pas une date"))

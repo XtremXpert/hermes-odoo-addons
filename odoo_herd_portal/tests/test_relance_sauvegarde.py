@@ -102,10 +102,17 @@ class TestRelanceSauvegarde(TransactionCase):
     def test_une_sauvegarde_terminee_fait_avancer_la_promotion(self):
         """Le CR dit terminé : la promotion avance sans attendre six heures."""
         promotion, sauvegarde = self._promotion("backing_up", 30, "running")
-        with patch.object(
-            type(sauvegarde),
-            "_k8s_job_poll_one",
-            lambda record, now: record.write({"state": "completed"}),
+        with (
+            patch.object(
+                type(sauvegarde),
+                "_k8s_job_poll_one",
+                lambda record, now: record.write({"state": "completed"}),
+            ),
+            patch.object(
+                type(self.env["k8s.odoo.instance"]),
+                "_herd_patch_image",
+                lambda record, image: True,
+            ),
         ):
             self._relancer(promotion)
         self.assertEqual(sauvegarde.state, "completed")
