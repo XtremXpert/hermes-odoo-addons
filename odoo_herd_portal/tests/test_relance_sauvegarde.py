@@ -29,6 +29,15 @@ class TestRelanceSauvegarde(TransactionCase):
         cls.enterClassContext(
             patch.object(type(cls.env["k8s.cluster"]), "_get_k8s_client", return_value=None)
         )
+        # La promotion relit l'image en service pour la consigner : sans
+        # cluster, cette lecture échoue et masque ce que le test vérifie.
+        cls.enterClassContext(
+            patch.object(
+                type(cls.env["k8s.odoo.instance"]),
+                "_herd_live_image",
+                lambda record: record.image,
+            )
+        )
         cls.cluster = cls.env["k8s.cluster"].create(
             {
                 "active": False,
