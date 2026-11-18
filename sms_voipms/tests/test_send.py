@@ -40,6 +40,8 @@ class TestSend(SmsVoipmsCommon, TransactionCase):
             sms.send()
         tracker.invalidate_recordset()
         self.assertEqual(tracker.sms_voipms_message_ids, "7")
+        sms.invalidate_recordset()
+        self.assertEqual(sms.sms_voipms_message_ids, "7")
 
     def test_long_body_is_segmented(self):
         """A long body is split into numbered segments of 150 chars."""
