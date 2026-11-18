@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <record id="res_config_settings_view_form" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.sms.voipms</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="sms.res_config_settings_view_form" />
+        <field name="arch" type="xml">
+            <!-- Provider choice, before the IAP credits widget. -->
+            <xpath expr="//widget[@service_name='sms']" position="before">
+                <field
+                    name="sms_provider"
+                    class="o_light_label"
+                    widget="radio"
+                    options="{'horizontal': true}"
+                    required="True"
+                />
+                <div class="content-group" invisible="sms_provider != 'voipms'">
+                    <div class="row mt16">
+                        <label for="sms_voipms_did_id" class="col-lg-3 o_light_label" />
+                        <field name="sms_voipms_did_id" options="{'no_create': True}" />
+                    </div>
+                    <div class="text-muted mt8">
+                        Identifiants API : bloc « SMS VoIP.ms » plus bas.
+                    </div>
+                </div>
+            </xpath>
+            <!-- Hide the IAP buy-credits widget when VoIP.ms is the sender. -->
+            <xpath expr="//widget[@service_name='sms']" position="attributes">
+                <attribute name="invisible">sms_provider == 'voipms'</attribute>
+            </xpath>
+        </field>
+    </record>
+</odoo>

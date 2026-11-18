@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <record id="sms_tsms_view_form" model="ir.ui.view">
+        <field name="name">sms.sms.view.form.inherit.sms.voipms</field>
+        <field name="model">sms.sms</field>
+        <field name="inherit_id" ref="sms.sms_tsms_view_form" />
+        <field name="arch" type="xml">
+            <!-- Show the provider message ids on the SMS form. -->
+            <xpath expr="//field[@name='failure_type']" position="after">
+                <field
+                    name="sms_voipms_message_ids"
+                    readonly="1"
+                    invisible="not sms_voipms_message_ids"
+                />
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,2 @@
+id,name,model_id,group_id/id,operation,domain
+access_voipms_did_system,voipms.did system read,voipms.did,base.group_system,r,
