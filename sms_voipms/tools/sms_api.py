@@ -75,8 +75,9 @@ class SmsApiVoIPMS(SmsApiBase):
                         "message": segment,
                     },
                 )
-                if response.get("message_id") is not None:
-                    message_ids.append(str(response["message_id"]))
+                provider_id = response.get("message_id") or response.get("sms")
+                if provider_id is not None:
+                    message_ids.append(str(provider_id))
         except VoIPMSAPIError as error:
             return {
                 "uuid": uuid,

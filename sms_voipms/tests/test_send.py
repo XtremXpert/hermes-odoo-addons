@@ -13,7 +13,7 @@ class TestSend(SmsVoipmsCommon, TransactionCase):
     def test_send_sms_batch_success(self):
         """One sendSMS call is made and the SMS reaches pending."""
         sms = self._new_sms(number="5145550101", body="Bonjour")
-        response = {"status": "success", "message_id": "42"}
+        response = {"status": "success", "sms": "42"}
         with (
             patch.object(VoIPMSClient, "_request", return_value=response) as request,
             patch.object(SmsApi, "_contact_iap") as iap,
@@ -35,7 +35,7 @@ class TestSend(SmsVoipmsCommon, TransactionCase):
         with patch.object(
             VoIPMSClient,
             "_request",
-            return_value={"status": "success", "message_id": "7"},
+            return_value={"status": "success", "sms": "7"},
         ):
             sms.send()
         tracker.invalidate_recordset()
@@ -50,7 +50,7 @@ class TestSend(SmsVoipmsCommon, TransactionCase):
         with patch.object(
             VoIPMSClient,
             "_request",
-            return_value={"status": "success", "message_id": "1"},
+            return_value={"status": "success", "sms": "1"},
         ) as request:
             sms.send()
         segments = [call.args[1]["message"] for call in request.call_args_list]
