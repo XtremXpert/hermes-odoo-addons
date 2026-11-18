@@ -7,7 +7,7 @@
    donnée ment par omission. */
 import {registry} from "@web/core/registry";
 import {useService} from "@web/core/utils/hooks";
-import {Component, onWillStart, onWillUnmount, useProps, useState} from "@odoo/owl";
+import {Component, onWillStart, onWillUnmount, proxy, useProps} from "@odoo/owl";
 import {standardActionServiceProps} from "@web/webclient/actions/action_plugin";
 
 const REFRESH_MS = 30000;
@@ -18,7 +18,7 @@ export class ArcRunnersDashboard extends Component {
 
     setup() {
         this.orm = useService("orm");
-        this.state = useState({data: null, loading: true, error: null});
+        this.state = proxy({data: null, loading: true, error: null});
         this.timer = null;
         onWillStart(() => this.reload());
         onWillUnmount(() => this.stopTimer());

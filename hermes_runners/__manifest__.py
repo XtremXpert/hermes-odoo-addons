@@ -1,7 +1,7 @@
 # Part of the hermes_runners Odoo module. See LICENSE for details.
 {
     "name": "Hermes — Runners",
-    "version": "20.0.1.0.1",
+    "version": "20.0.1.0.2",
     "development_status": "Beta",
     "category": "Administration",
     "author": "Benoît Vézina, Diverse-Cité",

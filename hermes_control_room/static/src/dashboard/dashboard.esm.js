@@ -7,7 +7,7 @@
    presented as live is worse than no figure. */
 import {registry} from "@web/core/registry";
 import {useService} from "@web/core/utils/hooks";
-import {Component, onWillStart, onWillUnmount, useProps, useState} from "@odoo/owl";
+import {Component, onWillStart, onWillUnmount, proxy, useProps} from "@odoo/owl";
 import {standardActionServiceProps} from "@web/webclient/actions/action_plugin";
 
 const REFRESH_MS = 60000;
@@ -18,7 +18,7 @@ export class ControlRoomDashboard extends Component {
 
     setup() {
         this.orm = useService("orm");
-        this.state = useState({data: null, k8s: null, loading: true, error: null});
+        this.state = proxy({data: null, k8s: null, loading: true, error: null});
         this.timer = null;
         onWillStart(() => this.reload());
         onWillUnmount(() => this.stopTimer());
