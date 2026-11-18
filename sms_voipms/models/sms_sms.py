@@ -12,10 +12,7 @@ class SmsSms(models.Model):
     _inherit = "sms.sms"
 
     record_company_id = fields.Many2one("res.company", string="Société", ondelete="set null")
-    sms_voipms_message_ids = fields.Char(
-        related="sms_tracker_id.sms_voipms_message_ids",
-        string="Identifiants VoIP.ms",
-    )
+    sms_voipms_message_ids = fields.Char(string="Identifiants VoIP.ms", readonly=True)
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -80,6 +77,8 @@ class SmsSms(models.Model):
         for result in results:
             sms = sms_by_uuid.get(result.get("uuid"))
             message_ids = result.get("sms_voipms_message_ids")
-            if sms and message_ids and sms.sms_tracker_id:
-                sms.sms_tracker_id.sms_voipms_message_ids = message_ids
+            if sms and message_ids:
+                sms.sms_voipms_message_ids = message_ids
+                if sms.sms_tracker_id:
+                    sms.sms_tracker_id.sms_voipms_message_ids = message_ids
         return super(SmsSms, self - voipms_sms)._handle_call_result_hook(results)
