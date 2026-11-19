@@ -48,8 +48,9 @@ class VoIPMSSmsOut(models.Model):
                             "message": segment,
                         },
                     )
-                    if response.get("message_id") is not None:
-                        provider_ids.append(str(response["message_id"]))
+                    provider_id = response.get("sms") or response.get("message_id")
+                    if provider_id is not None:
+                        provider_ids.append(str(provider_id))
                 msg.write(
                     {
                         "state": "sent",

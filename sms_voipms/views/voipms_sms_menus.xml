@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <menuitem
+        id="menu_voipms_sms_inbound"
+        name="Réponses entrantes"
+        parent="voipms_sms.menu_voipms_sms_root"
+        action="action_voipms_sms_inbound"
+        groups="voipms_sms.group_voipms_user"
+    />
+</odoo>

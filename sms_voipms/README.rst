@@ -23,13 +23,21 @@ SMS via VoIP.ms
 |badge1| |badge2| |badge3|
 
 Envoie les SMS d'Odoo par l'API REST de **VoIP.ms** au lieu du service
-payant IAP d'Odoo.
+payant IAP d'Odoo, et reçoit les réponses.
 
 Le réglage se fait par société : « Envoyer via Odoo (IAP) » (défaut) ou
 « Envoyer via VoIP.ms ». Dans le second cas, le composeur SMS, le CRM,
 les modèles de SMS, l'automatisation et le marketing de masse passent
-tous par VoIP.ms, et le DID expéditeur est choisi dans les réglages de
-la société.
+par VoIP.ms, et le DID expéditeur est choisi dans les réglages de la
+société.
+
+Les **réponses entrantes** arrivent par l'URL de rappel du DID
+(``url_callback``) : elles sont postées dans le chatter de
+l'enregistrement d'origine (dernier SMS envoyé, ≤ 90 jours), sinon dans
+la file « Réponses entrantes ». Un **STOP** (STOP, ARRET, DÉSABONNER…)
+ajoute le numéro à la liste noire téléphonique d'Odoo — comportement
+d'Odoo : le composeur de masse l'exclut, les envois manuels restent
+possibles, aucune confirmation n'est envoyée.
 
 Le module s'appuie sur ``voipms_sms`` (client REST, segmentation à 150
 caractères, gestion des DID, identifiants API) et sur l'abstraction
@@ -37,10 +45,10 @@ fournisseur d'Odoo 20 — la même que celle utilisée par ``sms_twilio``.
 
 Limites connues :
 
-- **envoi seulement** : les réponses des destinataires ne remontent pas
-  dans Odoo (une spec ultérieure pourra les rattacher au chatter à
-  partir du suivi conservé à l'envoi) ;
 - **NANP seulement** (Canada / États-Unis) ;
+- **aucun accusé de livraison** : l'API VoIP.ms n'expose pas de statut
+  d'acheminement, le SMS reste « Envoyé » (en attente) — les
+  statistiques de marketing ne montrent pas de « Livré » ;
 - ``sms_twilio`` et ``sms_voipms`` déclarent tous deux le champ
   ``sms_provider`` : les installer ensemble fait perdre une option de la
   sélection (limite d'Odoo 20 pour les modules fournisseurs), donc ne
@@ -63,12 +71,14 @@ compte VoIP.ms dont des DID ont le SMS activé, et le module
 Le besoin métier est de faire passer les SMS d'Odoo — ceux que les
 utilisateurs envoient depuis le chatter, le CRM, les modèles de SMS et
 les campagnes — par ce compte VoIP.ms, sans changer d'outil, sans
-toucher au cœur d'Odoo et sans acheter de crédits IAP.
+toucher au cœur d'Odoo et sans acheter de crédits IAP. Les réponses
+doivent revenir dans Odoo, au bon endroit, et un STOP doit alimenter la
+liste noire d'Odoo.
 
 Le module est donc un pont : il ne réimplémente ni le composeur, ni les
-modèles, ni le suivi d'Odoo ; il remplace seulement le transport (le
-fournisseur), par société, en s'appuyant sur les mêmes points
-d'extension que ``sms_twilio``.
+modèles, ni le suivi d'Odoo ; il remplace le transport (le fournisseur),
+par société, en s'appuyant sur les mêmes points d'extension que
+``sms_twilio``, et ajoute l'entrant par l'URL de rappel de VoIP.ms.
 
 Installation
 ============
@@ -111,24 +121,54 @@ Pour revenir au service Odoo, choisir « Envoyer via Odoo (IAP) » : les
 crédits IAP redeviennent la voie d'envoi, sans réinstallation.
 
 Le DID proposé est limité aux numéros dont le SMS est activé chez
-VoIP.ms (champ ``sms_enabled`` synchronisé par ``voipms_sms``).
+VoIP.ms (champ ``sms_enabled`` synchronisé par ``voipms_sms``, menu *SMS
+VoIP.ms → Synchroniser les DID*).
+
+Réponses entrantes
+------------------
+
+1. L'instance Odoo doit être joignable en HTTPS depuis Internet (c'est
+   le cas du staging et de la production maison).
+2. Réglages → **SMS**, bloc VoIP.ms : le **jeton de rappel** est généré
+   à l'ouverture ; l'**URL de rappel** affichée contient le jeton et les
+   placeholders ``{FROM}``, ``{TO}``, ``{MESSAGE}``.
+3. Cliquer **Configurer l'URL SMS du DID** : le module appelle
+   ``setSMS`` sur le DID expéditeur (``enable=1``, ``url_callback``,
+   ``url_callback_enabled=1``, ``url_callback_retry=1``).
+4. Vérifier en répondant au SMS depuis le téléphone : la réponse
+   apparaît dans le chatter de l'enregistrement d'origine ou dans *SMS
+   VoIP.ms → Réponses entrantes*. Un « STOP » ajoute le numéro à la
+   liste noire téléphonique.
 
 Usage
 =====
 
 Envoyer un SMS comme d'habitude : composeur du chatter, action « Envoyer
 un SMS », modèle de SMS, automatisation ou marketing de masse. Le
-message part par VoIP.ms et le SMS passe à l'état *Envoyé* (en attente
-de livraison chez VoIP.ms), puis à *Livré* lorsque le fournisseur le
-confirme.
+message part par VoIP.ms et le SMS passe à l'état *Envoyé* (accepté par
+le fournisseur).
 
-Les identifiants renvoyés par VoIP.ms sont conservés sur le suivi
-(``sms.tracker``) et restent visibles sur la fiche du SMS, même après le
-nettoyage des SMS envoyés.
+Les identifiants renvoyés par VoIP.ms sont conservés sur le SMS et sur
+le suivi (``sms.tracker``) ; ils restent visibles après le nettoyage des
+SMS envoyés.
 
-Si VoIP.ms refuse l'envoi (numéro invalide, hors NANP, crédit épuisé,
-panne), le SMS passe à l'état *Erreur* avec le motif du fournisseur ; il
-est possible de le renvoyer depuis la liste des SMS.
+Si VoIP.ms refuse l'envoi (numéro invalide, hors NANP, panne), le SMS
+passe à l'état *Erreur* avec le motif du fournisseur ; il est possible
+de le renvoyer depuis la liste des SMS. Aucun statut de livraison n'est
+fourni par VoIP.ms : le SMS ne passe pas à *Livré*.
+
+Réponses
+--------
+
+Une réponse est postée dans le chatter de l'enregistrement d'origine (le
+dernier SMS envoyé à ce numéro, ≤ 90 jours), avec le contact en auteur
+s'il est reconnu par son mobile. Sans envoi récent, elle va dans *SMS
+VoIP.ms → Réponses entrantes* (état *Nouveau*), où on peut la marquer
+*Traité* ou *Ignorée*.
+
+Un **STOP** (STOP, ARRET, DÉSABONNER…) ajoute le numéro à la liste noire
+téléphonique d'Odoo : les campagnes de masse l'excluent, les envois
+manuels restent possibles, aucune confirmation n'est renvoyée.
 
 Known issues / Roadmap
 ======================
@@ -136,20 +176,23 @@ Known issues / Roadmap
 Limites connues
 ---------------
 
-- Envoi seulement : les réponses des destinataires ne remontent pas dans
-  Odoo.
 - NANP (Canada / États-Unis) seulement.
-- Pas d'accusé de livraison poussé par VoIP.ms : le SMS reste *Envoyé*
-  jusqu'au nettoyage, sauf si le fournisseur confirme la livraison.
+- Aucun accusé de livraison : l'API VoIP.ms n'expose pas de statut
+  d'acheminement, le SMS reste *Envoyé*.
 - ``sms_twilio`` et ``sms_voipms`` sont mutuellement exclusifs (même
   champ ``sms_provider``).
+- Les réponses ne sont rattachées qu'aux envois encore présents (≤ 90
+  jours) ; au-delà, elles vont dans la file.
 
 Évolutions envisagées
 ---------------------
 
-- Réponses entrantes : contrôleur HTTP, URL SMS du DID, rattachement au
-  chatter à partir du suivi conservé à l'envoi.
-- Accusés de livraison par interrogation périodique (``getSMS``).
+- Accusés de livraison par interrogation périodique — impossible tant
+  que VoIP.ms n'expose pas de statut (le champ ``carrier_status`` répond
+  « Information not available »).
+- Enregistrement A2P chez VoIP.ms si le volume de marketing augmente.
+- Rattachement des réponses à des envois plus anciens (journal des
+  envois).
 
 Bug Tracker
 ===========

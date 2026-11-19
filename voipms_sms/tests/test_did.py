@@ -22,7 +22,7 @@ class TestVoIPMSDid(TransactionCase):
         """Vérifie que la synchronisation crée les DID distants."""
         remote = {
             "status": "success",
-            "did": [
+            "dids": [
                 {"did": "14184803381", "sms_available": 1, "sms_enabled": "1"},
                 {"did": "15140000001", "sms_available": 1, "sms_enabled": "0"},
             ],
@@ -48,3 +48,29 @@ class TestVoIPMSDid(TransactionCase):
         """Vérifie que le numéro est normalisé à la création."""
         did = self.env["voipms.did"].create({"number": "4184803381"})
         self.assertEqual(did.number, "14184803381")
+
+    def test_sync_works_on_empty_table_uses_dids(self):
+        """Vérifie que la synchro modèle fonctionne sans aucun DID local."""
+        remote = {
+            "status": "success",
+            "dids": [
+                {"did": "14184803381", "sms_available": 1, "sms_enabled": "1"},
+            ],
+        }
+        self.assertEqual(self.env["voipms.did"].search_count([]), 0)
+        with patch.object(VoIPMSClient, "_request", return_value=remote):
+            self.env["voipms.did"].sync_from_provider()
+        did = self.env["voipms.did"].search([("number", "=", "14184803381")])
+        self.assertTrue(did)
+        self.assertEqual(did.sms_enabled, 1)
+        self.assertTrue(did.synced)
+
+    def test_sync_falls_back_to_legacy_did_key(self):
+        """Vérifie que l'ancienne clé ``did`` reste lue."""
+        remote = {
+            "status": "success",
+            "did": [{"did": "14184803381", "sms_available": 1, "sms_enabled": "1"}],
+        }
+        with patch.object(VoIPMSClient, "_request", return_value=remote):
+            self.env["voipms.did"].sync_from_provider()
+        self.assertTrue(self.env["voipms.did"].search([("number", "=", "14184803381")]))
