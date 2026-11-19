@@ -47,13 +47,23 @@ class VoIPMSDid(models.Model):
             vals["number"] = number
         return super().create(vals_list)
 
-    def action_sync_from_provider(self):
-        """Aligne l'état local sur le serveur (getDIDsInfo)."""
-        self.ensure_one()
-        client = VoIPMSClient(self.env)
-        response = client._request("getDIDsInfo")
-        entries = response.get("did") or []
-        for entry in entries:
+    @api.model
+    def _get_dids_info(self):
+        """Return the DID entries from the provider.
+
+        The current API answers with ``dids``; older answers used ``did``.
+        """
+        response = VoIPMSClient(self.env)._request("getDIDsInfo")
+        return response.get("dids") or response.get("did") or []
+
+    @api.model
+    def sync_from_provider(self):
+        """Create or update the DID records from the VoIP.ms account.
+
+        Model-level on purpose: the DID table is empty on a fresh database, so
+        a per-record button could never start the first synchronization.
+        """
+        for entry in self._get_dids_info():
             if not isinstance(entry, dict) or not entry.get("did"):
                 continue
             try:
@@ -71,3 +81,7 @@ class VoIPMSDid(models.Model):
             else:
                 self.create(dict(values, number=number))
         return True
+
+    def action_sync_from_provider(self):
+        """Synchronize all DIDs from the DID form button."""
+        return self.env["voipms.did"].sync_from_provider()

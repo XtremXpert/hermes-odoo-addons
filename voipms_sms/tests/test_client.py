@@ -46,7 +46,7 @@ class VoIPMSClientTestBase(TransactionCase):
 
 
 @tagged("voipms_sms", "post_install", "-at_install")
-class TestVoIPMSClientRequest(VoIPMSClientTestBase):
+class TestVoIPMSClientRequest(VoIPMSClientTestBase, TransactionCase):
     def test_get_sends_query_params_and_no_body(self):
         """Vérifie qu'un GET passe les paramètres en requête, sans corps."""
         request, params = self._call_with("getDIDsInfo")
@@ -101,3 +101,27 @@ class TestVoIPMSClientRequest(VoIPMSClientTestBase):
             client = VoIPMSClient(self.env)
             with self.assertRaises(VoIPMSAPIError):
                 client._request("getSMS", {"did": "14184803381"})
+
+    def test_set_sms_sends_required_parameters(self):
+        """Vérifie les paramètres envoyés à ``setSMS``."""
+        client = VoIPMSClient(self.env)
+        with patch.object(VoIPMSClient, "_request", return_value={"status": "success"}) as request:
+            client.set_sms(
+                "4184803381",
+                enable=1,
+                url_callback="https://example.com/sms_voipms/inbound/token",
+                url_callback_enabled=1,
+                url_callback_retry=1,
+                ignored=None,
+            )
+        self.assertTrue(request.called)
+        request.assert_called_once_with(
+            "setSMS",
+            {
+                "did": "4184803381",
+                "enable": 1,
+                "url_callback": "https://example.com/sms_voipms/inbound/token",
+                "url_callback_enabled": 1,
+                "url_callback_retry": 1,
+            },
+        )

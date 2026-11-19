@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <record id="voipms_sms_inbound_view_list" model="ir.ui.view">
+        <field name="name">voipms.sms.inbound.list</field>
+        <field name="model">voipms.sms.inbound</field>
+        <field name="arch" type="xml">
+            <list string="Réponses SMS reçues">
+                <field name="received_at" />
+                <field name="from_number" />
+                <field name="to_number" />
+                <field name="body" />
+                <field name="partner_id" />
+                <field name="state" widget="badge" />
+            </list>
+        </field>
+    </record>
+
+    <record id="voipms_sms_inbound_view_form" model="ir.ui.view">
+        <field name="name">voipms.sms.inbound.form</field>
+        <field name="model">voipms.sms.inbound</field>
+        <field name="arch" type="xml">
+            <form string="SMS reçu">
+                <header>
+                    <button
+                        name="action_done"
+                        type="object"
+                        string="Marquer traité"
+                        class="oe_highlight"
+                        invisible="state != 'new'"
+                    />
+                    <button
+                        name="action_ignored"
+                        type="object"
+                        string="Ignorer"
+                        invisible="state != 'new'"
+                    />
+                    <field name="state" widget="statusbar" />
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="from_number" />
+                            <field name="to_number" />
+                            <field name="received_at" />
+                        </group>
+                        <group>
+                            <field name="partner_id" />
+                            <field name="provider_id" />
+                            <field name="mail_message_id" />
+                        </group>
+                    </group>
+                    <group string="Message">
+                        <field name="body" nolabel="1" colspan="2" />
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_voipms_sms_inbound" model="ir.actions.act_window">
+        <field name="name">Réponses entrantes</field>
+        <field name="res_model">voipms.sms.inbound</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

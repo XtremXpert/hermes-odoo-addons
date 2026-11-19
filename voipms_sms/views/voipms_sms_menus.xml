@@ -18,4 +18,11 @@
         parent="menu_voipms_sms_root"
         action="action_voipms_did"
     />
+    <menuitem
+        id="menu_voipms_dids_sync"
+        name="Synchroniser les DID"
+        parent="menu_voipms_sms_root"
+        action="action_sync_dids"
+        groups="group_voipms_manager"
+    />
 </odoo>

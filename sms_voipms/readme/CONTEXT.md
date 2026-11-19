@@ -7,8 +7,10 @@ autonome.
 Le besoin métier est de faire passer les SMS d'Odoo — ceux que les utilisateurs
 envoient depuis le chatter, le CRM, les modèles de SMS et les campagnes — par ce
 compte VoIP.ms, sans changer d'outil, sans toucher au cœur d'Odoo et sans
-acheter de crédits IAP.
+acheter de crédits IAP. Les réponses doivent revenir dans Odoo, au bon endroit,
+et un STOP doit alimenter la liste noire d'Odoo.
 
 Le module est donc un pont : il ne réimplémente ni le composeur, ni les modèles,
-ni le suivi d'Odoo ; il remplace seulement le transport (le fournisseur), par
-société, en s'appuyant sur les mêmes points d'extension que `sms_twilio`.
+ni le suivi d'Odoo ; il remplace le transport (le fournisseur), par société, en
+s'appuyant sur les mêmes points d'extension que `sms_twilio`, et ajoute
+l'entrant par l'URL de rappel de VoIP.ms.

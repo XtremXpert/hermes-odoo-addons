@@ -115,3 +115,15 @@ class TestVoIPMSOutbox(TransactionCase):
         ) as request:
             msg.action_send()
         self.assertEqual(request.call_args[0][1]["dst"], "14184541752")
+
+    def test_send_reads_sms_key(self):
+        """Vérifie que l'identifiant est lu dans la clé ``sms`` de l'API."""
+        msg = self._make_message("Bonjour")
+        with patch.object(
+            VoIPMSClient,
+            "_request",
+            return_value={"status": "success", "sms": 11},
+        ):
+            msg.action_send()
+        self.assertEqual(msg.state, "sent")
+        self.assertEqual(msg.provider_message_ids, "11")

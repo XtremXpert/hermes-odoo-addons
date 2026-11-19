@@ -56,3 +56,20 @@ class VoIPMSClient:
                 % (method, data.get("message") or data.get("status"))
             )
         return data
+
+    def set_sms(self, did, **values):
+        """Update the SMS settings of a DID (wire method ``setSMS``).
+
+        ``enable`` (1/0) enables or disables the SMS service on the DID;
+        ``url_callback`` and ``url_callback_enabled`` / ``url_callback_retry``
+        configure the inbound callback. Unset (None) values are omitted.
+
+        :param str did: DID number as the provider writes it (ten digits).
+        :param dict values: ``enable``, ``url_callback``, ...
+        :returns: the parsed API answer.
+        """
+        if not did:
+            raise VoIPMSAPIError("DID manquant pour setSMS.")
+        params = {"did": did}
+        params.update({key: value for key, value in values.items() if value is not None})
+        return self._request("setSMS", params)

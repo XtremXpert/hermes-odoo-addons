@@ -1,0 +1,3 @@
+Synchronisation des DID : lit la clé `dids` de `getDIDsInfo` et fonctionne sur
+une liste vide ; l'identifiant d'envoi est lu dans la clé `sms` de `sendSMS` ;
+nouveau helper `set_sms()` pour `setSMS`.

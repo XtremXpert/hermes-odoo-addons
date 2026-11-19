@@ -1,2 +1,5 @@
 id,name,model_id,group_id/id,operation,domain
 access_voipms_did_system,voipms.did system read,voipms.did,base.group_system,r,
+access_voipms_sms_inbound_user,voipms.sms.inbound user,voipms.sms.inbound,voipms_sms.group_voipms_user,r,
+access_voipms_sms_inbound_manager,voipms.sms.inbound manager,voipms.sms.inbound,voipms_sms.group_voipms_manager,crud,
+access_voipms_sms_inbound_system,voipms.sms.inbound system,voipms.sms.inbound,base.group_system,crud,

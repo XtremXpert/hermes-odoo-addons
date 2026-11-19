@@ -46,4 +46,22 @@
         <field name="res_model">voipms.did</field>
         <field name="view_mode">list,form</field>
     </record>
+
+    <record id="action_sync_dids" model="ir.actions.server">
+        <field name="name">Synchroniser les DID</field>
+        <field name="model_id" ref="model_voipms_did" />
+        <field name="state">code</field>
+        <field name="code">
+model.sync_from_provider()
+action = {
+    'type': 'ir.actions.client',
+    'tag': 'display_notification',
+    'params': {
+        'title': 'SMS VoIP.ms',
+        'message': 'DID synchronisés depuis VoIP.ms.',
+        'type': 'success',
+    },
+}
+        </field>
+    </record>
 </odoo>

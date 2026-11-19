@@ -371,21 +371,28 @@ ul.auto-toc {
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! -->
 <p><a class="reference external image-reference" href="https://odoo-community.org/page/development-status"><img alt="Beta" src="https://img.shields.io/badge/maturity-Beta-yellow.png" /></a> <a class="reference external image-reference" href="http://www.gnu.org/licenses/lgpl-3.0-standalone.html"><img alt="License: LGPL-3" src="https://img.shields.io/badge/license-LGPL--3-blue.png" /></a> <a class="reference external image-reference" href="https://github.com/XtremXpert/hermes-odoo-addons/tree/20.0/sms_voipms"><img alt="XtremXpert/hermes-odoo-addons" src="https://img.shields.io/badge/github-XtremXpert%2Fhermes--odoo--addons-lightgray.png?logo=github" /></a></p>
 <p>Envoie les SMS d’Odoo par l’API REST de <strong>VoIP.ms</strong> au lieu du service
-payant IAP d’Odoo.</p>
+payant IAP d’Odoo, et reçoit les réponses.</p>
 <p>Le réglage se fait par société : « Envoyer via Odoo (IAP) » (défaut) ou
 « Envoyer via VoIP.ms ». Dans le second cas, le composeur SMS, le CRM,
 les modèles de SMS, l’automatisation et le marketing de masse passent
-tous par VoIP.ms, et le DID expéditeur est choisi dans les réglages de
-la société.</p>
+par VoIP.ms, et le DID expéditeur est choisi dans les réglages de la
+société.</p>
+<p>Les <strong>réponses entrantes</strong> arrivent par l’URL de rappel du DID
+(<tt class="docutils literal">url_callback</tt>) : elles sont postées dans le chatter de
+l’enregistrement d’origine (dernier SMS envoyé, ≤ 90 jours), sinon dans
+la file « Réponses entrantes ». Un <strong>STOP</strong> (STOP, ARRET, DÉSABONNER…)
+ajoute le numéro à la liste noire téléphonique d’Odoo — comportement
+d’Odoo : le composeur de masse l’exclut, les envois manuels restent
+possibles, aucune confirmation n’est envoyée.</p>
 <p>Le module s’appuie sur <tt class="docutils literal">voipms_sms</tt> (client REST, segmentation à 150
 caractères, gestion des DID, identifiants API) et sur l’abstraction
 fournisseur d’Odoo 20 — la même que celle utilisée par <tt class="docutils literal">sms_twilio</tt>.</p>
 <p>Limites connues :</p>
 <ul class="simple">
-<li><strong>envoi seulement</strong> : les réponses des destinataires ne remontent pas
-dans Odoo (une spec ultérieure pourra les rattacher au chatter à
-partir du suivi conservé à l’envoi) ;</li>
 <li><strong>NANP seulement</strong> (Canada / États-Unis) ;</li>
+<li><strong>aucun accusé de livraison</strong> : l’API VoIP.ms n’expose pas de statut
+d’acheminement, le SMS reste « Envoyé » (en attente) — les
+statistiques de marketing ne montrent pas de « Livré » ;</li>
 <li><tt class="docutils literal">sms_twilio</tt> et <tt class="docutils literal">sms_voipms</tt> déclarent tous deux le champ
 <tt class="docutils literal">sms_provider</tt> : les installer ensemble fait perdre une option de la
 sélection (limite d’Odoo 20 pour les modules fournisseurs), donc ne
@@ -402,19 +409,23 @@ pas installer les deux.</li>
 <li><a class="reference internal" href="#configuration" id="toc-entry-4">Configuration</a><ul>
 <li><a class="reference internal" href="#prerequis-voip-ms" id="toc-entry-5">Prérequis VoIP.ms</a></li>
 <li><a class="reference internal" href="#reglages-odoo" id="toc-entry-6">Réglages Odoo</a></li>
+<li><a class="reference internal" href="#reponses-entrantes" id="toc-entry-7">Réponses entrantes</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#usage" id="toc-entry-7">Usage</a></li>
-<li><a class="reference internal" href="#known-issues-roadmap" id="toc-entry-8">Known issues / Roadmap</a><ul>
-<li><a class="reference internal" href="#limites-connues" id="toc-entry-9">Limites connues</a></li>
-<li><a class="reference internal" href="#evolutions-envisagees" id="toc-entry-10">Évolutions envisagées</a></li>
+<li><a class="reference internal" href="#usage" id="toc-entry-8">Usage</a><ul>
+<li><a class="reference internal" href="#reponses" id="toc-entry-9">Réponses</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#bug-tracker" id="toc-entry-11">Bug Tracker</a></li>
-<li><a class="reference internal" href="#credits" id="toc-entry-12">Credits</a><ul>
-<li><a class="reference internal" href="#authors" id="toc-entry-13">Authors</a></li>
-<li><a class="reference internal" href="#contributors" id="toc-entry-14">Contributors</a></li>
-<li><a class="reference internal" href="#maintainers" id="toc-entry-15">Maintainers</a></li>
+<li><a class="reference internal" href="#known-issues-roadmap" id="toc-entry-10">Known issues / Roadmap</a><ul>
+<li><a class="reference internal" href="#limites-connues" id="toc-entry-11">Limites connues</a></li>
+<li><a class="reference internal" href="#evolutions-envisagees" id="toc-entry-12">Évolutions envisagées</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#bug-tracker" id="toc-entry-13">Bug Tracker</a></li>
+<li><a class="reference internal" href="#credits" id="toc-entry-14">Credits</a><ul>
+<li><a class="reference internal" href="#authors" id="toc-entry-15">Authors</a></li>
+<li><a class="reference internal" href="#contributors" id="toc-entry-16">Contributors</a></li>
+<li><a class="reference internal" href="#maintainers" id="toc-entry-17">Maintainers</a></li>
 </ul>
 </li>
 </ul>
@@ -429,11 +440,13 @@ compte VoIP.ms dont des DID ont le SMS activé, et le module
 <p>Le besoin métier est de faire passer les SMS d’Odoo — ceux que les
 utilisateurs envoient depuis le chatter, le CRM, les modèles de SMS et
 les campagnes — par ce compte VoIP.ms, sans changer d’outil, sans
-toucher au cœur d’Odoo et sans acheter de crédits IAP.</p>
+toucher au cœur d’Odoo et sans acheter de crédits IAP. Les réponses
+doivent revenir dans Odoo, au bon endroit, et un STOP doit alimenter la
+liste noire d’Odoo.</p>
 <p>Le module est donc un pont : il ne réimplémente ni le composeur, ni les
-modèles, ni le suivi d’Odoo ; il remplace seulement le transport (le
-fournisseur), par société, en s’appuyant sur les mêmes points
-d’extension que <tt class="docutils literal">sms_twilio</tt>.</p>
+modèles, ni le suivi d’Odoo ; il remplace le transport (le fournisseur),
+par société, en s’appuyant sur les mêmes points d’extension que
+<tt class="docutils literal">sms_twilio</tt>, et ajoute l’entrant par l’URL de rappel de VoIP.ms.</p>
 </div>
 <div class="section" id="installation">
 <h1><a class="toc-backref" href="#toc-entry-2">Installation</a></h1>
@@ -447,8 +460,12 @@ automatiquement comme dépendance.</li>
 <li>Un compte VoIP.ms avec l’API activée, un jeton, et un DID dont le SMS
 est activé.</li>
 </ul>
-<p>Aucune bibliothèque Python supplémentaire : le client existant utilise
-<tt class="docutils literal">urllib</tt> de la bibliothèque standard.</p>
+<p>Aucune bibliothèque Python supplémentaire n’est exigée : le client
+utilise <tt class="docutils literal">urllib</tt> de la bibliothèque standard. <tt class="docutils literal">phonenumbers</tt> (fourni
+par <tt class="docutils literal">phone_validation</tt> et par l’image maison) améliore la
+reconnaissance du contact (<tt class="docutils literal">phone_sanitized</tt>) ; sans lui, le module
+compare les chiffres du champ <tt class="docutils literal">phone</tt> (repli) et la recherche reste
+fonctionnelle.</p>
 </div>
 </div>
 <div class="section" id="configuration">
@@ -475,48 +492,80 @@ expéditeur</strong>.</li>
 <p>Pour revenir au service Odoo, choisir « Envoyer via Odoo (IAP) » : les
 crédits IAP redeviennent la voie d’envoi, sans réinstallation.</p>
 <p>Le DID proposé est limité aux numéros dont le SMS est activé chez
-VoIP.ms (champ <tt class="docutils literal">sms_enabled</tt> synchronisé par <tt class="docutils literal">voipms_sms</tt>).</p>
+VoIP.ms (champ <tt class="docutils literal">sms_enabled</tt> synchronisé par <tt class="docutils literal">voipms_sms</tt>, menu <em>SMS
+VoIP.ms → Synchroniser les DID</em>).</p>
+</div>
+<div class="section" id="reponses-entrantes">
+<h2><a class="toc-backref" href="#toc-entry-7">Réponses entrantes</a></h2>
+<ol class="arabic simple">
+<li>L’instance Odoo doit être joignable en HTTPS depuis Internet (c’est
+le cas du staging et de la production maison).</li>
+<li>Réglages → <strong>SMS</strong>, bloc VoIP.ms : le <strong>jeton de rappel</strong> est généré
+à l’ouverture ; l’<strong>URL de rappel</strong> affichée contient le jeton et les
+placeholders <tt class="docutils literal">{FROM}</tt>, <tt class="docutils literal">{TO}</tt>, <tt class="docutils literal">{MESSAGE}</tt>.</li>
+<li>Cliquer <strong>Configurer l’URL SMS du DID</strong> : le module appelle
+<tt class="docutils literal">setSMS</tt> sur le DID expéditeur (<tt class="docutils literal">enable=1</tt>, <tt class="docutils literal">url_callback</tt>,
+<tt class="docutils literal">url_callback_enabled=1</tt>, <tt class="docutils literal">url_callback_retry=1</tt>).</li>
+<li>Vérifier en répondant au SMS depuis le téléphone : la réponse
+apparaît dans le chatter de l’enregistrement d’origine ou dans <em>SMS
+VoIP.ms → Réponses entrantes</em>. Un « STOP » ajoute le numéro à la
+liste noire téléphonique.</li>
+</ol>
 </div>
 </div>
 <div class="section" id="usage">
-<h1><a class="toc-backref" href="#toc-entry-7">Usage</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-8">Usage</a></h1>
 <p>Envoyer un SMS comme d’habitude : composeur du chatter, action « Envoyer
 un SMS », modèle de SMS, automatisation ou marketing de masse. Le
-message part par VoIP.ms et le SMS passe à l’état <em>Envoyé</em> (en attente
-de livraison chez VoIP.ms), puis à <em>Livré</em> lorsque le fournisseur le
-confirme.</p>
-<p>Les identifiants renvoyés par VoIP.ms sont conservés sur le suivi
-(<tt class="docutils literal">sms.tracker</tt>) et restent visibles sur la fiche du SMS, même après le
-nettoyage des SMS envoyés.</p>
-<p>Si VoIP.ms refuse l’envoi (numéro invalide, hors NANP, crédit épuisé,
-panne), le SMS passe à l’état <em>Erreur</em> avec le motif du fournisseur ; il
-est possible de le renvoyer depuis la liste des SMS.</p>
+message part par VoIP.ms et le SMS passe à l’état <em>Envoyé</em> (accepté par
+le fournisseur).</p>
+<p>Les identifiants renvoyés par VoIP.ms sont conservés sur le SMS et sur
+le suivi (<tt class="docutils literal">sms.tracker</tt>) ; ils restent visibles après le nettoyage des
+SMS envoyés.</p>
+<p>Si VoIP.ms refuse l’envoi (numéro invalide, hors NANP, panne), le SMS
+passe à l’état <em>Erreur</em> avec le motif du fournisseur ; il est possible
+de le renvoyer depuis la liste des SMS. Aucun statut de livraison n’est
+fourni par VoIP.ms : le SMS ne passe pas à <em>Livré</em>.</p>
+<div class="section" id="reponses">
+<h2><a class="toc-backref" href="#toc-entry-9">Réponses</a></h2>
+<p>Une réponse est postée dans le chatter de l’enregistrement d’origine (le
+dernier SMS envoyé à ce numéro, ≤ 90 jours), avec le contact en auteur
+s’il est reconnu par son mobile. Sans envoi récent, elle va dans <em>SMS
+VoIP.ms → Réponses entrantes</em> (état <em>Nouveau</em>), où on peut la marquer
+<em>Traité</em> ou <em>Ignorée</em>.</p>
+<p>Un <strong>STOP</strong> (STOP, ARRET, DÉSABONNER…) ajoute le numéro à la liste noire
+téléphonique d’Odoo : les campagnes de masse l’excluent, les envois
+manuels restent possibles, aucune confirmation n’est renvoyée.</p>
+</div>
 </div>
 <div class="section" id="known-issues-roadmap">
-<h1><a class="toc-backref" href="#toc-entry-8">Known issues / Roadmap</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-10">Known issues / Roadmap</a></h1>
 <div class="section" id="limites-connues">
-<h2><a class="toc-backref" href="#toc-entry-9">Limites connues</a></h2>
+<h2><a class="toc-backref" href="#toc-entry-11">Limites connues</a></h2>
 <ul class="simple">
-<li>Envoi seulement : les réponses des destinataires ne remontent pas dans
-Odoo.</li>
 <li>NANP (Canada / États-Unis) seulement.</li>
-<li>Pas d’accusé de livraison poussé par VoIP.ms : le SMS reste <em>Envoyé</em>
-jusqu’au nettoyage, sauf si le fournisseur confirme la livraison.</li>
+<li>Aucun accusé de livraison : l’API VoIP.ms n’expose pas de statut
+d’acheminement, le SMS reste <em>Envoyé</em>.</li>
 <li><tt class="docutils literal">sms_twilio</tt> et <tt class="docutils literal">sms_voipms</tt> sont mutuellement exclusifs (même
 champ <tt class="docutils literal">sms_provider</tt>).</li>
+<li>Les réponses ne sont rattachées qu’aux envois encore présents (≤ 90
+jours) ; au-delà, elles vont dans la file.</li>
 </ul>
 </div>
 <div class="section" id="evolutions-envisagees">
-<h2><a class="toc-backref" href="#toc-entry-10">Évolutions envisagées</a></h2>
+<h2><a class="toc-backref" href="#toc-entry-12">Évolutions envisagées</a></h2>
 <ul class="simple">
-<li>Réponses entrantes : contrôleur HTTP, URL SMS du DID, rattachement au
-chatter à partir du suivi conservé à l’envoi.</li>
-<li>Accusés de livraison par interrogation périodique (<tt class="docutils literal">getSMS</tt>).</li>
+<li>Accusés de livraison par interrogation périodique — impossible tant
+que VoIP.ms n’expose pas de statut (le champ <tt class="docutils literal">carrier_status</tt> répond
+« Information not available »).</li>
+<li>Enregistrement A2P chez VoIP.ms si le volume de marketing augmente.</li>
+<li>Rattachement des réponses à des envois plus anciens (journal des
+envois).</li>
 </ul>
 </div>
 </div>
 <div class="section" id="bug-tracker">
-<h1><a class="toc-backref" href="#toc-entry-11">Bug Tracker</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-13">Bug Tracker</a></h1>
 <p>Bugs are tracked on <a class="reference external" href="https://github.com/XtremXpert/hermes-odoo-addons/issues">GitHub Issues</a>.
 In case of trouble, please check there if your issue has already been reported.
 If you spotted it first, help us to smash it by providing a detailed and welcomed
@@ -524,22 +573,22 @@ If you spotted it first, help us to smash it by providing a detailed and welcome
 <p>Do not contact contributors directly about support or help with technical issues.</p>
 </div>
 <div class="section" id="credits">
-<h1><a class="toc-backref" href="#toc-entry-12">Credits</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-14">Credits</a></h1>
 <div class="section" id="authors">
-<h2><a class="toc-backref" href="#toc-entry-13">Authors</a></h2>
+<h2><a class="toc-backref" href="#toc-entry-15">Authors</a></h2>
 <ul class="simple">
 <li>Benoît Vézina</li>
 <li>Diverse-Cité</li>
 </ul>
 </div>
 <div class="section" id="contributors">
-<h2><a class="toc-backref" href="#toc-entry-14">Contributors</a></h2>
+<h2><a class="toc-backref" href="#toc-entry-16">Contributors</a></h2>
 <ul class="simple">
 <li>Benoît Vézina, Diverse-Cité</li>
 </ul>
 </div>
 <div class="section" id="maintainers">
-<h2><a class="toc-backref" href="#toc-entry-15">Maintainers</a></h2>
+<h2><a class="toc-backref" href="#toc-entry-17">Maintainers</a></h2>
 <p>Current maintainer:</p>
 <p><a class="reference external image-reference" href="https://github.com/XtremXpert"><img alt="XtremXpert" src="https://github.com/XtremXpert.png?size=40px" /></a></p>
 <p>This module is part of the <a class="reference external" href="https://github.com/XtremXpert/hermes-odoo-addons/tree/20.0/sms_voipms">XtremXpert/hermes-odoo-addons</a> project on GitHub.</p>
