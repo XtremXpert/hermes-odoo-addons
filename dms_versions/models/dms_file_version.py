@@ -15,6 +15,7 @@ from odoo import api
 from odoo import fields
 from odoo import models
 from odoo.exceptions import AccessError
+from odoo.tools import BinaryBytes
 
 
 class DmsFileVersion(models.Model):
@@ -25,7 +26,6 @@ class DmsFileVersion(models.Model):
 
     file_id = fields.Many2one(
         "dms.file",
-        string="File",
         required=True,
         readonly=True,
         ondelete="cascade",
@@ -86,9 +86,10 @@ class DmsFileVersion(models.Model):
         # The normal write path archives the current content first
         # (see dms.file.write override), so the chain stays complete.
         # bytes(): freeze the lazy attachment proxy before the write path
-        # touches the file's own attachment.
+        # touches the file's own attachment. BinaryBytes: Odoo 20 only
+        # accepts a BinaryValue in a binary field, never raw bytes.
         dms_file.with_context(dms_version_restore=True).sudo().content = (
-            bytes(self.content) if self.content else False
+            BinaryBytes(bytes(self.content)) if self.content else False
         )
         return {
             "type": "ir.actions.client",
@@ -100,9 +101,9 @@ class DmsFileVersion(models.Model):
             },
         }
 
-    def unlink(self):
+    @api.ondelete(at_uninstall=False)
+    def _unlink_except_not_manager(self):
         # Versions are audit records: only a DMS manager may purge them,
         # and the restore flow never needs to delete anything.
         if not self.env.user.has_group("dms.group_dms_manager"):
-            raise AccessError("Seul un gestionnaire DMS peut supprimer des versions.")
-        return super().unlink()
+            raise AccessError(self.env._("Seul un gestionnaire DMS peut supprimer des versions."))
