@@ -41,7 +41,9 @@ class VoIPMSSmsInbound(models.Model):
         required=True,
     )
     partner_id = fields.Many2one("res.partner", string="Contact", ondelete="set null")
-    mail_message_id = fields.Many2one("mail.message", string="Message", ondelete="set null")
+    mail_message_id = fields.Many2one(
+        "mail.message", string="Message d'origine", ondelete="set null"
+    )
 
     def action_done(self):
         """Mark the inbound message as handled."""

@@ -1,5 +1,14 @@
 # Part of the sms_voipms Odoo module. See LICENSE for details.
 
+import unittest
+
+try:
+    import phonenumbers  # noqa: F401  (phone_validation dependency)
+
+    HAS_PHONENUMBERS = True
+except ImportError:  # the OCA test image does not ship it
+    HAS_PHONENUMBERS = False
+
 from odoo.tests import TransactionCase
 
 from .common import SmsVoipmsCommon
@@ -29,6 +38,7 @@ class TestInbound(SmsVoipmsCommon, TransactionCase):
             self.env["phone.blacklist"].sudo().search([("number", "=", "+14184541752")])
         )
 
+    @unittest.skipUnless(HAS_PHONENUMBERS, "phonenumbers absent : phone_sanitized vide")
     def test_reply_posts_on_origin_record(self):
         """A reply to a recent outgoing SMS lands in the origin chatter."""
         partner_from = self.env["res.partner"].create(
@@ -65,6 +75,7 @@ class TestInbound(SmsVoipmsCommon, TransactionCase):
         self.assertFalse(record.partner_id)
         self.assertEqual(record.from_number, "14184541752")
 
+    @unittest.skipUnless(HAS_PHONENUMBERS, "phonenumbers absent : phone_sanitized vide")
     def test_known_contact_without_outgoing_is_queued(self):
         """A known contact without a recent send stays in the queue."""
         partner = self.env["res.partner"].create(
