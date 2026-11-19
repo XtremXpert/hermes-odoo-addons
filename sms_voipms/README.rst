@@ -93,8 +93,12 @@ Dépendances
 - Un compte VoIP.ms avec l'API activée, un jeton, et un DID dont le SMS
   est activé.
 
-Aucune bibliothèque Python supplémentaire : le client existant utilise
-``urllib`` de la bibliothèque standard.
+Aucune bibliothèque Python supplémentaire n'est exigée : le client
+utilise ``urllib`` de la bibliothèque standard. ``phonenumbers`` (fourni
+par ``phone_validation`` et par l'image maison) améliore la
+reconnaissance du contact (``phone_sanitized``) ; sans lui, le module
+compare les chiffres du champ ``phone`` (repli) et la recherche reste
+fonctionnelle.
 
 Configuration
 =============

@@ -460,8 +460,12 @@ automatiquement comme dépendance.</li>
 <li>Un compte VoIP.ms avec l’API activée, un jeton, et un DID dont le SMS
 est activé.</li>
 </ul>
-<p>Aucune bibliothèque Python supplémentaire : le client existant utilise
-<tt class="docutils literal">urllib</tt> de la bibliothèque standard.</p>
+<p>Aucune bibliothèque Python supplémentaire n’est exigée : le client
+utilise <tt class="docutils literal">urllib</tt> de la bibliothèque standard. <tt class="docutils literal">phonenumbers</tt> (fourni
+par <tt class="docutils literal">phone_validation</tt> et par l’image maison) améliore la
+reconnaissance du contact (<tt class="docutils literal">phone_sanitized</tt>) ; sans lui, le module
+compare les chiffres du champ <tt class="docutils literal">phone</tt> (repli) et la recherche reste
+fonctionnelle.</p>
 </div>
 </div>
 <div class="section" id="configuration">

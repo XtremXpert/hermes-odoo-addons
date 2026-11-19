@@ -2,6 +2,7 @@
 """Inbound SMS received from the VoIP.ms ``url_callback``."""
 
 import logging
+import re
 from datetime import timedelta
 
 from odoo import api
@@ -55,12 +56,25 @@ class VoIPMSSmsInbound(models.Model):
 
     @api.model
     def _find_partner(self, number):
-        """Return the contact whose sanitized phone matches ``number``."""
-        return (
-            self.env["res.partner"]
-            .sudo()
-            .search([("phone_sanitized", "in", [number, "+" + number])], limit=1)
-        )
+        """Return the contact whose phone matches ``number``.
+
+        ``phone_sanitized`` (the E164 field) needs the ``phonenumbers``
+        library; when it is not installed the field stays empty, so fall back
+        to comparing the digits of the raw ``phone`` field.
+        """
+        partner_model = self.env["res.partner"].sudo()
+        partner = partner_model.search([("phone_sanitized", "in", [number, "+" + number])], limit=1)
+        if partner:
+            return partner
+        digits = re.sub(r"\D", "", number)[-10:]
+        if not digits:
+            return partner_model.browse()
+        candidates = partner_model.search([("phone", "!=", False), ("phone", "like", digits[-4:])])
+        for candidate in candidates:
+            candidate_digits = re.sub(r"\D", "", candidate.phone or "")[-10:]
+            if candidate_digits == digits:
+                return candidate
+        return partner_model.browse()
 
     @api.model
     def _post_reply(self, number, body, partner):
