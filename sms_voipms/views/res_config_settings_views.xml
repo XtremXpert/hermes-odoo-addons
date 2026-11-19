@@ -20,7 +20,10 @@
                         <field name="sms_voipms_did_id" options="{'no_create': True}" />
                     </div>
                     <div class="row mt8">
-                        <label for="sms_voipms_inbound_token" class="col-lg-3 o_light_label" />
+                        <label
+                            for="sms_voipms_inbound_token"
+                            class="col-lg-3 o_light_label"
+                        />
                         <field name="sms_voipms_inbound_token" class="col-lg-6" />
                         <button
                             name="action_configure_voipms_callback"
@@ -30,8 +33,15 @@
                         />
                     </div>
                     <div class="row">
-                        <label for="sms_voipms_callback_url" class="col-lg-3 o_light_label" />
-                        <field name="sms_voipms_callback_url" class="col-lg-6" readonly="1" />
+                        <label
+                            for="sms_voipms_callback_url"
+                            class="col-lg-3 o_light_label"
+                        />
+                        <field
+                            name="sms_voipms_callback_url"
+                            class="col-lg-6"
+                            readonly="1"
+                        />
                     </div>
                     <div class="text-muted mt8">
                         Identifiants API : bloc « SMS VoIP.ms » plus bas.
