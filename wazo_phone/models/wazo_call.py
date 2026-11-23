@@ -76,7 +76,11 @@ class ResUsersWazoCall(models.Model):
         Le navigateur qui a émis ignore sa propre notification (il sonne
         déjà par la couche SIP / le canal inter-onglets).
         """
-        self.ensure_one()
+        # `self` peut être vide : le client appelle cette méthode sans
+        # identifiant (`[[], {...}]`), parce qu'elle ne vise pas un
+        # utilisateur nommé mais la session courante. `ensure_one()` levait
+        # donc « not enough values to unpack » à chaque appel entrant, une
+        # trace par sonnerie.
         info = info or {}
         self.env.user._bus_send(
             "wazo_phone.incoming_call",
